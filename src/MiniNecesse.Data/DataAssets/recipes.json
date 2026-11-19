@@ -1,0 +1,98 @@
+[
+  {
+    "recipeId": "craft_workbench",
+    "outputItemId": "workbench",
+    "outputQuantity": 1,
+    "requiresWorkbench": false,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 6 }
+    ]
+  },
+  {
+    "recipeId": "craft_wood_axe",
+    "outputItemId": "wood_axe",
+    "outputQuantity": 1,
+    "requiresWorkbench": false,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 4 }
+    ]
+  },
+  {
+    "recipeId": "craft_wooden_wall",
+    "outputItemId": "wooden_wall",
+    "outputQuantity": 2,
+    "requiresWorkbench": false,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 2 }
+    ]
+  },
+  {
+    "recipeId": "craft_torch",
+    "outputItemId": "torch",
+    "outputQuantity": 2,
+    "requiresWorkbench": false,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 2 },
+      { "itemId": "stone", "quantity": 1 }
+    ]
+  },
+  {
+    "recipeId": "craft_copper_pickaxe",
+    "outputItemId": "copper_pickaxe",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 3 },
+      { "itemId": "copper_ore", "quantity": 5 }
+    ]
+  },
+  {
+    "recipeId": "craft_copper_sword",
+    "outputItemId": "copper_sword",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 2 },
+      { "itemId": "copper_ore", "quantity": 6 }
+    ]
+  },
+  {
+    "recipeId": "craft_iron_sword",
+    "outputItemId": "iron_sword",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 2 },
+      { "itemId": "iron_ore", "quantity": 6 }
+    ]
+  },
+  {
+    "recipeId": "craft_wooden_bow",
+    "outputItemId": "wooden_bow",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 8 },
+      { "itemId": "slime_gel", "quantity": 2 }
+    ]
+  },
+  {
+    "recipeId": "craft_health_potion",
+    "outputItemId": "health_potion",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 2 },
+      { "itemId": "slime_gel", "quantity": 3 }
+    ]
+  },
+  {
+    "recipeId": "craft_stone_wall",
+    "outputItemId": "stone_wall",
+    "outputQuantity": 2,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "stone", "quantity": 4 }
+    ]
+  }
+]

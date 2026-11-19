@@ -1,0 +1,72 @@
+{
+  "islandId": "ISLAND_03",
+  "name": "Murkwood Mire (Swamp)",
+  "biome": "Swamp",
+  "width": 24,
+  "height": 18,
+  "seed": 3003,
+  "playerSpawn": { "x": 12, "y": 9 },
+  "tileLayout": [
+    "WWWWWWWWWWWWWWWWWWWWWWWW",
+    "WMMMMMMMMMMMMMMMMMMMMMMW",
+    "WMGGGGMMMMMMWWMMMMMGGGGW",
+    "WMGGGGMMMMMWWWWMMMMGGGGW",
+    "WMMMMMMMMMMMWWMMMMMMMMMW",
+    "WMMMMWWMMMMMMMMMMWWMMMMW",
+    "WMMMMWWMMGGGGGGMMWWMMMMW",
+    "WMMMMMMMMGGGGGGMMMMMMMMW",
+    "WMMMMMMMMGGGGGGMMMMMMMMW",
+    "WMMMMMMMMGGGGGGMMMMMMMMW",
+    "WMMMMMMMMGGGGGGMMMMMMMMW",
+    "WMMMMWWMMGGGGGGMMWWMMMMW",
+    "WMMMMWWMMMMMMMMMMWWMMMMW",
+    "WMMMMMMMMMMMWWMMMMMMMMMW",
+    "WMGGGGMMMMMWWWWMMMMGGGGW",
+    "WMGGGGMMMMMMWWMMMMMGGGGW",
+    "WMMMMMMMMMMMMMMMMMMMMMMW",
+    "WWWWWWWWWWWWWWWWWWWWWWWW"
+  ],
+  "resourceSpawns": [
+    { "type": "Tree", "x": 3, "y": 2 },
+    { "type": "Tree", "x": 20, "y": 2 },
+    { "type": "Tree", "x": 3, "y": 15 },
+    { "type": "Tree", "x": 20, "y": 15 },
+    { "type": "Tree", "x": 9, "y": 7 },
+    { "type": "CopperDeposit", "x": 4, "y": 8 },
+    { "type": "CopperDeposit", "x": 19, "y": 8 },
+    { "type": "IronDeposit", "x": 7, "y": 4 },
+    { "type": "IronDeposit", "x": 16, "y": 4 },
+    { "type": "IronDeposit", "x": 7, "y": 13 },
+    { "type": "IronDeposit", "x": 16, "y": 13 }
+  ],
+  "waves": [
+    {
+      "waveNumber": 1,
+      "enemies": [
+        { "type": "SwampZombie", "count": 4 },
+        { "type": "SkeletonArcher", "count": 2 }
+      ]
+    },
+    {
+      "waveNumber": 2,
+      "enemies": [
+        { "type": "SwampZombie", "count": 4 },
+        { "type": "FrostRaider", "count": 2 },
+        { "type": "SkeletonArcher", "count": 2 }
+      ]
+    }
+  ],
+  "boss": {
+    "type": "SwampWitch",
+    "displayName": "Swamp Witch",
+    "maxHp": 390,
+    "moveSpeed": 84.0,
+    "attackDamage": 22,
+    "attackRange": 190.0,
+    "attackCooldown": 1.15,
+    "scoreReward": 600,
+    "initialStrategy": "ranged",
+    "enrageStrategy": "boss_enrage",
+    "enrageThresholdRatio": 0.30
+  }
+}
