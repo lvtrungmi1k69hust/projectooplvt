@@ -1,0 +1,72 @@
+{
+  "islandId": "ISLAND_02",
+  "name": "Copper Hills (Rocky Ridge)",
+  "biome": "CopperHills",
+  "width": 24,
+  "height": 18,
+  "seed": 2002,
+  "playerSpawn": { "x": 12, "y": 9 },
+  "tileLayout": [
+    "WWWWWWWWWWWWWWWWWWWWWWWW",
+    "WSSSSSSSSSSSSSSSSSSSSSSW",
+    "WSRRRRGGGGGGGGGGGGRRRRSW",
+    "WSRRRRGGGGGGGGGGGGRRRRSW",
+    "WSRRRGGGGGGGGGGGGGGGRRSW",
+    "WSGGGGGGWWGGGGWWGGGGGGSW",
+    "WSGGGGGGWWGGGGWWGGGGGGSW",
+    "WSGGGGGGGGGGGGGGGGGGGGSW",
+    "WSGGGGGRRRRRRRRRRGGGGGSW",
+    "WSGGGGGRRRRRRRRRRGGGGGSW",
+    "WSGGGGGRRRRRRRRRRGGGGGSW",
+    "WSGGGGGGGGGGGGGGGGGGGGSW",
+    "WSRRRGGGGGGGGGGGGGGGRRSW",
+    "WSRRRRGGGGGGGGGGGGRRRRSW",
+    "WSRRRRGGGGGGGGGGGGRRRRSW",
+    "WSGGGGGGGGGGGGGGGGGGGGSW",
+    "WSSSSSSSSSSSSSSSSSSSSSSW",
+    "WWWWWWWWWWWWWWWWWWWWWWWW"
+  ],
+  "resourceSpawns": [
+    { "type": "Tree", "x": 6, "y": 3 },
+    { "type": "Tree", "x": 16, "y": 3 },
+    { "type": "Tree", "x": 5, "y": 11 },
+    { "type": "Tree", "x": 18, "y": 11 },
+    { "type": "StoneRock", "x": 3, "y": 3 },
+    { "type": "StoneRock", "x": 20, "y": 3 },
+    { "type": "StoneRock", "x": 10, "y": 8 },
+    { "type": "CopperDeposit", "x": 4, "y": 14 },
+    { "type": "CopperDeposit", "x": 19, "y": 14 },
+    { "type": "CopperDeposit", "x": 15, "y": 9 },
+    { "type": "CopperDeposit", "x": 8, "y": 10 },
+    { "type": "IronDeposit", "x": 20, "y": 13 }
+  ],
+  "waves": [
+    {
+      "waveNumber": 1,
+      "enemies": [
+        { "type": "Slime", "count": 3 },
+        { "type": "SkeletonArcher", "count": 2 }
+      ]
+    },
+    {
+      "waveNumber": 2,
+      "enemies": [
+        { "type": "ZombieRaider", "count": 3 },
+        { "type": "SkeletonArcher", "count": 3 }
+      ]
+    }
+  ],
+  "boss": {
+    "type": "ForestGuardian",
+    "displayName": "Forest Guardian",
+    "maxHp": 340,
+    "moveSpeed": 78.0,
+    "attackDamage": 20,
+    "attackRange": 48.0,
+    "attackCooldown": 1.10,
+    "scoreReward": 550,
+    "initialStrategy": "melee",
+    "enrageStrategy": "boss_enrage",
+    "enrageThresholdRatio": 0.30
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "islandId": "ISLAND_01",
+  "name": "Greenwood Isle (Forest)",
+  "biome": "Forest",
+  "width": 24,
+  "height": 18,
+  "seed": 1001,
+  "playerSpawn": { "x": 12, "y": 9 },
+  "tileLayout": [
+    "WWWWWWWWWWWWWWWWWWWWWWWW",
+    "WSSSSSSSSSSSSSSSSSSSSSSW",
+    "WSGGGGGGGGGGGGGGGGGGGGSW",
+    "WSGGGGGGGGGGGGGGGGGGGGSW",
+    "WSGGGGGGGGGWWGGGGGGGGGSW",
+    "WSGGGGGGGGWWWWGGGGGGGGSW",
+    "WSGGGGGGGGGWWGGGGGGGGGSW",
+    "WSGGGGGGGGGGGGGGGGGGGGSW",
+    "WSGGGGGGGGGGGGGGGGGGGGSW",
+    "WSGGGGGGGGGGGGGGGGGGGGSW",
+    "WSGGGGGGGGGGGGGGGGGGGGSW",
+    "WSGGGGGGGGGGGGGGGGGGGGSW",
+    "WSGGGGGRRRGGGGGGGGGGGGSW",
+    "WSGGGGGRRRGGGGGGGGGGGGSW",
+    "WSGGGGGGGGGGGGGGGGGGGGSW",
+    "WSGGGGGGGGGGGGGGGGGGGGSW",
+    "WSSSSSSSSSSSSSSSSSSSSSSW",
+    "WWWWWWWWWWWWWWWWWWWWWWWW"
+  ],
+  "resourceSpawns": [
+    { "type": "Tree", "x": 4, "y": 3 },
+    { "type": "Tree", "x": 6, "y": 4 },
+    { "type": "Tree", "x": 18, "y": 3 },
+    { "type": "Tree", "x": 19, "y": 6 },
+    { "type": "Tree", "x": 5, "y": 10 },
+    { "type": "Tree", "x": 17, "y": 13 },
+    { "type": "Tree", "x": 20, "y": 12 },
+    { "type": "Tree", "x": 14, "y": 15 },
+    { "type": "StoneRock", "x": 8, "y": 12 },
+    { "type": "StoneRock", "x": 9, "y": 13 },
+    { "type": "StoneRock", "x": 15, "y": 4 },
+    { "type": "CopperDeposit", "x": 7, "y": 13 },
+    { "type": "CopperDeposit", "x": 19, "y": 14 }
+  ],
+  "waves": [
+    {
+      "waveNumber": 1,
+      "enemies": [
+        { "type": "Slime", "count": 4 }
+      ]
+    },
+    {
+      "waveNumber": 2,
+      "enemies": [
+        { "type": "Slime", "count": 3 },
+        { "type": "ZombieRaider", "count": 2 }
+      ]
+    }
+  ],
+  "boss": {
+    "type": "KingSlime",
+    "displayName": "King Slime",
+    "maxHp": 260,
+    "moveSpeed": 72.0,
+    "attackDamage": 16,
+    "attackRange": 44.0,
+    "attackCooldown": 1.15,
+    "scoreReward": 500,
+    "initialStrategy": "melee",
+    "enrageStrategy": "boss_enrage",
+    "enrageThresholdRatio": 0.30
+  }
+}

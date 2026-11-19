@@ -4,10 +4,10 @@ using System.Collections.Generic;
 namespace MiniNecesse.Core.Rules;
 
 /// <summary>
-/// Serializable data transfer object capturing a complete snapshot of a game session
-/// for persistence through <see cref="MiniNecesse.Core.Interfaces.ISaveStorage"/>.
+/// Serializable Data Transfer Object capturing 100% of an active game session
+/// for JSON persistence through <see cref="MiniNecesse.Core.Interfaces.ISaveStorage"/>.
 /// </summary>
-public sealed class GameStateSnapshot
+public sealed class GameStateDTO
 {
     /// <summary>Gets or sets the save schema version.</summary>
     public string Version { get; set; } = "2026.1";
@@ -17,6 +17,9 @@ public sealed class GameStateSnapshot
 
     /// <summary>Gets or sets the current island identifier.</summary>
     public string IslandId { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the difficulty preset name.</summary>
+    public string Difficulty { get; set; } = "Normal";
 
     /// <summary>Gets or sets the accumulated player score.</summary>
     public int Score { get; set; }
@@ -40,14 +43,14 @@ public sealed class GameStateSnapshot
     public List<EntityStateSnapshot> Resources { get; set; } = new();
 
     /// <summary>Gets or sets placed structure snapshots.</summary>
-    public List<EntityStateSnapshot> Structures { get; set; } = new();
+    public List<StructureStateSnapshot> Structures { get; set; } = new();
 
-    /// <summary>Gets or sets active enemy and boss snapshots.</summary>
-    public List<EntityStateSnapshot> Enemies { get; set; } = new();
+    /// <summary>Gets or sets living enemy and boss snapshots.</summary>
+    public List<EnemyStateSnapshot> Enemies { get; set; } = new();
 }
 
 /// <summary>
-/// Serializable player state stored inside <see cref="GameStateSnapshot"/>.
+/// Serializable player state stored inside <see cref="GameStateDTO"/>.
 /// </summary>
 public sealed class PlayerSnapshot
 {
@@ -86,7 +89,7 @@ public sealed class InventoryItemSnapshot
 }
 
 /// <summary>
-/// Serializable world entity record for resources, structures, and enemies.
+/// Serializable world entity record for harvestable resource nodes.
 /// </summary>
 public sealed class EntityStateSnapshot
 {
@@ -104,4 +107,55 @@ public sealed class EntityStateSnapshot
 
     /// <summary>Gets or sets the entity's remaining health.</summary>
     public int Hp { get; set; }
+}
+
+/// <summary>
+/// Serializable record for player-built structures including grid coordinates.
+/// </summary>
+public sealed class StructureStateSnapshot
+{
+    /// <summary>Gets or sets the unique structure identifier.</summary>
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the structure type name.</summary>
+    public string Type { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the world X coordinate.</summary>
+    public float X { get; set; }
+
+    /// <summary>Gets or sets the world Y coordinate.</summary>
+    public float Y { get; set; }
+
+    /// <summary>Gets or sets the occupied grid column.</summary>
+    public int TileCol { get; set; }
+
+    /// <summary>Gets or sets the occupied grid row.</summary>
+    public int TileRow { get; set; }
+
+    /// <summary>Gets or sets the structure's remaining health.</summary>
+    public int Hp { get; set; }
+}
+
+/// <summary>
+/// Serializable record for living enemies and bosses.
+/// </summary>
+public sealed class EnemyStateSnapshot
+{
+    /// <summary>Gets or sets the unique enemy identifier.</summary>
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the enemy or boss archetype identifier.</summary>
+    public string Type { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the world X coordinate.</summary>
+    public float X { get; set; }
+
+    /// <summary>Gets or sets the world Y coordinate.</summary>
+    public float Y { get; set; }
+
+    /// <summary>Gets or sets the enemy's remaining health.</summary>
+    public int Hp { get; set; }
+
+    /// <summary>Gets or sets whether this enemy is an island boss.</summary>
+    public bool IsBoss { get; set; }
 }

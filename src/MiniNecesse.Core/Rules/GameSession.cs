@@ -391,12 +391,13 @@ public sealed class GameSession : IDisposable
     /// <summary>Delegates fixed-timestep simulation to the active <see cref="IGameState"/> in <see cref="StateMachine"/>.</summary>
     public void Update(float deltaTime) => _stateMachine.Update(deltaTime);
 
-    /// <summary>Creates a complete serializable <see cref="GameStateSnapshot"/> for save storage.</summary>
-    public GameStateSnapshot CreateSnapshot()
+    /// <summary>Creates a complete serializable <see cref="GameStateDTO"/> for save storage.</summary>
+    public GameStateDTO CreateSnapshot()
     {
-        var snapshot = new GameStateSnapshot
+        var snapshot = new GameStateDTO
         {
             IslandId = _level.IslandId,
+            Difficulty = _difficulty.ToString(),
             Score = _ruleEngine.Score,
             DayNumber = _dayNightCycle.DayNumber,
             TimeOfDaySeconds = _dayNightCycle.ElapsedSecondsInCycle,
@@ -407,6 +408,24 @@ public sealed class GameSession : IDisposable
 
         PopulateEntitySnapshots(snapshot);
         return snapshot;
+    }
+
+    /// <summary>
+    /// Restores 100% of world entities, player position/HP/inventory, wave counter,
+    /// score, and day/night cycle from a persisted <see cref="GameStateDTO"/>.
+    /// </summary>
+    public void RestoreFromSnapshot(GameStateDTO snapshot, IEntityFactory entityFactory)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(entityFactory);
+
+        ClearActiveWorldEntities();
+        RestorePlayerFromSnapshot(snapshot.Player);
+        _ruleEngine.RestoreScore(snapshot.Score);
+        _dayNightCycle.RestoreState(snapshot.DayNumber, snapshot.TimeOfDaySeconds);
+        _currentWaveIndex = snapshot.CurrentWaveIndex;
+        _waveSpawner?.RestoreWaveIndex(snapshot.CurrentWaveIndex);
+        RestoreEntitiesFromSnapshot(snapshot, entityFactory);
     }
 
     /// <summary>Cleanly unsubscribes internal event handlers to prevent memory leaks.</summary>
@@ -809,7 +828,7 @@ public sealed class GameSession : IDisposable
         return playerSnapshot;
     }
 
-    private void PopulateEntitySnapshots(GameStateSnapshot snapshot)
+    private void PopulateEntitySnapshots(GameStateDTO snapshot)
     {
         for (int i = 0; i < _resources.Count; i++)
         {
@@ -820,13 +839,92 @@ public sealed class GameSession : IDisposable
         for (int i = 0; i < _structures.Count; i++)
         {
             Structure s = _structures[i];
-            snapshot.Structures.Add(new EntityStateSnapshot { Id = s.Id, Type = s.StructureType.ToString(), X = s.Position.X, Y = s.Position.Y, Hp = s.CurrentHp });
+            snapshot.Structures.Add(new StructureStateSnapshot { Id = s.Id, Type = s.StructureType.ToString(), X = s.Position.X, Y = s.Position.Y, TileCol = s.TileCol, TileRow = s.TileRow, Hp = s.CurrentHp });
         }
 
         for (int i = 0; i < _enemies.Count; i++)
         {
             Enemy e = _enemies[i];
-            snapshot.Enemies.Add(new EntityStateSnapshot { Id = e.Id, Type = e.Archetype, X = e.Position.X, Y = e.Position.Y, Hp = e.CurrentHp });
+            snapshot.Enemies.Add(new EnemyStateSnapshot { Id = e.Id, Type = e.Archetype, X = e.Position.X, Y = e.Position.Y, Hp = e.CurrentHp, IsBoss = e.IsBoss });
+        }
+    }
+
+    private void ClearActiveWorldEntities()
+    {
+        for (int i = 0; i < _structures.Count; i++)
+        {
+            Structure s = _structures[i];
+            if (s.IsSolid && _level.IsInBounds(s.TileCol, s.TileRow))
+            {
+                _level.SetStructureOccupancy(s.TileCol, s.TileRow, false);
+            }
+        }
+
+        _resources.Clear();
+        _structures.Clear();
+        _enemies.Clear();
+        _projectiles.Clear();
+        _droppedItems.Clear();
+        _activeBoss = null;
+        _bossDefeated = false;
+    }
+
+    private void RestorePlayerFromSnapshot(PlayerSnapshot playerDto)
+    {
+        _player.SetPosition(new Vector2D(playerDto.X, playerDto.Y));
+        _player.RestoreHealth(playerDto.Hp);
+        _player.Inventory.Clear();
+
+        for (int i = 0; i < playerDto.Inventory.Count; i++)
+        {
+            InventoryItemSnapshot entry = playerDto.Inventory[i];
+            Item resolved = _itemResolver(entry.ItemId);
+            _player.Inventory.TryAddItem(resolved, entry.Quantity);
+        }
+
+        int clampedHotbar = global::System.Math.Clamp(playerDto.SelectedHotbarIndex, 0, _player.HotbarCapacity - 1);
+        _player.SelectHotbarSlot(clampedHotbar);
+    }
+
+    private void RestoreEntitiesFromSnapshot(GameStateDTO snapshot, IEntityFactory entityFactory)
+    {
+        for (int i = 0; i < snapshot.Resources.Count; i++)
+        {
+            EntityStateSnapshot r = snapshot.Resources[i];
+            if (Enum.TryParse(r.Type, ignoreCase: true, out ResourceType resourceType))
+            {
+                ResourceNode node = entityFactory.CreateResourceNode(resourceType, new Vector2D(r.X, r.Y));
+                node.RestoreHealth(global::System.Math.Min(r.Hp, node.MaxHp));
+                AddResource(node);
+            }
+        }
+
+        for (int i = 0; i < snapshot.Structures.Count; i++)
+        {
+            StructureStateSnapshot s = snapshot.Structures[i];
+            if (Enum.TryParse(s.Type, ignoreCase: true, out StructureType structureType))
+            {
+                Structure structure = entityFactory.CreateStructure(structureType, s.TileCol, s.TileRow, _level.TileSize);
+                structure.RestoreHealth(global::System.Math.Min(s.Hp, structure.MaxHp));
+                AddStructure(structure);
+            }
+        }
+
+        for (int i = 0; i < snapshot.Enemies.Count; i++)
+        {
+            EnemyStateSnapshot e = snapshot.Enemies[i];
+            if (e.IsBoss)
+            {
+                Boss boss = entityFactory.CreateBoss(e.Type, new Vector2D(e.X, e.Y), _difficulty);
+                boss.RestoreHealth(global::System.Math.Min(e.Hp, boss.MaxHp));
+                SpawnBoss(boss);
+            }
+            else
+            {
+                Enemy enemy = entityFactory.CreateEnemy(e.Type, new Vector2D(e.X, e.Y), _difficulty);
+                enemy.RestoreHealth(global::System.Math.Min(e.Hp, enemy.MaxHp));
+                AddEnemy(enemy);
+            }
         }
     }
 }

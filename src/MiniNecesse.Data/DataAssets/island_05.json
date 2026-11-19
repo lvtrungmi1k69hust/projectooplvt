@@ -1,0 +1,80 @@
+{
+  "islandId": "ISLAND_05",
+  "name": "Shadow Citadel (Dark Fortress)",
+  "biome": "DarkFortress",
+  "width": 24,
+  "height": 18,
+  "seed": 5005,
+  "playerSpawn": { "x": 12, "y": 9 },
+  "tileLayout": [
+    "WWWWWWWWWWWWWWWWWWWWWWWW",
+    "WDDDDDDDDDDDDDDDDDDDDDDW",
+    "WDDRRRDDDDDDDDDDDDRRRDDW",
+    "WDDWWWDDDDDDDDDDDDWWWDDW",
+    "WDDDDDDDDDRRRRDDDDDDDDDW",
+    "WDDDDDDRRRDDDDRRRDDDDDDW",
+    "WDDDDDRDDDDDDDDDDRDDDDDW",
+    "WDDDDDRDDDDDDDDDDRDDDDDW",
+    "WDDDDDDDDDDDDDDDDDDDDDDW",
+    "WDDDDDDDDDDDDDDDDDDDDDDW",
+    "WDDDDDRDDDDDDDDDDRDDDDDW",
+    "WDDDDDRDDDDDDDDDDRDDDDDW",
+    "WDDDDDDRRRDDDDRRRDDDDDDW",
+    "WDDDDDDDDDRRRRDDDDDDDDDW",
+    "WDDWWWDDDDDDDDDDDDWWWDDW",
+    "WDDRRRDDDDDDDDDDDDRRRDDW",
+    "WDDDDDDDDDDDDDDDDDDDDDDW",
+    "WWWWWWWWWWWWWWWWWWWWWWWW"
+  ],
+  "resourceSpawns": [
+    { "type": "StoneRock", "x": 4, "y": 2 },
+    { "type": "StoneRock", "x": 19, "y": 2 },
+    { "type": "StoneRock", "x": 4, "y": 15 },
+    { "type": "StoneRock", "x": 19, "y": 15 },
+    { "type": "IronDeposit", "x": 8, "y": 5 },
+    { "type": "IronDeposit", "x": 15, "y": 5 },
+    { "type": "IronDeposit", "x": 8, "y": 12 },
+    { "type": "IronDeposit", "x": 15, "y": 12 },
+    { "type": "GoldDeposit", "x": 11, "y": 4 },
+    { "type": "GoldDeposit", "x": 12, "y": 4 },
+    { "type": "GoldDeposit", "x": 11, "y": 13 },
+    { "type": "GoldDeposit", "x": 12, "y": 13 }
+  ],
+  "waves": [
+    {
+      "waveNumber": 1,
+      "enemies": [
+        { "type": "FrostRaider", "count": 5 },
+        { "type": "SkeletonArcher", "count": 4 }
+      ]
+    },
+    {
+      "waveNumber": 2,
+      "enemies": [
+        { "type": "SwampZombie", "count": 5 },
+        { "type": "FrostRaider", "count": 4 },
+        { "type": "SkeletonArcher", "count": 4 }
+      ]
+    },
+    {
+      "waveNumber": 3,
+      "enemies": [
+        { "type": "FrostRaider", "count": 7 },
+        { "type": "SkeletonArcher", "count": 5 }
+      ]
+    }
+  ],
+  "boss": {
+    "type": "ShadowLord",
+    "displayName": "Shadow Lord",
+    "maxHp": 600,
+    "moveSpeed": 92.0,
+    "attackDamage": 30,
+    "attackRange": 180.0,
+    "attackCooldown": 1.00,
+    "scoreReward": 800,
+    "initialStrategy": "ranged",
+    "enrageStrategy": "boss_enrage_heavy",
+    "enrageThresholdRatio": 0.30
+  }
+}

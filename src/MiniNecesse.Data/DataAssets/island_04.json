@@ -1,0 +1,80 @@
+{
+  "islandId": "ISLAND_04",
+  "name": "Frostpeak Expanse (Snowlands)",
+  "biome": "Snowlands",
+  "width": 24,
+  "height": 18,
+  "seed": 4004,
+  "playerSpawn": { "x": 12, "y": 9 },
+  "tileLayout": [
+    "WWWWWWWWWWWWWWWWWWWWWWWW",
+    "WNNNNNNNNNNNNNNNNNNNNNNW",
+    "WNNRRRNNNNNNNNNNNNRRRNNW",
+    "WNNRRRNNNNNNNNNNNNRRRNNW",
+    "WNNNNNNNWWWNNWWWNNNNNNNW",
+    "WNNNNNNNWWWNNWWWNNNNNNNW",
+    "WNNNNNNNNNNNNNNNNNNNNNNW",
+    "WNNNNNNRRRRRRRRRRNNNNNNW",
+    "WNNNNNNRNNNNNNNNRNNNNNNW",
+    "WNNNNNNRNNNNNNNNRNNNNNNW",
+    "WNNNNNNRNNNNNNNNRNNNNNNW",
+    "WNNNNNNRRRRRRRRRRNNNNNNW",
+    "WNNNNNNNWWWNNWWWNNNNNNNW",
+    "WNNNNNNNWWWNNWWWNNNNNNNW",
+    "WNNRRRNNNNNNNNNNNNRRRNNW",
+    "WNNRRRNNNNNNNNNNNNRRRNNW",
+    "WNNNNNNNNNNNNNNNNNNNNNNW",
+    "WWWWWWWWWWWWWWWWWWWWWWWW"
+  ],
+  "resourceSpawns": [
+    { "type": "Tree", "x": 6, "y": 2 },
+    { "type": "Tree", "x": 17, "y": 2 },
+    { "type": "Tree", "x": 6, "y": 15 },
+    { "type": "Tree", "x": 17, "y": 15 },
+    { "type": "IronDeposit", "x": 4, "y": 3 },
+    { "type": "IronDeposit", "x": 19, "y": 3 },
+    { "type": "IronDeposit", "x": 4, "y": 14 },
+    { "type": "IronDeposit", "x": 19, "y": 14 },
+    { "type": "GoldDeposit", "x": 9, "y": 7 },
+    { "type": "GoldDeposit", "x": 14, "y": 7 },
+    { "type": "GoldDeposit", "x": 9, "y": 11 },
+    { "type": "GoldDeposit", "x": 14, "y": 11 }
+  ],
+  "waves": [
+    {
+      "waveNumber": 1,
+      "enemies": [
+        { "type": "FrostRaider", "count": 4 },
+        { "type": "SkeletonArcher", "count": 3 }
+      ]
+    },
+    {
+      "waveNumber": 2,
+      "enemies": [
+        { "type": "FrostRaider", "count": 5 },
+        { "type": "SwampZombie", "count": 3 },
+        { "type": "SkeletonArcher", "count": 3 }
+      ]
+    },
+    {
+      "waveNumber": 3,
+      "enemies": [
+        { "type": "FrostRaider", "count": 6 },
+        { "type": "SkeletonArcher", "count": 4 }
+      ]
+    }
+  ],
+  "boss": {
+    "type": "CryoGolem",
+    "displayName": "Cryo Golem",
+    "maxHp": 480,
+    "moveSpeed": 72.0,
+    "attackDamage": 26,
+    "attackRange": 50.0,
+    "attackCooldown": 1.15,
+    "scoreReward": 650,
+    "initialStrategy": "melee",
+    "enrageStrategy": "boss_enrage_heavy",
+    "enrageThresholdRatio": 0.30
+  }
+}
