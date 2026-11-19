@@ -1,4 +1,5 @@
 using System;
+using MiniNecesse.Core.Crafting;
 using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Interfaces;
 using MiniNecesse.Core.Math;
@@ -6,21 +7,26 @@ using MiniNecesse.Core.Math;
 namespace MiniNecesse.Core.Entities;
 
 /// <summary>
-/// Represents the player-controlled survivor character with hotbar selection,
-/// equipped weapon/tool references, and attack cooldown management.
+/// Represents the player-controlled survivor character with inventory aggregation,
+/// hotbar selection, equipped weapon/tool references, and attack cooldown management.
 /// </summary>
 public sealed class Player : Character
 {
     private const int DEFAULT_HOTBAR_CAPACITY = 9;
+    private const int DEFAULT_INVENTORY_CAPACITY = 20;
     private const float DEFAULT_BARE_HAND_COOLDOWN = 0.45f;
     private const int DEFAULT_BARE_HAND_HARVEST_POWER = 5;
 
+    private readonly Inventory _inventory;
     private readonly int _hotbarCapacity;
     private int _selectedHotbarIndex;
     private IWeapon? _equippedWeapon;
     private ToolType _equippedToolType;
     private int _harvestPower;
     private float _attackCooldownRemaining;
+
+    /// <summary>Gets the player's inventory (UML Aggregation).</summary>
+    public Inventory Inventory => _inventory;
 
     /// <summary>Gets the number of hotbar slots available to the player.</summary>
     public int HotbarCapacity => _hotbarCapacity;
@@ -57,7 +63,8 @@ public sealed class Player : Character
         Vector2D spawnPosition,
         int maxHp = 100,
         float moveSpeed = 140f,
-        int hotbarCapacity = DEFAULT_HOTBAR_CAPACITY)
+        int hotbarCapacity = DEFAULT_HOTBAR_CAPACITY,
+        Inventory? inventory = null)
         : base(id, spawnPosition, new Vector2D(24f, 24f), maxHp, moveSpeed)
     {
         if (hotbarCapacity <= 0)
@@ -65,6 +72,7 @@ public sealed class Player : Character
             throw new ArgumentOutOfRangeException(nameof(hotbarCapacity), "Hotbar capacity must be positive.");
         }
 
+        _inventory = inventory ?? new Inventory(DEFAULT_INVENTORY_CAPACITY);
         _hotbarCapacity = hotbarCapacity;
         _selectedHotbarIndex = 0;
         _equippedToolType = ToolType.None;
@@ -97,7 +105,10 @@ public sealed class Player : Character
         _harvestPower = DEFAULT_BARE_HAND_HARVEST_POWER;
     }
 
-    /// <summary>Selects a valid 0-based hotbar slot index.</summary>
+    /// <summary>Gets the item stack currently selected on the hotbar, or <see langword="null"/> if empty.</summary>
+    public ItemStack? SelectedItemStack => _inventory.GetStackAt(_selectedHotbarIndex);
+
+    /// <summary>Selects a valid 0-based hotbar slot index and equips its item polymorphically.</summary>
     public void SelectHotbarSlot(int slotIndex)
     {
         if (slotIndex < 0 || slotIndex >= _hotbarCapacity)
@@ -105,13 +116,23 @@ public sealed class Player : Character
             throw new ArgumentOutOfRangeException(nameof(slotIndex), "Hotbar slot index is out of range.");
         }
 
-        if (_selectedHotbarIndex == slotIndex)
+        _selectedHotbarIndex = slotIndex;
+        SyncEquippedFromSelectedSlot();
+        OnHotbarSelectionChanged?.Invoke(_selectedHotbarIndex);
+    }
+
+    /// <summary>Synchronizes equipped weapon/tool state from the currently selected hotbar slot.</summary>
+    public void SyncEquippedFromSelectedSlot()
+    {
+        ItemStack? selected = SelectedItemStack;
+        if (selected is null)
         {
+            EquipWeapon(null);
+            UnequipTool();
             return;
         }
 
-        _selectedHotbarIndex = slotIndex;
-        OnHotbarSelectionChanged?.Invoke(_selectedHotbarIndex);
+        selected.Item.ApplyHotbarSelection(this);
     }
 
     /// <summary>Starts the attack or tool swing cooldown using the equipped weapon or default timing.</summary>
