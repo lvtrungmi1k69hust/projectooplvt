@@ -1,0 +1,60 @@
+@startuml MiniNecesse_StateDiagrams
+title MiniNecesse (v2026) — State Diagrams (GameStateMachine & Enemy/Boss AI FSM)
+
+' =============================================================================
+' PART 1: Game Lifecycle State Machine (GameStateMachine + IGameState)
+' =============================================================================
+state "GameStateMachine (MiniNecesse.Core.Patterns.State)" as GSM {
+    [*] --> MainMenu : new GameSession()
+
+    state MainMenu : MainMenuState\nUpdate(dt) idle\nSelect Island / Load Save
+    state Playing : PlayingState\nStepPlayingSimulation(dt)\nDayNight, AI, Physics, Pool
+    state Paused : PausedState\nSimulation frozen\nSave / Load / Settings
+    state Victory : VictoryState\nOnSoundEffectRequested("victory")\nRecord High Score / Next Island
+    state GameOver : GameOverState\nOnSoundEffectRequested("game_over")\nRecord High Score / Replay
+
+    MainMenu --> Playing : Start()
+    Playing --> Paused : Pause() [Esc pressed]
+    Paused --> Playing : Resume() [Esc / Resume]
+    Paused --> MainMenu : ReturnToMainMenu()
+    Playing --> Victory : RuleEngine.EvaluateOutcome()\n[IsBossDefeated == true]
+    Playing --> GameOver : RuleEngine.EvaluateOutcome()\n[Player.CurrentHp == 0]
+    Victory --> Playing : InitializeNewIslandSession(nextIsland)
+    Victory --> MainMenu : ReturnToMainMenu()
+    GameOver --> Playing : PlayAgain()
+    GameOver --> MainMenu : ReturnToMainMenu()
+}
+
+' =============================================================================
+' PART 2: Enemy & Boss AI FSM (EnemyFSM + Boss.TakeDamage)
+' =============================================================================
+state "Enemy & Boss AI FSM (EnemyFSM + Boss)" as AIFSM {
+    [*] --> Idle : EnemyFactory.CreateEnemy / CreateBoss
+
+    state Idle : Stationary\n_stateTimer < _idleDuration
+    state Patrol : Move along CurrentPatrolDirection\n_stateTimer < _patrolDuration
+    state Chase : AStarPathfinder shortest path\n(or breach BlockingWallTile)
+    state Attack : Melee strike or RangedKiteStrategy\nprojectile shot on cooldown
+    state Enraged : Boss Phase (< 30% HP)\nSetAIStrategy(BossEnrageStrategy)\nSpeed x1.35, Dmg x1.25, Cooldown x0.70\n3-5 way spread volley
+    state Dead : OnHealthDepleted()\nDeactivate() + OnDefeated
+
+    Idle --> Patrol : _stateTimer >= _idleDuration
+    Patrol --> Idle : _stateTimer >= _patrolDuration
+
+    Idle --> Chase : distance <= DetectionRange
+    Patrol --> Chase : distance <= DetectionRange
+    Chase --> Patrol : distance > DetectionRange
+    Chase --> Attack : distance <= AttackRange
+    Attack --> Chase : distance > AttackRange
+
+    Chase --> Enraged : Boss.TakeDamage()\n[IsBoss && HealthRatio < 0.30]
+    Attack --> Enraged : Boss.TakeDamage()\n[IsBoss && HealthRatio < 0.30]
+
+    Idle --> Dead : CurrentHp == 0
+    Patrol --> Dead : CurrentHp == 0
+    Chase --> Dead : CurrentHp == 0
+    Attack --> Dead : CurrentHp == 0
+    Enraged --> Dead : CurrentHp == 0
+    Dead --> [*]
+}
+@enduml
