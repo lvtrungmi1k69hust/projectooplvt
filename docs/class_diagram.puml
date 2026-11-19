@@ -1,0 +1,542 @@
+@startuml MiniNecesse_ClassDiagram
+title MiniNecesse (v2026) — UML 2.5 Class Diagram (3-Tier Architecture)
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+' =============================================================================
+' LAYER 2: MiniNecesse.Core (Pure C# — 0% UI / Engine dependencies)
+' =============================================================================
+package "MiniNecesse.Core.Math" {
+    struct Vector2D <<readonly struct>> {
+        + X : float
+        + Y : float
+        + Length : float
+        + Normalized() : Vector2D
+        + {static} Distance(a : Vector2D, b : Vector2D) : float
+        + {static} DistanceSquared(a : Vector2D, b : Vector2D) : float
+    }
+
+    struct RectF <<readonly struct>> {
+        + X : float
+        + Y : float
+        + Width : float
+        + Height : float
+        + Center : Vector2D
+        + Intersects(other : RectF) : bool
+        + GetIntersection(other : RectF) : RectF
+        + Contains(point : Vector2D) : bool
+    }
+}
+
+package "MiniNecesse.Core.Interfaces" {
+    interface IDamageable {
+        + CurrentHp : int
+        + MaxHp : int
+        + IsAlive : bool
+        + TakeDamage(amount : int) : void
+        + Heal(amount : int) : void
+    }
+
+    interface IMovable {
+        + Position : Vector2D
+        + Velocity : Vector2D
+        + MoveSpeed : float
+        + FacingDirection : Direction
+        + Move(direction : Vector2D, deltaTime : float) : void
+        + SetPosition(position : Vector2D) : void
+    }
+
+    interface IHarvestable {
+        + RequiredTool : ToolType
+        + DropItemId : string
+        + DropQuantity : int
+        + CanHarvestWith(toolType : ToolType) : bool
+        + Harvest(toolType : ToolType, toolPower : int) : int
+    }
+
+    interface ICollectible {
+        + ItemId : string
+        + Quantity : int
+        + IsCollected : bool
+        + TryCollect(tryStore : Func<string, int, bool>) : bool
+    }
+
+    interface IWeapon {
+        + WeaponId : string
+        + Name : string
+        + BaseDamage : int
+        + AttackRange : float
+        + BaseCooldown : float
+        + IsRanged : bool
+        + ComputeDamage() : int
+        + ComputeCooldown() : float
+    }
+
+    interface IAIStrategy {
+        + StrategyName : string
+        + Execute(enemy : Enemy, target : Player, level : IslandLevel, deltaTime : float) : void
+    }
+
+    interface IGameState {
+        + StateType : GameState
+        + Enter() : void
+        + Update(deltaTime : float) : void
+        + Exit() : void
+    }
+
+    interface IEntityFactory {
+        + CreateEnemy(archetypeId : string, spawnPosition : Vector2D, difficulty : Difficulty) : Enemy
+        + CreateBoss(bossId : string, spawnPosition : Vector2D, difficulty : Difficulty) : Boss
+        + CreateResourceNode(resourceType : ResourceType, position : Vector2D) : ResourceNode
+        + CreateStructure(structureType : StructureType, tileCol : int, tileRow : int, tileSize : float) : Structure
+    }
+
+    interface IInputProvider {
+        + GetMovementAxis() : Vector2D
+        + GetAimWorldPosition() : Vector2D
+        + IsPrimaryActionPressed() : bool
+        + IsSecondaryActionPressed() : bool
+        + IsInteractPressed() : bool
+        + IsPausePressed() : bool
+        + IsInventoryTogglePressed() : bool
+        + GetSelectedHotbarSlot() : int?
+    }
+
+    interface IHudObserver {
+        + OnPlayerHealthUpdated(currentHp : int, maxHp : int) : void
+        + OnScoreUpdated(newScore : int) : void
+        + OnInventoryUpdated() : void
+        + OnDayPhaseUpdated(dayNumber : int, phase : DayPhase, normalizedProgress : float) : void
+        + OnGameStateUpdated(newState : GameState) : void
+        + OnBossHealthUpdated(bossName : string, currentHp : int, maxHp : int, isVisible : bool) : void
+    }
+
+    interface ILevelLoader {
+        + LoadConfig() : GameConfig
+        + LoadRecipes() : IReadOnlyList<CraftingRecipe>
+        + LoadIsland(islandId : string) : LoadedIslandPackage
+        + GetAvailableIslandIds() : IReadOnlyList<string>
+    }
+
+    interface ISaveStorage {
+        + Save(slotIndex : int, snapshot : GameStateDTO) : void
+        + Load(slotIndex : int) : GameStateDTO
+        + Exists(slotIndex : int) : bool
+        + Delete(slotIndex : int) : void
+    }
+
+    interface IHighScoreRepository {
+        + LoadTopScores() : IReadOnlyList<HighScoreEntry>
+        + RecordScore(entry : HighScoreEntry) : void
+        + Clear() : void
+    }
+}
+
+package "MiniNecesse.Core.Entities" {
+    abstract class Entity {
+        - _id : string
+        - _position : Vector2D
+        - _size : Vector2D
+        - _isActive : bool
+        + Id : string
+        + Position : Vector2D
+        + Size : Vector2D
+        + IsActive : bool
+        + GetBounds() : RectF
+        + Deactivate() : void
+        + {abstract} Update(deltaTime : float) : void
+        # UpdatePosition(newPosition : Vector2D) : void
+    }
+
+    abstract class Character {
+        - _currentHp : int
+        - _maxHp : int
+        - _moveSpeed : float
+        - _velocity : Vector2D
+        - _facingDirection : Direction
+        + CurrentHp : int
+        + MaxHp : int
+        + IsAlive : bool
+        + HealthRatio : float
+        + TakeDamage(amount : int) : void
+        + Heal(amount : int) : void
+        + Move(direction : Vector2D, deltaTime : float) : void
+        + SetPosition(position : Vector2D) : void
+        # SetMoveSpeed(newSpeed : float) : void
+        # OnHealthDepleted() : void
+    }
+
+    class Player {
+        - _inventory : Inventory
+        - _selectedHotbarIndex : int
+        - _equippedWeapon : IWeapon?
+        - _equippedToolType : ToolType
+        - _harvestPower : int
+        + Inventory : Inventory
+        + EquippedWeapon : IWeapon?
+        + CanAct : bool
+        + EquipWeapon(weapon : IWeapon?) : void
+        + EquipTool(toolType : ToolType, harvestPower : int) : void
+        + SelectHotbarSlot(slotIndex : int) : void
+        + SyncEquippedFromSelectedSlot() : void
+        + Update(deltaTime : float) : void
+    }
+
+    class Enemy {
+        - _archetype : string
+        - _state : EnemyState
+        - _aiStrategy : IAIStrategy?
+        - _attackDamage : int
+        - _attackRange : float
+        + IsBoss : bool
+        + State : EnemyState
+        + CurrentStrategy : IAIStrategy?
+        + SetAIStrategy(newStrategy : IAIStrategy) : void
+        + SetState(newState : EnemyState) : void
+        + TryAttack(target : IDamageable) : bool
+        + ExecuteAI(target : Player, level : IslandLevel, deltaTime : float) : void
+        + Update(deltaTime : float) : void
+    }
+
+    class Boss {
+        - _bossName : string
+        - _enrageThresholdRatio : float
+        - _isEnraged : bool
+        - _enrageStrategy : IAIStrategy?
+        + BossName : string
+        + IsEnraged : bool
+        + IsBoss : bool
+        + TakeDamage(amount : int) : void
+    }
+
+    class ResourceNode {
+        - _resourceType : ResourceType
+        - _requiredTool : ToolType
+        - _dropItemId : string
+        - _dropQuantity : int
+        - _currentHp : int
+        - _maxHp : int
+        + Harvest(toolType : ToolType, toolPower : int) : int
+        + TakeDamage(amount : int) : void
+        + Update(deltaTime : float) : void
+    }
+
+    class Structure {
+        - _structureType : StructureType
+        - _isSolid : bool
+        - _isCraftingStation : bool
+        - _lightRadius : float
+        - _tileCol : int
+        - _tileRow : int
+        + TakeDamage(amount : int) : void
+        + Update(deltaTime : float) : void
+    }
+
+    class Projectile {
+        - _velocity : Vector2D
+        - _damage : int
+        - _ownerId : string
+        - _isFromPlayer : bool
+        + Reset(origin : Vector2D, velocity : Vector2D, damage : int, maxLifetime : float, ownerId : string, isFromPlayer : bool) : void
+        + Update(deltaTime : float) : void
+    }
+
+    class DroppedItem {
+        - _itemId : string
+        - _quantity : int
+        - _isCollected : bool
+        + Reset(itemId : string, quantity : int, position : Vector2D, despawnSeconds : float) : void
+        + TryCollect(tryStore : Func<string, int, bool>) : bool
+        + Update(deltaTime : float) : void
+    }
+
+    class Tile {
+        - _col : int
+        - _row : int
+        - _flyweight : TileDataFlyweight
+        - _isOccupiedBySolidStructure : bool
+        + IsWalkable : bool
+        + ColorHex : string
+        + GetWorldBounds(tileSize : float) : RectF
+    }
+
+    class IslandLevel {
+        - _islandId : string
+        - _width : int
+        - _height : int
+        - _tiles : List<Tile>
+        + Tiles : IReadOnlyList<Tile>
+        + GetTile(col : int, row : int) : Tile
+        + IsTileWalkable(col : int, row : int) : bool
+        + SetStructureOccupancy(col : int, row : int, isOccupied : bool) : void
+    }
+}
+
+package "MiniNecesse.Core.Crafting" {
+    abstract class Item {
+        - _id : string
+        - _name : string
+        - _category : ItemCategory
+        - _maxStackSize : int
+        + ApplyHotbarSelection(player : Player) : void
+        + TryUse(player : Player) : bool
+        + TryGetPlaceableStructure(out structureType : StructureType) : bool
+    }
+
+    class WeaponItem
+    class ToolItem
+    class ConsumableItem
+    class MaterialItem
+    class StructureItem
+
+    class ItemStack {
+        - _item : Item
+        - _quantity : int
+        + Add(amount : int) : int
+        + Remove(amount : int) : void
+    }
+
+    class Inventory {
+        - _capacity : int
+        - _stacks : List<ItemStack>
+        + Stacks : IReadOnlyList<ItemStack>
+        + TryAddItem(item : Item, quantity : int) : bool
+        + TryRemoveItem(itemId : string, quantity : int) : bool
+        + HasItem(itemId : string, requiredQuantity : int) : bool
+    }
+
+    class CraftingRecipe {
+        + RecipeId : string
+        + OutputItemId : string
+        + OutputQuantity : int
+        + RequiresWorkbench : bool
+        + Ingredients : IReadOnlyList<RecipeIngredient>
+    }
+
+    class CraftingSystem {
+        - _itemResolver : Func<string, Item>
+        + CanCraft(inventory : Inventory, recipe : CraftingRecipe, nearWorkbench : bool) : bool
+        + TryCraft(inventory : Inventory, recipe : CraftingRecipe, nearWorkbench : bool, out craftedStack : ItemStack?) : bool
+        + CraftOrThrow(inventory : Inventory, recipe : CraftingRecipe, nearWorkbench : bool) : ItemStack
+    }
+}
+
+package "MiniNecesse.Core.Patterns" {
+    class TileDataFlyweight <<Flyweight>> {
+        + TileType : TileType
+        + Hardness : int
+        + IsWalkable : bool
+        + MovementSpeedMultiplier : float
+        + ColorHex : string
+        + SpriteId : string
+    }
+
+    class TileDataFlyweightFactory <<FlyweightFactory>> {
+        - _cache : Dictionary<TileType, TileDataFlyweight>
+        + Get(tileType : TileType) : TileDataFlyweight
+    }
+
+    abstract class WeaponUpgradeDecorator <<Decorator>> {
+        - _innerWeapon : IWeapon
+        + ComputeDamage() : int
+        + ComputeCooldown() : float
+    }
+
+    class FireDamageDecorator
+    class SwiftAttackDecorator
+
+    class EnemyFactory <<Factory>>
+    class ItemFactory <<Factory>>
+    class "ObjectPool<T>" as ObjectPool <<Pool>> {
+        - _available : Stack<T>
+        + Acquire() : T
+        + Release(instance : T) : void
+        + Prewarm(count : int) : void
+    }
+
+    class GameStateMachine <<Context>> {
+        - _states : Dictionary<GameState, IGameState>
+        - _currentState : IGameState?
+        + TransitionTo(nextState : GameState) : void
+        + Update(deltaTime : float) : void
+    }
+
+    class MainMenuState
+    class PlayingState
+    class PausedState
+    class VictoryState
+    class GameOverState
+}
+
+package "MiniNecesse.Core.AI & Physics" {
+    class "SpatialHashGrid<T>" as SpatialHashGrid {
+        + Clear() : void
+        + Insert(entity : T) : void
+        + Query(queryArea : RectF, resultsBuffer : List<T>) : void
+    }
+
+    class CollisionDetector {
+        + TryDetectOverlap(entityA : Entity, entityB : Entity, out info : CollisionInfo) : bool
+        + MoveWithTileCollision(movable : IMovable, delta : Vector2D, size : Vector2D, level : IslandLevel) : Vector2D
+        + TryAdvanceProjectileSwept<TTarget>(...) : bool
+    }
+
+    class AStarPathfinder {
+        + FindPath(level : IslandLevel, start : GridPoint, goal : GridPoint, outputBuffer : List<GridPoint>, maxIterations : int) : PathResult
+    }
+
+    class EnemyFSM {
+        + Evaluate(enemy : Enemy, target : Player, deltaTime : float) : EnemyState
+    }
+
+    class RaidWaveSpawner {
+        + SpawnNextWave(player : Player, spawnedOutput : List<Enemy>) : int
+        + TryFindSafeSpawnPosition(playerCenter : Vector2D, out spawnPosition : Vector2D) : bool
+    }
+
+    class MeleeChaseStrategy
+    class RangedKiteStrategy
+    class BossEnrageStrategy
+}
+
+package "MiniNecesse.Core.Rules" {
+    struct CollisionInfo <<readonly struct>>
+    class DayNightCycle {
+        + DayNumber : int
+        + CurrentPhase : DayPhase
+        + Advance(deltaTime : float) : void
+    }
+
+    class RuleEngine {
+        - _score : int
+        + Score : int
+        + AddScore(points : int) : void
+        + ResolveMeleeAttack(attacker : Player, target : IDamageable) : bool
+        + ResolveHarvest(node : ResourceNode, toolType : ToolType, toolPower : int) : DroppedItem?
+        + ResolveCollision(info : CollisionInfo) : Vector2D
+        + EvaluateOutcome(player : Player, bossDefeated : bool) : GameState
+    }
+
+    class GameLoopController {
+        + {static} FIXED_DELTA_TIME : float
+        + StepFrame(frameDeltaTime : float) : int
+    }
+
+    class GameSession {
+        - _stateMachine : GameStateMachine
+        - _dayNightCycle : DayNightCycle
+        - _ruleEngine : RuleEngine
+        - _projectilePool : ObjectPool<Projectile>
+        - _droppedItemPool : ObjectPool<DroppedItem>
+        - _hudObservers : List<IHudObserver>
+        + ExecutePrimaryAction(aimWorldPosition : Vector2D) : bool
+        + ExecuteSecondaryAction(aimWorldPosition : Vector2D, entityFactory : IEntityFactory) : bool
+        + TryCraft(recipe : CraftingRecipe, workbenchRadius : float) : bool
+        + Update(deltaTime : float) : void
+        + CreateSnapshot() : GameStateDTO
+        + RestoreFromSnapshot(snapshot : GameStateDTO, entityFactory : IEntityFactory) : void
+    }
+}
+
+' =============================================================================
+' LAYER 3 & LAYER 1: Data & Presentation Adapters
+' =============================================================================
+package "MiniNecesse.Data" {
+    class JsonLevelLoader
+    class JsonSaveStorage
+    class JsonHighScoreRepository
+}
+
+package "MiniNecesse.App" {
+    class WinFormsInputAdapter
+    class AudioManager
+    class HudViewModel
+    class TopDownRenderer
+    class FrmMainMenu
+    class FrmGamePlay
+}
+
+' =============================================================================
+' ALL 6 UML 2.5 RELATIONSHIPS WITH MULTIPLICITIES
+' =============================================================================
+
+' 1. Inheritance (<|--)
+Entity <|-- Character
+Character <|-- Player
+Character <|-- Enemy
+Enemy <|-- Boss
+Entity <|-- ResourceNode
+Entity <|-- Structure
+Entity <|-- Projectile
+Entity <|-- DroppedItem
+
+Item <|-- WeaponItem
+Item <|-- ToolItem
+Item <|-- ConsumableItem
+Item <|-- MaterialItem
+Item <|-- StructureItem
+
+WeaponUpgradeDecorator <|-- FireDamageDecorator
+WeaponUpgradeDecorator <|-- SwiftAttackDecorator
+
+' 2. Realization (<|..)
+IDamageable <|.. Character
+IMovable <|.. Character
+IDamageable <|.. ResourceNode
+IHarvestable <|.. ResourceNode
+IDamageable <|.. Structure
+ICollectible <|.. DroppedItem
+IWeapon <|.. WeaponItem
+IWeapon <|.. WeaponUpgradeDecorator
+
+IAIStrategy <|.. MeleeChaseStrategy
+IAIStrategy <|.. RangedKiteStrategy
+IAIStrategy <|.. BossEnrageStrategy
+
+IGameState <|.. MainMenuState
+IGameState <|.. PlayingState
+IGameState <|.. PausedState
+IGameState <|.. VictoryState
+IGameState <|.. GameOverState
+
+IEntityFactory <|.. EnemyFactory
+ILevelLoader <|.. JsonLevelLoader
+ISaveStorage <|.. JsonSaveStorage
+IHighScoreRepository <|.. JsonHighScoreRepository
+IInputProvider <|.. WinFormsInputAdapter
+IHudObserver <|.. HudViewModel
+
+' 3. Composition (*--)
+IslandLevel "1" *-- "1..*" Tile : owns
+GameSession "1" *-- "1" GameStateMachine : owns
+GameSession "1" *-- "1" DayNightCycle : owns
+GameSession "1" *-- "1" RuleEngine : owns
+GameSession "1" *-- "2" ObjectPool : owns
+
+' 4. Aggregation (o--)
+Player "1" o-- "1" Inventory : carries
+Inventory "1" o-- "0..*" ItemStack : contains
+GameSession "1" o-- "0..*" IHudObserver : notifies
+
+' 5. Association (-->)
+Player "1" --> "0..1" IWeapon : equipped
+Enemy "1" --> "0..1" IAIStrategy : strategy
+Tile "0..*" --> "1" TileDataFlyweight : shares
+TileDataFlyweightFactory "1" --> "1..*" TileDataFlyweight : caches
+WeaponUpgradeDecorator "1" --> "1" IWeapon : wraps
+GameStateMachine "1" --> "1..5" IGameState : manages
+FrmGamePlay "1" --> "1" GameSession : drives
+FrmGamePlay "1" --> "1" IInputProvider : reads
+FrmGamePlay "1" --> "1" TopDownRenderer : renders
+
+' 6. Dependency (..>)
+RuleEngine ..> CollisionInfo : <<use>>
+CraftingSystem ..> CraftingRecipe : <<use>>
+CraftingSystem ..> Inventory : <<use>>
+MeleeChaseStrategy ..> AStarPathfinder : <<use>>
+MeleeChaseStrategy ..> EnemyFSM : <<use>>
+RangedKiteStrategy ..> EnemyFSM : <<use>>
+GameSession ..> CollisionDetector : <<use>>
+GameSession ..> SpatialHashGrid : <<use>>
+@enduml

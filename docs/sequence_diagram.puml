@@ -1,0 +1,95 @@
+@startuml MiniNecesse_SequenceDiagrams
+
+' =============================================================================
+' SEQUENCE DIAGRAM 1: 1 Frame Fixed Timestep Game Loop (FixedUpdate(dt))
+' =============================================================================
+title Sequence 1: Fixed-Timestep Game Loop (1 Frame @ 60 Hz)
+
+participant "FrmGamePlay\n(App)" as UI
+participant "GameLoopController\n(Core)" as Loop
+participant "WinFormsInputAdapter\n(IInputProvider)" as Input
+participant "GameSession\n(Core)" as Session
+participant "PlayingState\n(IGameState)" as State
+participant "Enemy & IAIStrategy\n(Core.AI)" as AI
+participant "CollisionDetector &\nSpatialHashGrid" as Physics
+participant "RuleEngine\n(Core.Rules)" as Rules
+participant "HudViewModel &\nAudioManager" as Obs
+participant "TopDownRenderer\n(App)" as Render
+
+UI -> UI : Timer.Tick (measure Stopwatch frameDt)
+UI -> Loop : StepFrame(frameDt)
+loop while accumulator >= FIXED_DELTA_TIME (1/60s)
+    Loop -> UI : RunFixedSimulationStep(fixedDt)
+    UI -> Input : GetMovementAxis(), GetAimWorldPosition(),\nIsPrimaryActionPressed(), IsSecondaryActionPressed()
+    UI -> Session : MovePlayer(axis, fixedDt)
+    Session -> Physics : MoveWithTileCollision(player, delta, size, level)
+    opt Primary Action Pressed
+        UI -> Session : ExecutePrimaryAction(aimWorld)
+        Session -> Rules : ResolveMeleeAttack / ResolveHarvest
+        Rules --> Obs : OnScoreChanged / OnSoundEffectRequested
+    end
+    UI -> Session : Update(fixedDt)
+    Session -> State : Update(fixedDt)
+    State -> Session : StepPlayingSimulation(fixedDt)
+    Session -> AI : enemy.Update(dt) & enemy.ExecuteAI(player, level, dt)
+    Session -> Physics : Clear() & InsertRange(enemies)\nTryAdvanceProjectileSwept(proj, dt, level, grid)
+    Session -> Rules : ResolveProjectileHit() / ResolvePickup()
+    Session -> Session : CleanupInactiveEntities()\n(Release back to ObjectPool<T>)
+    Session -> Rules : EvaluateOutcome(player, bossDefeated)
+    opt Player HP == 0 or Boss Defeated
+        Session -> Obs : OnGameStateUpdated(GameOver / Victory)
+    end
+end
+UI -> Render : ComputeCameraOffset(session, viewport)
+UI -> UI : canvas.Invalidate() -> OnPaint
+UI -> Render : Render(graphics, viewport, session, hud, cam, aim)
+
+newpage
+
+' =============================================================================
+' SEQUENCE DIAGRAM 2: Crafting Workflow (CraftItem)
+' =============================================================================
+title Sequence 2: Crafting Item Workflow (CraftItem)
+
+actor Player as User
+participant "CraftingOverlayPanel\n(App)" as Panel
+participant "GameSession\n(Core)" as Session
+participant "CraftingSystem\n(Core.Crafting)" as Craft
+participant "ItemFactory\n(Core.Patterns)" as Factory
+participant "Inventory\n(Core.Crafting)" as Inv
+participant "RuleEngine\n(Core.Rules)" as Rules
+participant "HudViewModel &\nAudioManager" as Obs
+
+User -> Panel : Press [C] to open Crafting Panel
+Panel -> Session : IsPlayerNearWorkbench(radius)
+loop for each CraftingRecipe from recipes.json
+    Panel -> Craft : CanCraft(inventory, recipe, nearWorkbench)
+    Craft -> Inv : HasItem(ingredient.ItemId, ingredient.Quantity)
+    Craft --> Panel : bool (highlight Green / Red)
+end
+
+User -> Panel : Click [Craft] on selected recipe
+Panel -> Session : TryCraft(recipe, workbenchRadius)
+Session -> Session : IsPlayerNearWorkbench(workbenchRadius)
+Session -> Craft : TryCraft(inventory, recipe, nearWorkbench, out stack)
+Craft -> Craft : CanCraft(...)
+alt requirements satisfied
+    Craft -> Factory : ResolveItem(recipe.OutputItemId)
+    Factory --> Craft : Item (Weapon/Tool/Structure/Consumable)
+    loop for each ingredient
+        Craft -> Inv : TryRemoveItem(itemId, quantity)
+    end
+    Craft -> Inv : TryAddItem(outputItem, recipe.OutputQuantity)
+    Inv --> Obs : OnInventoryChanged -> OnInventoryUpdated()
+    Craft --> Session : true (OnItemCrafted)
+    Session -> Rules : RecordCraftCompleted() (+15 score)
+    Rules --> Obs : OnScoreChanged -> OnScoreUpdated(score)
+    Session -> Session : Player.SyncEquippedFromSelectedSlot()
+    Session --> Obs : OnSoundEffectRequested("craft")
+    Session --> Panel : true
+    Panel -> Panel : RefreshView()
+else missing materials or no nearby workbench
+    Craft --> Session : false (Inventory untouched)
+    Session --> Panel : false
+end
+@enduml
