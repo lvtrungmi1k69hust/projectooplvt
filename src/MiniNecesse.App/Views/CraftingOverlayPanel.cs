@@ -32,7 +32,7 @@ public sealed class CraftingOverlayPanel : Panel
     public CraftingOverlayPanel()
     {
         Size = new Size(560, 440);
-        BackColor = Color.FromArgb(238, 20, 26, 38);
+        BackColor = Color.FromArgb(20, 26, 38);
         BorderStyle = BorderStyle.FixedSingle;
         Visible = false;
 

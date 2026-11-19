@@ -99,8 +99,8 @@ public sealed class FrmGamePlay : Form
         _availableIslands = _levelLoader.GetAvailableIslandIds();
         _itemFactory = ItemFactory.CreateDefault();
 
+        SuspendLayout();
         Text = "MiniNecesse — Survival Island";
-        ClientSize = new Size(1024, 680);
         StartPosition = FormStartPosition.CenterScreen;
         KeyPreview = true;
         DoubleBuffered = true;
@@ -120,6 +120,9 @@ public sealed class FrmGamePlay : Form
         (_outcomePanel, _lblOutcomeTitle, _lblOutcomeSummary, _txtHighScoreName, _btnSaveHighScore, _btnNextIsland, _btnPlayAgain, _btnOutcomeMenu) = BuildOutcomeOverlay();
         Controls.Add(_outcomePanel);
         _outcomePanel.BringToFront();
+
+        ClientSize = new Size(1024, 680);
+        ResumeLayout(false);
 
         _renderTimer = new System.Windows.Forms.Timer { Interval = 16 };
         SubscribeUiEvents();
@@ -486,8 +489,13 @@ public sealed class FrmGamePlay : Form
         CenterControl(_outcomePanel);
     }
 
-    private void CenterControl(Control control)
+    private void CenterControl(Control? control)
     {
+        if (control is null)
+        {
+            return;
+        }
+
         control.Location = new Point(
             Math.Max(0, (ClientSize.Width - control.Width) / 2),
             Math.Max(0, (ClientSize.Height - control.Height) / 2));
@@ -576,7 +584,7 @@ public sealed class FrmGamePlay : Form
         var panel = new Panel
         {
             Size = new Size(320, 340),
-            BackColor = Color.FromArgb(242, 20, 26, 38),
+            BackColor = Color.FromArgb(20, 26, 38),
             BorderStyle = BorderStyle.FixedSingle,
             Visible = false
         };
@@ -606,7 +614,7 @@ public sealed class FrmGamePlay : Form
         var panel = new Panel
         {
             Size = new Size(380, 360),
-            BackColor = Color.FromArgb(244, 20, 26, 38),
+            BackColor = Color.FromArgb(20, 26, 38),
             BorderStyle = BorderStyle.FixedSingle,
             Visible = false
         };
