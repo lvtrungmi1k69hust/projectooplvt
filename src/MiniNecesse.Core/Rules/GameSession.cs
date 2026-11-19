@@ -1,21 +1,27 @@
 using System;
 using System.Collections.Generic;
+using MiniNecesse.Core.AI;
 using MiniNecesse.Core.Crafting;
 using MiniNecesse.Core.Entities;
 using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Interfaces;
 using MiniNecesse.Core.Math;
+using MiniNecesse.Core.Patterns.Pool;
+using MiniNecesse.Core.Patterns.State;
+using MiniNecesse.Core.Physics;
 
 namespace MiniNecesse.Core.Rules;
 
 /// <summary>
-/// Coordinates an active island survival run: world entities, day/night cycle,
-/// crafting, rule evaluation, HUD observer notifications, and state snapshots.
+/// Coordinates an active island survival run using GoF State (<see cref="GameStateMachine"/>),
+/// Object Pool (<see cref="ObjectPool{T}"/>), Spatial Hash Grid (<see cref="SpatialHashGrid{T}"/>),
+/// and Observer events without any dependency on UI or Audio layers.
 /// </summary>
 public sealed class GameSession : IDisposable
 {
     private const float DEFAULT_WORKBENCH_RADIUS = 80f;
     private const float DEFAULT_PICKUP_RADIUS = 28f;
+    private const float DEFAULT_PROJECTILE_LIFETIME = 2.5f;
 
     private readonly IslandLevel _level;
     private readonly Player _player;
@@ -25,6 +31,17 @@ public sealed class GameSession : IDisposable
     private readonly Func<string, Item> _itemResolver;
     private readonly Difficulty _difficulty;
 
+    private readonly GameStateMachine _stateMachine = new();
+    private readonly CollisionDetector _collisionDetector = new();
+    private readonly SpatialHashGrid<Enemy> _enemySpatialGrid = new(96f);
+    private readonly SpatialHashGrid<Player> _playerSpatialGrid = new(96f);
+    private readonly List<Enemy> _enemyQueryBuffer = new(32);
+    private readonly List<Player> _playerQueryBuffer = new(4);
+    private readonly List<Enemy> _waveSpawnBuffer = new(24);
+
+    private readonly ObjectPool<Projectile> _projectilePool;
+    private readonly ObjectPool<DroppedItem> _droppedItemPool;
+
     private readonly List<Enemy> _enemies = new();
     private readonly List<ResourceNode> _resources = new();
     private readonly List<Structure> _structures = new();
@@ -32,9 +49,11 @@ public sealed class GameSession : IDisposable
     private readonly List<DroppedItem> _droppedItems = new();
     private readonly List<IHudObserver> _hudObservers = new();
 
+    private RaidWaveSpawner? _waveSpawner;
     private Boss? _activeBoss;
-    private GameState _currentState;
     private int _currentWaveIndex;
+    private int _pooledProjectileSequence;
+    private int _pooledDropSequence;
     private bool _bossDefeated;
     private bool _disposed;
 
@@ -56,11 +75,23 @@ public sealed class GameSession : IDisposable
     /// <summary>Gets the gameplay rule engine.</summary>
     public RuleEngine RuleEngine => _ruleEngine;
 
+    /// <summary>Gets the GoF State Machine controlling session lifecycle.</summary>
+    public GameStateMachine StateMachine => _stateMachine;
+
+    /// <summary>Gets the collision detector used for sliding and swept checks.</summary>
+    public CollisionDetector CollisionDetector => _collisionDetector;
+
+    /// <summary>Gets the pooled projectile cache for zero-allocation combat.</summary>
+    public ObjectPool<Projectile> ProjectilePool => _projectilePool;
+
+    /// <summary>Gets the pooled dropped-item cache for zero-allocation harvesting.</summary>
+    public ObjectPool<DroppedItem> DroppedItemPool => _droppedItemPool;
+
     /// <summary>Gets the configured difficulty preset.</summary>
     public Difficulty Difficulty => _difficulty;
 
-    /// <summary>Gets the current high-level game state.</summary>
-    public GameState CurrentState => _currentState;
+    /// <summary>Gets the current high-level game state from the state machine.</summary>
+    public GameState CurrentState => _stateMachine.CurrentStateType;
 
     /// <summary>Gets the active island boss, if spawned.</summary>
     public Boss? ActiveBoss => _activeBoss;
@@ -86,8 +117,23 @@ public sealed class GameSession : IDisposable
     /// <summary>Gets a read-only view of all loose dropped items.</summary>
     public IReadOnlyList<DroppedItem> DroppedItems => _droppedItems.AsReadOnly();
 
-    /// <summary>Raised whenever the session's <see cref="GameState"/> transitions.</summary>
+    /// <summary>Observer event raised when player health changes (currentHp, maxHp).</summary>
+    public event Action<int, int>? OnHealthChanged;
+
+    /// <summary>Observer event raised when player inventory contents change.</summary>
+    public event Action? OnInventoryChanged;
+
+    /// <summary>Observer event raised when an item is crafted.</summary>
+    public event Action<CraftingRecipe, ItemStack>? OnItemCrafted;
+
+    /// <summary>Observer event raised when the player's score changes.</summary>
+    public event Action<int>? OnScoreChanged;
+
+    /// <summary>Observer event raised when the session's <see cref="GameState"/> transitions.</summary>
     public event Action<GameState>? OnGameStateChanged;
+
+    /// <summary>Observer event requesting a logical sound cue without coupling Core to any audio API.</summary>
+    public event Action<string>? OnSoundEffectRequested;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GameSession"/> class.
@@ -111,9 +157,21 @@ public sealed class GameSession : IDisposable
         _dayNightCycle = dayNightCycle ?? new DayNightCycle();
         _ruleEngine = ruleEngine ?? new RuleEngine();
         _difficulty = difficulty;
-        _currentState = GameState.MainMenu;
 
+        _projectilePool = new ObjectPool<Projectile>(CreatePooledProjectile, p => p.Deactivate(), initialCapacity: 32, maxCapacity: 256);
+        _droppedItemPool = new ObjectPool<DroppedItem>(CreatePooledDrop, d => d.Deactivate(), initialCapacity: 24, maxCapacity: 128);
+        _projectilePool.Prewarm(16);
+        _droppedItemPool.Prewarm(12);
+
+        ConfigureStateMachine();
         SubscribeInternalEvents();
+    }
+
+    /// <summary>Attaches a <see cref="RaidWaveSpawner"/> triggered automatically on night transitions.</summary>
+    public void AttachWaveSpawner(RaidWaveSpawner waveSpawner)
+    {
+        ArgumentNullException.ThrowIfNull(waveSpawner);
+        _waveSpawner = waveSpawner;
     }
 
     /// <summary>Registers a HUD observer and pushes initial state.</summary>
@@ -132,25 +190,45 @@ public sealed class GameSession : IDisposable
     /// <summary>Unregisters a previously attached HUD observer.</summary>
     public void DetachHudObserver(IHudObserver observer) => _hudObservers.Remove(observer);
 
-    /// <summary>Transitions the session into active gameplay.</summary>
-    public void Start() => SetGameState(GameState.Playing);
+    /// <summary>Transitions the state machine into <see cref="GameState.Playing"/>.</summary>
+    public void Start() => _stateMachine.TransitionTo(GameState.Playing);
 
-    /// <summary>Pauses active gameplay.</summary>
+    /// <summary>Transitions the state machine from Playing into <see cref="GameState.Paused"/>.</summary>
     public void Pause()
     {
-        if (_currentState == GameState.Playing)
+        if (CurrentState == GameState.Playing)
         {
-            SetGameState(GameState.Paused);
+            _stateMachine.TransitionTo(GameState.Paused);
         }
     }
 
-    /// <summary>Resumes paused gameplay.</summary>
+    /// <summary>Transitions the state machine from Paused back to <see cref="GameState.Playing"/>.</summary>
     public void Resume()
     {
-        if (_currentState == GameState.Paused)
+        if (CurrentState == GameState.Paused)
         {
-            SetGameState(GameState.Playing);
+            _stateMachine.TransitionTo(GameState.Playing);
         }
+    }
+
+    /// <summary>Transitions the state machine back to <see cref="GameState.MainMenu"/>.</summary>
+    public void ReturnToMainMenu() => _stateMachine.TransitionTo(GameState.MainMenu);
+
+    /// <summary>Moves the player with axis-separated tile collision resolution.</summary>
+    public void MovePlayer(Vector2D direction, float deltaTime)
+    {
+        if (CurrentState != GameState.Playing || !_player.IsAlive || direction == Vector2D.Zero)
+        {
+            return;
+        }
+
+        Vector2D normalized = direction.Normalized();
+        (int col, int row) = _level.WorldToTile(_player.Center);
+        float terrainFactor = _level.TryGetTile(col, row, out Tile? tile) && tile is not null ? tile.MovementSpeedMultiplier : 1f;
+        Vector2D delta = normalized * (_player.MoveSpeed * terrainFactor * deltaTime);
+
+        _player.Move(normalized, 0f);
+        _collisionDetector.MoveWithTileCollision(_player, delta, _player.Size, _level);
     }
 
     /// <summary>Adds a harvestable resource node to the active island.</summary>
@@ -171,6 +249,23 @@ public sealed class GameSession : IDisposable
             _level.SetStructureOccupancy(structure.TileCol, structure.TileRow, true);
             structure.OnDefeated += HandleStructureDestroyed;
         }
+
+        RequestSound("build");
+    }
+
+    /// <summary>Looks up a living structure occupying <paramref name="tile"/> (used by wall-breaching AI).</summary>
+    public Structure? FindStructureAtTile(GridPoint tile)
+    {
+        for (int i = 0; i < _structures.Count; i++)
+        {
+            Structure s = _structures[i];
+            if (s.IsAlive && s.TileCol == tile.Col && s.TileRow == tile.Row)
+            {
+                return s;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>Registers a hostile enemy into the active session.</summary>
@@ -188,18 +283,45 @@ public sealed class GameSession : IDisposable
         _activeBoss = boss;
         _bossDefeated = false;
         boss.OnHealthChanged += HandleBossHealthChanged;
+        boss.OnEnraged += HandleBossEnraged;
         AddEnemy(boss);
         NotifyBossHealth(boss.BossName, boss.CurrentHp, boss.MaxHp, isVisible: true);
+        RequestSound("boss_spawn");
     }
 
-    /// <summary>Adds a live projectile into the simulation.</summary>
+    /// <summary>Acquires and activates a pooled <see cref="Projectile"/> with zero heap allocation.</summary>
+    public Projectile SpawnPooledProjectile(
+        Vector2D origin,
+        Vector2D velocity,
+        int damage,
+        string ownerId,
+        bool isFromPlayer,
+        float lifetime = DEFAULT_PROJECTILE_LIFETIME)
+    {
+        Projectile projectile = _projectilePool.Acquire();
+        projectile.Reset(origin, velocity, damage, lifetime, ownerId, isFromPlayer);
+        _projectiles.Add(projectile);
+        RequestSound("shoot");
+        return projectile;
+    }
+
+    /// <summary>Acquires and activates a pooled <see cref="DroppedItem"/> with zero heap allocation.</summary>
+    public DroppedItem SpawnPooledDroppedItem(string itemId, int quantity, Vector2D position)
+    {
+        DroppedItem drop = _droppedItemPool.Acquire();
+        drop.Reset(itemId, quantity, position);
+        _droppedItems.Add(drop);
+        return drop;
+    }
+
+    /// <summary>Adds an externally created projectile into the simulation.</summary>
     public void AddProjectile(Projectile projectile)
     {
         ArgumentNullException.ThrowIfNull(projectile);
         _projectiles.Add(projectile);
     }
 
-    /// <summary>Adds a loose collectible item to the ground.</summary>
+    /// <summary>Adds an externally created dropped item into the simulation.</summary>
     public void AddDroppedItem(DroppedItem droppedItem)
     {
         ArgumentNullException.ThrowIfNull(droppedItem);
@@ -247,6 +369,7 @@ public sealed class GameSession : IDisposable
 
         _ruleEngine.RecordCraftCompleted();
         _player.SyncEquippedFromSelectedSlot();
+        RequestSound("craft");
         return true;
     }
 
@@ -261,31 +384,12 @@ public sealed class GameSession : IDisposable
 
         _player.Inventory.TryRemoveItem(selected.Item.Id, 1);
         _player.SyncEquippedFromSelectedSlot();
+        RequestSound("potion");
         return true;
     }
 
-    /// <summary>Advances the simulation by one fixed time step when in <see cref="GameState.Playing"/>.</summary>
-    public void Update(float deltaTime)
-    {
-        if (deltaTime < 0f)
-        {
-            throw new ArgumentOutOfRangeException(nameof(deltaTime), "Delta time cannot be negative.");
-        }
-
-        if (_currentState != GameState.Playing)
-        {
-            return;
-        }
-
-        _dayNightCycle.Advance(deltaTime);
-        NotifyDayPhase();
-        _player.Update(deltaTime);
-        UpdateEnemies(deltaTime);
-        UpdateProjectiles(deltaTime);
-        UpdateDroppedItems(deltaTime);
-        CleanupInactiveEntities();
-        EvaluateSessionOutcome();
-    }
+    /// <summary>Delegates fixed-timestep simulation to the active <see cref="IGameState"/> in <see cref="StateMachine"/>.</summary>
+    public void Update(float deltaTime) => _stateMachine.Update(deltaTime);
 
     /// <summary>Creates a complete serializable <see cref="GameStateSnapshot"/> for save storage.</summary>
     public GameStateSnapshot CreateSnapshot()
@@ -315,18 +419,57 @@ public sealed class GameSession : IDisposable
 
         _player.OnHealthChanged -= HandlePlayerHealthChanged;
         _player.Inventory.OnInventoryChanged -= HandleInventoryChanged;
+        _craftingSystem.OnItemCrafted -= HandleItemCrafted;
         _ruleEngine.OnScoreChanged -= HandleScoreChanged;
         _dayNightCycle.OnDayPhaseChanged -= HandleDayPhaseChanged;
+        _stateMachine.OnStateChanged -= HandleStateChanged;
         _hudObservers.Clear();
         _disposed = true;
+    }
+
+    private void ConfigureStateMachine()
+    {
+        _stateMachine.RegisterState(new MainMenuState());
+        _stateMachine.RegisterState(new PlayingState(StepPlayingSimulation));
+        _stateMachine.RegisterState(new PausedState());
+        _stateMachine.RegisterState(new VictoryState(() => RequestSound("victory")));
+        _stateMachine.RegisterState(new GameOverState(() => RequestSound("game_over")));
+        _stateMachine.TransitionTo(GameState.MainMenu);
     }
 
     private void SubscribeInternalEvents()
     {
         _player.OnHealthChanged += HandlePlayerHealthChanged;
         _player.Inventory.OnInventoryChanged += HandleInventoryChanged;
+        _craftingSystem.OnItemCrafted += HandleItemCrafted;
         _ruleEngine.OnScoreChanged += HandleScoreChanged;
         _dayNightCycle.OnDayPhaseChanged += HandleDayPhaseChanged;
+        _stateMachine.OnStateChanged += HandleStateChanged;
+    }
+
+    private void StepPlayingSimulation(float deltaTime)
+    {
+        _dayNightCycle.Advance(deltaTime);
+        NotifyDayPhase();
+        _player.Update(deltaTime);
+        UpdateEnemies(deltaTime);
+        RebuildSpatialGrids();
+        UpdateProjectiles(deltaTime);
+        UpdateDroppedItems(deltaTime);
+        CleanupInactiveEntities();
+        EvaluateSessionOutcome();
+    }
+
+    private void RebuildSpatialGrids()
+    {
+        _enemySpatialGrid.Clear();
+        _enemySpatialGrid.InsertRange(_enemies);
+
+        _playerSpatialGrid.Clear();
+        if (_player.IsAlive)
+        {
+            _playerSpatialGrid.Insert(_player);
+        }
     }
 
     private void UpdateEnemies(float deltaTime)
@@ -348,10 +491,56 @@ public sealed class GameSession : IDisposable
     {
         for (int i = 0; i < _projectiles.Count; i++)
         {
-            if (_projectiles[i].IsActive)
+            Projectile projectile = _projectiles[i];
+            if (!projectile.IsActive)
             {
-                _projectiles[i].Update(deltaTime);
+                continue;
             }
+
+            if (projectile.IsFromPlayer)
+            {
+                StepPlayerProjectile(projectile, deltaTime);
+            }
+            else
+            {
+                StepEnemyProjectile(projectile, deltaTime);
+            }
+        }
+    }
+
+    private void StepPlayerProjectile(Projectile projectile, float deltaTime)
+    {
+        bool hit = _collisionDetector.TryAdvanceProjectileSwept(
+            projectile,
+            deltaTime,
+            _level,
+            _enemySpatialGrid,
+            _enemyQueryBuffer,
+            out Enemy? hitEnemy,
+            out _);
+
+        if (hit && hitEnemy is not null)
+        {
+            _ruleEngine.ResolveProjectileHit(projectile, hitEnemy);
+            RequestSound("hit");
+        }
+    }
+
+    private void StepEnemyProjectile(Projectile projectile, float deltaTime)
+    {
+        bool hit = _collisionDetector.TryAdvanceProjectileSwept(
+            projectile,
+            deltaTime,
+            _level,
+            _playerSpatialGrid,
+            _playerQueryBuffer,
+            out Player? hitPlayer,
+            out _);
+
+        if (hit && hitPlayer is not null)
+        {
+            _ruleEngine.ResolveProjectileHit(projectile, hitPlayer);
+            RequestSound("player_hurt");
         }
     }
 
@@ -367,49 +556,82 @@ public sealed class GameSession : IDisposable
             }
 
             drop.Update(deltaTime);
-            if (drop.IsActive && Vector2D.DistanceSquared(_player.Center, drop.Center) <= pickupRadiusSq)
+            if (drop.IsActive &&
+                Vector2D.DistanceSquared(_player.Center, drop.Center) <= pickupRadiusSq &&
+                _ruleEngine.ResolvePickup(drop, _player.Inventory, _itemResolver))
             {
-                _ruleEngine.ResolvePickup(drop, _player.Inventory, _itemResolver);
+                RequestSound("pickup");
             }
         }
     }
 
     private void CleanupInactiveEntities()
     {
-        _projectiles.RemoveAll(p => !p.IsActive);
-        _droppedItems.RemoveAll(d => !d.IsActive);
-        _resources.RemoveAll(r => !r.IsActive);
-        _structures.RemoveAll(s => !s.IsActive);
-        _enemies.RemoveAll(e => !e.IsActive);
+        ReleaseInactiveProjectiles();
+        ReleaseInactiveDrops();
+        RemoveInactiveInPlace(_resources);
+        RemoveInactiveInPlace(_structures);
+        RemoveInactiveInPlace(_enemies);
+    }
+
+    private void ReleaseInactiveProjectiles()
+    {
+        for (int i = _projectiles.Count - 1; i >= 0; i--)
+        {
+            if (!_projectiles[i].IsActive)
+            {
+                Projectile inactive = _projectiles[i];
+                _projectiles.RemoveAt(i);
+                _projectilePool.Release(inactive);
+            }
+        }
+    }
+
+    private void ReleaseInactiveDrops()
+    {
+        for (int i = _droppedItems.Count - 1; i >= 0; i--)
+        {
+            if (!_droppedItems[i].IsActive)
+            {
+                DroppedItem inactive = _droppedItems[i];
+                _droppedItems.RemoveAt(i);
+                _droppedItemPool.Release(inactive);
+            }
+        }
+    }
+
+    private static void RemoveInactiveInPlace<T>(List<T> entities) where T : Entity
+    {
+        for (int i = entities.Count - 1; i >= 0; i--)
+        {
+            if (!entities[i].IsActive)
+            {
+                entities.RemoveAt(i);
+            }
+        }
     }
 
     private void EvaluateSessionOutcome()
     {
         GameState outcome = _ruleEngine.EvaluateOutcome(_player, _bossDefeated);
-        if (outcome != _currentState)
+        if (outcome != CurrentState)
         {
-            SetGameState(outcome);
+            _stateMachine.TransitionTo(outcome);
         }
     }
 
-    private void SetGameState(GameState newState)
+    private void HandleStateChanged(GameState newState)
     {
-        if (_currentState == newState)
-        {
-            return;
-        }
-
-        _currentState = newState;
-        OnGameStateChanged?.Invoke(_currentState);
-
+        OnGameStateChanged?.Invoke(newState);
         for (int i = 0; i < _hudObservers.Count; i++)
         {
-            _hudObservers[i].OnGameStateUpdated(_currentState);
+            _hudObservers[i].OnGameStateUpdated(newState);
         }
     }
 
     private void HandlePlayerHealthChanged(int currentHp, int maxHp)
     {
+        OnHealthChanged?.Invoke(currentHp, maxHp);
         for (int i = 0; i < _hudObservers.Count; i++)
         {
             _hudObservers[i].OnPlayerHealthUpdated(currentHp, maxHp);
@@ -418,21 +640,39 @@ public sealed class GameSession : IDisposable
 
     private void HandleInventoryChanged()
     {
+        OnInventoryChanged?.Invoke();
         for (int i = 0; i < _hudObservers.Count; i++)
         {
             _hudObservers[i].OnInventoryUpdated();
         }
     }
 
+    private void HandleItemCrafted(CraftingRecipe recipe, ItemStack stack) => OnItemCrafted?.Invoke(recipe, stack);
+
     private void HandleScoreChanged(int newScore)
     {
+        OnScoreChanged?.Invoke(newScore);
         for (int i = 0; i < _hudObservers.Count; i++)
         {
             _hudObservers[i].OnScoreUpdated(newScore);
         }
     }
 
-    private void HandleDayPhaseChanged(int dayNumber, DayPhase phase) => NotifyDayPhase();
+    private void HandleDayPhaseChanged(int dayNumber, DayPhase phase)
+    {
+        NotifyDayPhase();
+        if (phase == DayPhase.Night && _waveSpawner is not null && !_waveSpawner.HasCompletedAllWaves)
+        {
+            int spawned = _waveSpawner.SpawnNextWave(_player, _waveSpawnBuffer);
+            for (int i = 0; i < spawned; i++)
+            {
+                AddEnemy(_waveSpawnBuffer[i]);
+            }
+
+            _currentWaveIndex = _waveSpawner.NextWaveIndex;
+            RequestSound("raid_horn");
+        }
+    }
 
     private void NotifyDayPhase()
     {
@@ -455,12 +695,15 @@ public sealed class GameSession : IDisposable
         }
 
         _ruleEngine.ResolveEnemyDefeated(matched);
+        RequestSound("enemy_defeated");
+
         if (matched.IsBoss)
         {
             _bossDefeated = true;
             if (_activeBoss is not null)
             {
                 _activeBoss.OnHealthChanged -= HandleBossHealthChanged;
+                _activeBoss.OnEnraged -= HandleBossEnraged;
                 NotifyBossHealth(_activeBoss.BossName, 0, _activeBoss.MaxHp, isVisible: false);
             }
         }
@@ -474,6 +717,8 @@ public sealed class GameSession : IDisposable
         }
     }
 
+    private void HandleBossEnraged(Boss boss) => RequestSound("boss_enrage");
+
     private void HandleStructureDestroyed(IDamageable destroyed)
     {
         destroyed.OnDefeated -= HandleStructureDestroyed;
@@ -482,6 +727,7 @@ public sealed class GameSession : IDisposable
             if (ReferenceEquals(_structures[i], destroyed))
             {
                 _level.SetStructureOccupancy(_structures[i].TileCol, _structures[i].TileRow, false);
+                RequestSound("structure_break");
                 return;
             }
         }
@@ -500,6 +746,24 @@ public sealed class GameSession : IDisposable
         return null;
     }
 
+    private void RequestSound(string soundKey) => OnSoundEffectRequested?.Invoke(soundKey);
+
+    private Projectile CreatePooledProjectile()
+    {
+        _pooledProjectileSequence++;
+        var projectile = new Projectile($"proj_{_pooledProjectileSequence}", Vector2D.Zero, Vector2D.UnitX, 1, 1f, "pool", true);
+        projectile.Deactivate();
+        return projectile;
+    }
+
+    private DroppedItem CreatePooledDrop()
+    {
+        _pooledDropSequence++;
+        var drop = new DroppedItem($"drop_pool_{_pooledDropSequence}", "wood", 1, Vector2D.Zero);
+        drop.Deactivate();
+        return drop;
+    }
+
     private void NotifyBossHealth(string bossName, int currentHp, int maxHp, bool isVisible)
     {
         for (int i = 0; i < _hudObservers.Count; i++)
@@ -514,7 +778,7 @@ public sealed class GameSession : IDisposable
         observer.OnScoreUpdated(_ruleEngine.Score);
         observer.OnInventoryUpdated();
         observer.OnDayPhaseUpdated(_dayNightCycle.DayNumber, _dayNightCycle.CurrentPhase, _dayNightCycle.NormalizedPhaseProgress);
-        observer.OnGameStateUpdated(_currentState);
+        observer.OnGameStateUpdated(CurrentState);
         if (_activeBoss is not null && _activeBoss.IsAlive)
         {
             observer.OnBossHealthUpdated(_activeBoss.BossName, _activeBoss.CurrentHp, _activeBoss.MaxHp, isVisible: true);
