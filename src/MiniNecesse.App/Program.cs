@@ -1,16 +1,40 @@
+using System;
+using System.Windows.Forms;
+using MiniNecesse.App.Audio;
+using MiniNecesse.App.Forms;
+using MiniNecesse.App.Settings;
+using MiniNecesse.Core.Interfaces;
+using MiniNecesse.Data;
+
 namespace MiniNecesse.App;
 
-static class Program
+/// <summary>
+/// Application Composition Root wiring Core interfaces to Data and WinForms Presentation via Constructor DI.
+/// </summary>
+internal static class Program
 {
-    /// <summary>
-    ///  The main entry point for the application.
-    /// </summary>
     [STAThread]
-    static void Main()
+    private static void Main()
     {
-        // To customize application configuration such as set high DPI settings or default font,
-        // see https://aka.ms/applicationconfiguration.
         ApplicationConfiguration.Initialize();
-        Application.Run(new Form1());
-    }    
+
+        ILevelLoader levelLoader = new JsonLevelLoader();
+        ISaveStorage saveStorage = new JsonSaveStorage();
+        IHighScoreRepository highScoreRepository = new JsonHighScoreRepository();
+        var settings = new AppSettings();
+        using var audioManager = new AudioManager
+        {
+            IsMuted = settings.IsMuted,
+            Volume = settings.Volume
+        };
+
+        using var mainMenu = new FrmMainMenu(
+            levelLoader,
+            saveStorage,
+            highScoreRepository,
+            audioManager,
+            settings);
+
+        Application.Run(mainMenu);
+    }
 }
