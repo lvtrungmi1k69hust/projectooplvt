@@ -56,6 +56,14 @@ public sealed class GameSession : IDisposable
     private int _pooledDropSequence;
     private bool _bossDefeated;
     private bool _disposed;
+    private float _swingEffectRemaining;
+    private Vector2D _lastAimDirection = Vector2D.Right;
+
+    /// <summary>Gets remaining visual swing animation time in seconds (read-only render hint).</summary>
+    public float SwingEffectRemaining => _swingEffectRemaining;
+
+    /// <summary>Gets the normalized direction vector of the player's most recent aim/action.</summary>
+    public Vector2D LastAimDirection => _lastAimDirection;
 
     /// <summary>Gets the active island tilemap.</summary>
     public IslandLevel Level => _level;
@@ -388,6 +396,75 @@ public sealed class GameSession : IDisposable
         return true;
     }
 
+    /// <summary>
+    /// Executes the player's primary action (ranged shot, melee attack, or resource harvesting)
+    /// toward <paramref name="aimWorldPosition"/> inside Core rules so UI contains zero combat math.
+    /// </summary>
+    public bool ExecutePrimaryAction(Vector2D aimWorldPosition)
+    {
+        if (CurrentState != GameState.Playing || !_player.CanAct)
+        {
+            return false;
+        }
+
+        Vector2D aimDir = (aimWorldPosition - _player.Center).Normalized();
+        if (aimDir != Vector2D.Zero)
+        {
+            _lastAimDirection = aimDir;
+        }
+
+        _swingEffectRemaining = 0.16f;
+        if (TryFireEquippedRangedWeapon(_lastAimDirection))
+        {
+            return true;
+        }
+
+        if (TryMeleeStrikeEnemy(aimWorldPosition))
+        {
+            return true;
+        }
+
+        return TryHarvestResourceNear(aimWorldPosition);
+    }
+
+    /// <summary>
+    /// Executes the player's secondary action: consumes a potion or places a structure at <paramref name="aimWorldPosition"/>.
+    /// </summary>
+    public bool ExecuteSecondaryAction(Vector2D aimWorldPosition, IEntityFactory entityFactory)
+    {
+        ArgumentNullException.ThrowIfNull(entityFactory);
+        if (CurrentState != GameState.Playing || !_player.IsAlive)
+        {
+            return false;
+        }
+
+        if (TryUseSelectedHotbarItem())
+        {
+            return true;
+        }
+
+        return TryPlaceSelectedStructure(aimWorldPosition, entityFactory);
+    }
+
+    /// <summary>
+    /// Summons the current island's boss if not yet active or defeated.
+    /// </summary>
+    public bool TrySummonIslandBoss(BossConfiguration bossConfig, IEntityFactory entityFactory)
+    {
+        ArgumentNullException.ThrowIfNull(bossConfig);
+        ArgumentNullException.ThrowIfNull(entityFactory);
+
+        if (CurrentState != GameState.Playing || _activeBoss is not null || _bossDefeated)
+        {
+            return false;
+        }
+
+        Vector2D spawnPos = FindSafeBossSpawnPosition();
+        Boss boss = entityFactory.CreateBoss(bossConfig.BossType, spawnPos, _difficulty);
+        SpawnBoss(boss);
+        return true;
+    }
+
     /// <summary>Delegates fixed-timestep simulation to the active <see cref="IGameState"/> in <see cref="StateMachine"/>.</summary>
     public void Update(float deltaTime) => _stateMachine.Update(deltaTime);
 
@@ -468,6 +545,11 @@ public sealed class GameSession : IDisposable
 
     private void StepPlayingSimulation(float deltaTime)
     {
+        if (_swingEffectRemaining > 0f)
+        {
+            _swingEffectRemaining = MathF.Max(0f, _swingEffectRemaining - deltaTime);
+        }
+
         _dayNightCycle.Advance(deltaTime);
         NotifyDayPhase();
         _player.Update(deltaTime);
@@ -477,6 +559,156 @@ public sealed class GameSession : IDisposable
         UpdateDroppedItems(deltaTime);
         CleanupInactiveEntities();
         EvaluateSessionOutcome();
+    }
+
+    private bool TryFireEquippedRangedWeapon(Vector2D aimDirection)
+    {
+        IWeapon? weapon = _player.EquippedWeapon;
+        if (weapon is null || !weapon.IsRanged || aimDirection == Vector2D.Zero)
+        {
+            return false;
+        }
+
+        SpawnPooledProjectile(_player.Center, aimDirection * weapon.ProjectileSpeed, weapon.ComputeDamage(), _player.Id, isFromPlayer: true);
+        _player.TriggerActionCooldown(weapon.ComputeCooldown());
+        return true;
+    }
+
+    private bool TryMeleeStrikeEnemy(Vector2D aimWorldPosition)
+    {
+        float reach = _player.EquippedWeapon?.AttackRange ?? 54f;
+        Enemy? bestTarget = FindClosestEnemyInReach(aimWorldPosition, reach);
+        if (bestTarget is null)
+        {
+            return false;
+        }
+
+        bool struck = _ruleEngine.ResolveMeleeAttack(_player, bestTarget);
+        if (struck)
+        {
+            RequestSound("hit");
+        }
+
+        return struck;
+    }
+
+    private Enemy? FindClosestEnemyInReach(Vector2D aimWorldPosition, float reach)
+    {
+        Enemy? best = null;
+        float bestAimDist = float.MaxValue;
+        float reachSq = (reach + 16f) * (reach + 16f);
+
+        for (int i = 0; i < _enemies.Count; i++)
+        {
+            Enemy enemy = _enemies[i];
+            if (!enemy.IsAlive || Vector2D.DistanceSquared(_player.Center, enemy.Center) > reachSq)
+            {
+                continue;
+            }
+
+            float aimDist = Vector2D.DistanceSquared(aimWorldPosition, enemy.Center);
+            if (aimDist < bestAimDist)
+            {
+                bestAimDist = aimDist;
+                best = enemy;
+            }
+        }
+
+        return best;
+    }
+
+    private bool TryHarvestResourceNear(Vector2D aimWorldPosition)
+    {
+        const float HARVEST_REACH_SQ = 68f * 68f;
+        ResourceNode? bestNode = null;
+        float bestAimDist = float.MaxValue;
+
+        for (int i = 0; i < _resources.Count; i++)
+        {
+            ResourceNode node = _resources[i];
+            if (!node.IsAlive || Vector2D.DistanceSquared(_player.Center, node.Center) > HARVEST_REACH_SQ)
+            {
+                continue;
+            }
+
+            float aimDist = Vector2D.DistanceSquared(aimWorldPosition, node.Center);
+            if (aimDist < bestAimDist)
+            {
+                bestAimDist = aimDist;
+                bestNode = node;
+            }
+        }
+
+        if (bestNode is null)
+        {
+            _player.TriggerActionCooldown();
+            RequestSound("swing");
+            return false;
+        }
+
+        DroppedItem? drop = _ruleEngine.ResolveHarvest(bestNode, _player.EquippedToolType, _player.HarvestPower);
+        if (drop is not null)
+        {
+            SpawnPooledDroppedItem(drop.ItemId, drop.Quantity, drop.Position);
+        }
+
+        _player.TriggerActionCooldown();
+        RequestSound("harvest");
+        return true;
+    }
+
+    private bool TryPlaceSelectedStructure(Vector2D aimWorldPosition, IEntityFactory entityFactory)
+    {
+        ItemStack? selected = _player.SelectedItemStack;
+        if (selected is null || !selected.Item.TryGetPlaceableStructure(out StructureType structureType))
+        {
+            return false;
+        }
+
+        if (Vector2D.Distance(_player.Center, aimWorldPosition) > 112f)
+        {
+            return false;
+        }
+
+        (int col, int row) = _level.WorldToTile(aimWorldPosition);
+        if (!_level.IsTileWalkable(col, row) || FindStructureAtTile(new GridPoint(col, row)) is not null)
+        {
+            return false;
+        }
+
+        RectF tileBounds = _level.GetTile(col, row).GetWorldBounds(_level.TileSize);
+        if (tileBounds.Intersects(_player.GetBounds()))
+        {
+            return false;
+        }
+
+        Structure structure = entityFactory.CreateStructure(structureType, col, row, _level.TileSize);
+        AddStructure(structure);
+        _player.Inventory.TryRemoveItem(selected.Item.Id, 1);
+        _player.SyncEquippedFromSelectedSlot();
+        return true;
+    }
+
+    private Vector2D FindSafeBossSpawnPosition()
+    {
+        for (int row = 2; row < _level.Height - 2; row++)
+        {
+            for (int col = 2; col < _level.Width - 2; col++)
+            {
+                if (!_level.IsTileWalkable(col, row))
+                {
+                    continue;
+                }
+
+                Vector2D candidate = _level.TileToWorldCenter(col, row);
+                if (Vector2D.Distance(candidate, _player.Center) >= 160f)
+                {
+                    return candidate;
+                }
+            }
+        }
+
+        return _level.PlayerSpawnWorldPosition;
     }
 
     private void RebuildSpatialGrids()
