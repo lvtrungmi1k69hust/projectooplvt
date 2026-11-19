@@ -103,13 +103,16 @@ public class Enemy : Character
         _state = EnemyState.Idle;
     }
 
-    /// <summary>Replaces the active AI strategy at runtime (Strategy pattern).</summary>
-    public void SetStrategy(IAIStrategy newStrategy)
+    /// <summary>Replaces the active AI strategy at runtime (GoF Strategy pattern).</summary>
+    public void SetAIStrategy(IAIStrategy newStrategy)
     {
         ArgumentNullException.ThrowIfNull(newStrategy);
         _aiStrategy = newStrategy;
         OnStrategyChanged?.Invoke(this, newStrategy);
     }
+
+    /// <summary>Alias for <see cref="SetAIStrategy(IAIStrategy)"/>.</summary>
+    public void SetStrategy(IAIStrategy newStrategy) => SetAIStrategy(newStrategy);
 
     /// <summary>Transitions the enemy to a new FSM state.</summary>
     public void SetState(EnemyState newState)

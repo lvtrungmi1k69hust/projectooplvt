@@ -107,7 +107,7 @@ public sealed class Boss : Enemy
 
         if (_enrageStrategy is not null)
         {
-            SetStrategy(_enrageStrategy);
+            SetAIStrategy(_enrageStrategy);
         }
 
         OnEnraged?.Invoke(this);
