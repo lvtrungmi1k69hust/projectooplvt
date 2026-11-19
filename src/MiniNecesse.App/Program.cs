@@ -33,7 +33,15 @@ internal static class Program
             saveStorage,
             highScoreRepository,
             audioManager,
-            settings);
+            settings,
+            gameplayLauncher: (islandId, loadSavedSlot) => new FrmGamePlay(
+                levelLoader,
+                saveStorage,
+                highScoreRepository,
+                audioManager,
+                settings,
+                islandId,
+                loadSavedSlot));
 
         Application.Run(mainMenu);
     }
