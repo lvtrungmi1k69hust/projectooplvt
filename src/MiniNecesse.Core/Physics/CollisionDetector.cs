@@ -84,17 +84,18 @@ public sealed class CollisionDetector
 
     /// <summary>
     /// Advances a <paramref name="projectile"/> across <paramref name="deltaTime"/> using sub-stepped swept checks
-    /// to prevent high-speed projectiles from tunneling through thin walls or small enemies.
+    /// to prevent high-speed projectiles from tunneling through thin walls or small targets.
     /// Returns <see langword="true"/> if an obstacle or entity was hit.
     /// </summary>
-    public bool TryAdvanceProjectileSwept(
+    public bool TryAdvanceProjectileSwept<TTarget>(
         Projectile projectile,
         float deltaTime,
         IslandLevel level,
-        SpatialHashGrid<Entity> spatialGrid,
-        List<Entity> candidateBuffer,
-        out Entity? hitEntity,
+        SpatialHashGrid<TTarget> spatialGrid,
+        List<TTarget> candidateBuffer,
+        out TTarget? hitEntity,
         out CollisionInfo collisionInfo)
+        where TTarget : Entity
     {
         ArgumentNullException.ThrowIfNull(projectile);
         ArgumentNullException.ThrowIfNull(level);
@@ -252,12 +253,13 @@ public sealed class CollisionDetector
         return global::System.Math.Clamp(steps, 1, MAX_SWEPT_SUBSTEPS);
     }
 
-    private bool TryHitSpatialCandidate(
+    private bool TryHitSpatialCandidate<TTarget>(
         Projectile projectile,
-        SpatialHashGrid<Entity> spatialGrid,
-        List<Entity> candidateBuffer,
-        out Entity? hitEntity,
+        SpatialHashGrid<TTarget> spatialGrid,
+        List<TTarget> candidateBuffer,
+        out TTarget? hitEntity,
         out CollisionInfo collisionInfo)
+        where TTarget : Entity
     {
         hitEntity = null;
         collisionInfo = default;
@@ -265,7 +267,7 @@ public sealed class CollisionDetector
         spatialGrid.Query(projectile.GetBounds(), candidateBuffer);
         for (int i = 0; i < candidateBuffer.Count; i++)
         {
-            Entity candidate = candidateBuffer[i];
+            TTarget candidate = candidateBuffer[i];
             if (string.Equals(candidate.Id, projectile.OwnerId, StringComparison.Ordinal))
             {
                 continue;

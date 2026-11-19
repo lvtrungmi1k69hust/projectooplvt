@@ -1,17 +1,20 @@
 using System;
 using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Math;
+using MiniNecesse.Core.Patterns.Flyweight;
 
 namespace MiniNecesse.Core.Entities;
 
 /// <summary>
-/// Represents a single grid cell exclusively created and owned by <see cref="IslandLevel"/> (Composition).
+/// Represents a single grid cell exclusively created and owned by <see cref="IslandLevel"/> (UML Composition).
+/// Stores only extrinsic per-cell coordinates and occupancy while sharing intrinsic terrain metadata via
+/// <see cref="TileDataFlyweight"/> (GoF Flyweight).
 /// </summary>
 public sealed class Tile
 {
     private readonly int _col;
     private readonly int _row;
-    private TileType _tileType;
+    private TileDataFlyweight _flyweight;
     private bool _isOccupiedBySolidStructure;
 
     /// <summary>Gets the 0-based grid column index.</summary>
@@ -20,22 +23,34 @@ public sealed class Tile
     /// <summary>Gets the 0-based grid row index.</summary>
     public int Row => _row;
 
+    /// <summary>Gets the shared intrinsic flyweight describing terrain properties.</summary>
+    public TileDataFlyweight Flyweight => _flyweight;
+
     /// <summary>Gets the terrain type of this tile.</summary>
-    public TileType TileType => _tileType;
+    public TileType TileType => _flyweight.TileType;
+
+    /// <summary>Gets the terrain hardness from the shared flyweight.</summary>
+    public int Hardness => _flyweight.Hardness;
+
+    /// <summary>Gets the logical sprite identifier from the shared flyweight.</summary>
+    public string SpriteId => _flyweight.SpriteId;
+
+    /// <summary>Gets the hex base color from the shared flyweight.</summary>
+    public string ColorHex => _flyweight.ColorHex;
 
     /// <summary>Gets a value indicating whether a solid structure currently blocks this tile.</summary>
     public bool IsOccupiedBySolidStructure => _isOccupiedBySolidStructure;
 
     /// <summary>Gets a value indicating whether characters can traverse this tile.</summary>
-    public bool IsWalkable => _tileType != TileType.Water && !_isOccupiedBySolidStructure;
+    public bool IsWalkable => _flyweight.IsWalkable && !_isOccupiedBySolidStructure;
 
-    /// <summary>Gets the terrain movement speed factor (e.g., slower on swamp tiles).</summary>
-    public float MovementSpeedMultiplier => ResolveSpeedMultiplier(_tileType);
+    /// <summary>Gets the terrain movement speed factor from the shared flyweight.</summary>
+    public float MovementSpeedMultiplier => _flyweight.MovementSpeedMultiplier;
 
     /// <summary>
     /// Internal constructor enforcing UML Composition: only <see cref="IslandLevel"/> constructs tiles.
     /// </summary>
-    internal Tile(int col, int row, TileType tileType)
+    internal Tile(int col, int row, TileType tileType, TileDataFlyweightFactory? flyweightFactory = null)
     {
         if (col < 0)
         {
@@ -49,7 +64,7 @@ public sealed class Tile
 
         _col = col;
         _row = row;
-        _tileType = tileType;
+        _flyweight = (flyweightFactory ?? TileDataFlyweightFactory.Shared).Get(tileType);
     }
 
     /// <summary>Computes the world-space bounding rectangle of this tile.</summary>
@@ -63,21 +78,12 @@ public sealed class Tile
         return new RectF(_col * tileSize, _row * tileSize, tileSize, tileSize);
     }
 
-    /// <summary>Updates the terrain type of this tile.</summary>
-    internal void SetTileType(TileType tileType) => _tileType = tileType;
+    /// <summary>Updates the terrain type of this tile by swapping its shared flyweight reference.</summary>
+    internal void SetTileType(TileType tileType, TileDataFlyweightFactory? flyweightFactory = null)
+    {
+        _flyweight = (flyweightFactory ?? TileDataFlyweightFactory.Shared).Get(tileType);
+    }
 
     /// <summary>Marks whether a solid structure occupies this tile.</summary>
     internal void SetSolidStructureOccupied(bool isOccupied) => _isOccupiedBySolidStructure = isOccupied;
-
-    private static float ResolveSpeedMultiplier(TileType tileType)
-    {
-        return tileType switch
-        {
-            TileType.Water => 0f,
-            TileType.Swamp => 0.72f,
-            TileType.Snow => 0.88f,
-            TileType.Sand => 0.94f,
-            _ => 1.0f
-        };
-    }
 }

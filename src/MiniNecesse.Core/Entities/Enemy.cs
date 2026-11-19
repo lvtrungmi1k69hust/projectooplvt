@@ -136,9 +136,12 @@ public class Enemy : Character
         }
 
         target.TakeDamage(_attackDamage);
-        _attackCooldownRemaining = _attackCooldown;
+        TriggerAttackCooldown();
         return true;
     }
+
+    /// <summary>Starts the attack cooldown timer (used by ranged/volley AI strategies without allocating targets).</summary>
+    public void TriggerAttackCooldown() => _attackCooldownRemaining = _attackCooldown;
 
     /// <summary>Executes the assigned <see cref="IAIStrategy"/> for one fixed step.</summary>
     public void ExecuteAI(Player target, IslandLevel level, float deltaTime)
