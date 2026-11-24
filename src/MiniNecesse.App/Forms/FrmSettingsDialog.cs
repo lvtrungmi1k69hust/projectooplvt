@@ -93,7 +93,7 @@ public sealed class FrmSettingsDialog : Form
         Controls.Add(_lblVolumeValue);
 
         string keysText = $"Controls: Move [{_settings.KeyBindings.MoveUp}{_settings.KeyBindings.MoveLeft}{_settings.KeyBindings.MoveDown}{_settings.KeyBindings.MoveRight}] | " +
-                          $"Craft [{_settings.KeyBindings.ToggleCrafting}] | Boss/Use [{_settings.KeyBindings.Interact}] | Pause [{_settings.KeyBindings.Pause}] | Hotbar [1-5]";
+                          $"Craft [{_settings.KeyBindings.ToggleCrafting}] | Boss/Use [{_settings.KeyBindings.Interact}] | Pause [{_settings.KeyBindings.Pause}] | Hotbar [1-9 / Wheel]";
         var lblControls = new Label
         {
             Text = keysText,

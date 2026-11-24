@@ -167,6 +167,7 @@ public sealed class FrmGamePlay : Form
         _canvas.MouseDown += HandleCanvasMouseDown;
         _canvas.MouseUp += HandleCanvasMouseUp;
         _canvas.MouseMove += HandleCanvasMouseMove;
+        _canvas.MouseWheel += HandleCanvasMouseWheel;
 
         KeyDown += HandleFormKeyDown;
         KeyUp += HandleFormKeyUp;
@@ -195,6 +196,7 @@ public sealed class FrmGamePlay : Form
         _canvas.MouseDown -= HandleCanvasMouseDown;
         _canvas.MouseUp -= HandleCanvasMouseUp;
         _canvas.MouseMove -= HandleCanvasMouseMove;
+        _canvas.MouseWheel -= HandleCanvasMouseWheel;
 
         KeyDown -= HandleFormKeyDown;
         KeyUp -= HandleFormKeyUp;
@@ -511,9 +513,32 @@ public sealed class FrmGamePlay : Form
 
     private void HandleFormKeyUp(object? sender, KeyEventArgs e) => _inputAdapter.HandleKeyUp(e.KeyCode);
     private void HandleFormDeactivate(object? sender, EventArgs e) => _inputAdapter.ClearAllInputs();
-    private void HandleCanvasMouseDown(object? sender, MouseEventArgs e) => _inputAdapter.HandleMouseDown(e.Button, e.Location);
+    private void HandleCanvasMouseDown(object? sender, MouseEventArgs e)
+    {
+        if (e.Button == MouseButtons.Left && _renderer.TryHitTestHotbarSlot(e.Location, _canvas.ClientSize, out int hotbarSlot))
+        {
+            _inputAdapter.QueueHotbarSlot(hotbarSlot);
+            return;
+        }
+
+        _inputAdapter.HandleMouseDown(e.Button, e.Location);
+    }
+
     private void HandleCanvasMouseUp(object? sender, MouseEventArgs e) => _inputAdapter.HandleMouseUp(e.Button);
     private void HandleCanvasMouseMove(object? sender, MouseEventArgs e) => _inputAdapter.HandleMouseMove(e.Location);
+
+    private void HandleCanvasMouseWheel(object? sender, MouseEventArgs e)
+    {
+        if (_session is null || _craftingPanel.Visible || _pausePanel.Visible || _outcomePanel.Visible)
+        {
+            return;
+        }
+
+        int slots = _session.Player.HotbarCapacity;
+        int step = e.Delta > 0 ? -1 : 1;
+        int nextSlot = (_session.Player.SelectedHotbarIndex + step + slots) % slots;
+        _inputAdapter.QueueHotbarSlot(nextSlot);
+    }
     private void HandleCloseCraftingRequested() => CloseCraftingPanel();
 
     private void HandlePauseResumeClick(object? sender, EventArgs e)

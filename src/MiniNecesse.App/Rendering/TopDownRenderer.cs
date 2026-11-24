@@ -21,7 +21,10 @@ namespace MiniNecesse.App.Rendering;
 /// </summary>
 public sealed class TopDownRenderer : IDisposable
 {
-    private const int HOTBAR_DISPLAY_SLOTS = 5;
+    private const int HOTBAR_DISPLAY_SLOTS = 9;
+    private const int HOTBAR_SLOT_SIZE = 58;
+    private const int HOTBAR_GAP = 6;
+    private const int HOTBAR_BOTTOM_MARGIN = 14;
     private const int MINIMAP_TILE_PX = 6;
 
     private readonly RenderResourceCache _cache = new();
@@ -513,30 +516,56 @@ public sealed class TopDownRenderer : IDisposable
         g.DrawRectangle(_cache.DarkOutlinePen, x, y + 24, barWidth, 14);
     }
 
+    /// <summary>Checks whether a screen click landed on a hotbar slot (0..8) and returns that slot index.</summary>
+    public bool TryHitTestHotbarSlot(Point screenPoint, Size viewport, out int slotIndex)
+    {
+        slotIndex = -1;
+        int totalWidth = (HOTBAR_DISPLAY_SLOTS * HOTBAR_SLOT_SIZE) + ((HOTBAR_DISPLAY_SLOTS - 1) * HOTBAR_GAP);
+        int startX = (viewport.Width - totalWidth) / 2;
+        int startY = viewport.Height - HOTBAR_SLOT_SIZE - HOTBAR_BOTTOM_MARGIN;
+
+        if (screenPoint.Y < startY || screenPoint.Y > startY + HOTBAR_SLOT_SIZE)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < HOTBAR_DISPLAY_SLOTS; i++)
+        {
+            int x = startX + (i * (HOTBAR_SLOT_SIZE + HOTBAR_GAP));
+            if (screenPoint.X >= x && screenPoint.X <= x + HOTBAR_SLOT_SIZE)
+            {
+                slotIndex = i;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private void DrawHotbar(Graphics g, Size viewport, GameSession session)
     {
-        const int SLOT_SIZE = 68;
-        const int GAP = 8;
-        int totalWidth = (HOTBAR_DISPLAY_SLOTS * SLOT_SIZE) + ((HOTBAR_DISPLAY_SLOTS - 1) * GAP);
+        int totalWidth = (HOTBAR_DISPLAY_SLOTS * HOTBAR_SLOT_SIZE) + ((HOTBAR_DISPLAY_SLOTS - 1) * HOTBAR_GAP);
         int startX = (viewport.Width - totalWidth) / 2;
-        int startY = viewport.Height - SLOT_SIZE - 16;
+        int startY = viewport.Height - HOTBAR_SLOT_SIZE - HOTBAR_BOTTOM_MARGIN;
 
         ItemStack? selectedStack = session.Player.SelectedItemStack;
-        if (selectedStack is not null)
-        {
-            g.FillRectangle(_cache.HudPanelBrush, startX, startY - 24, totalWidth, 20);
-            g.DrawString($"Equipped: {selectedStack.Item.Name} (x{selectedStack.Quantity})", _cache.SmallFont, _cache.TextGoldBrush, startX + 8, startY - 21);
-        }
+        string equippedText = selectedStack is not null
+            ? $"Equipped: {selectedStack.Item.Name} (x{selectedStack.Quantity})"
+            : "Equipped: Bare Hands (Empty Slot)";
+
+        g.FillRectangle(_cache.HudPanelBrush, startX, startY - 26, totalWidth, 22);
+        g.DrawRectangle(_cache.HudBorderPen, startX, startY - 26, totalWidth, 22);
+        g.DrawString(equippedText, _cache.SmallFont, _cache.TextGoldBrush, startX + 8, startY - 22);
 
         g.InterpolationMode = InterpolationMode.NearestNeighbor;
         for (int i = 0; i < HOTBAR_DISPLAY_SLOTS; i++)
         {
-            int x = startX + (i * (SLOT_SIZE + GAP));
+            int x = startX + (i * (HOTBAR_SLOT_SIZE + HOTBAR_GAP));
             bool selected = session.Player.SelectedHotbarIndex == i;
 
-            g.FillRectangle(selected ? _cache.HotbarSelectedBrush : _cache.HotbarSlotBrush, x, startY, SLOT_SIZE, SLOT_SIZE);
-            g.DrawRectangle(selected ? _cache.HotbarSelectedPen : _cache.HudBorderPen, x, startY, SLOT_SIZE, SLOT_SIZE);
-            g.DrawString($"{i + 1}", _cache.SmallFont, _cache.TextGoldBrush, x + 5, startY + 4);
+            g.FillRectangle(selected ? _cache.HotbarSelectedBrush : _cache.HotbarSlotBrush, x, startY, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE);
+            g.DrawRectangle(selected ? _cache.HotbarSelectedPen : _cache.HudBorderPen, x, startY, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE);
+            g.DrawString($"{i + 1}", _cache.SmallFont, _cache.TextGoldBrush, x + 4, startY + 3);
 
             ItemStack? stack = session.Inventory.GetStackAt(i);
             if (stack is null) continue;
@@ -544,10 +573,10 @@ public sealed class TopDownRenderer : IDisposable
             Bitmap? icon = _sprites.Get(stack.Item.Id);
             if (icon is not null)
             {
-                g.DrawImage(icon, x + 16, startY + 12, 36, 36);
+                g.DrawImage(icon, x + 13, startY + 11, 32, 32);
             }
 
-            g.DrawString($"x{stack.Quantity}", _cache.SmallFont, _cache.TextGreenBrush, x + SLOT_SIZE - 26, startY + SLOT_SIZE - 16);
+            g.DrawString($"x{stack.Quantity}", _cache.SmallFont, _cache.TextGreenBrush, x + HOTBAR_SLOT_SIZE - 26, startY + HOTBAR_SLOT_SIZE - 16);
         }
     }
 

@@ -37,8 +37,12 @@ public sealed class KeyBindingConfig
     /// <summary>Gets or sets the key toggling the pause overlay.</summary>
     public Keys Pause { get; set; } = Keys.Escape;
 
-    /// <summary>Gets or sets the hotbar slot 1-5 keys.</summary>
-    public Keys[] HotbarKeys { get; set; } = { Keys.D1, Keys.D2, Keys.D3, Keys.D4, Keys.D5 };
+    /// <summary>Gets or sets the hotbar slot 1-9 keys.</summary>
+    public Keys[] HotbarKeys { get; set; } =
+    {
+        Keys.D1, Keys.D2, Keys.D3, Keys.D4, Keys.D5,
+        Keys.D6, Keys.D7, Keys.D8, Keys.D9
+    };
 
     /// <summary>Loads key bindings from a relative JSON file, falling back to defaults safely.</summary>
     public static KeyBindingConfig LoadOrDefault(string? filePath = null)

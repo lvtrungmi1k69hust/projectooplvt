@@ -10,7 +10,7 @@ using MiniNecesse.Core.Rules;
 namespace MiniNecesse.App.Views;
 
 /// <summary>
-/// Interactive Crafting &amp; Inventory overlay panel toggled with key <c>C</c>.
+/// Interactive Crafting &amp; Inventory overlay panel toggled with key <c>C</c> or <c>Tab</c>.
 /// Strictly delegates recipe validation to <see cref="CraftingSystem.CanCraft"/> and crafting execution
 /// to <see cref="GameSession.TryCraft"/> without duplicating domain rules in UI.
 /// </summary>
@@ -33,16 +33,17 @@ public sealed class CraftingOverlayPanel : Panel
     /// <summary>Initializes a new instance of the <see cref="CraftingOverlayPanel"/> class.</summary>
     public CraftingOverlayPanel()
     {
-        Size = new Size(560, 440);
+        Size = new Size(660, 510);
         BackColor = Color.FromArgb(20, 26, 38);
         BorderStyle = BorderStyle.FixedSingle;
         Visible = false;
 
         var lblHeader = new Label
         {
-            Text = "INVENTORY & CRAFTING  (Press C to toggle)",
+            Text = "INVENTORY & CRAFTING  (Press C or Tab to close)",
+            UseMnemonic = false,
             Location = new Point(16, 12),
-            AutoSize = true,
+            Size = new Size(624, 28),
             Font = new Font("Segoe UI", 12f, FontStyle.Bold),
             ForeColor = Color.FromArgb(246, 196, 82)
         };
@@ -50,8 +51,9 @@ public sealed class CraftingOverlayPanel : Panel
 
         _lblWorkbenchStatus = new Label
         {
-            Location = new Point(16, 40),
-            Size = new Size(520, 22),
+            UseMnemonic = false,
+            Location = new Point(16, 44),
+            Size = new Size(624, 24),
             Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
             ForeColor = Color.FromArgb(146, 226, 152)
         };
@@ -59,8 +61,9 @@ public sealed class CraftingOverlayPanel : Panel
 
         _lblInventorySummary = new Label
         {
-            Location = new Point(16, 66),
-            Size = new Size(524, 42),
+            UseMnemonic = false,
+            Location = new Point(16, 70),
+            Size = new Size(624, 46),
             Font = new Font("Segoe UI", 8.8f),
             ForeColor = Color.FromArgb(212, 222, 236)
         };
@@ -68,20 +71,22 @@ public sealed class CraftingOverlayPanel : Panel
 
         _recipeListPanel = new FlowLayoutPanel
         {
-            Location = new Point(14, 112),
-            Size = new Size(530, 272),
+            Location = new Point(16, 120),
+            Size = new Size(626, 330),
             AutoScroll = true,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
             BackColor = Color.FromArgb(26, 33, 48)
         };
+        _recipeListPanel.HorizontalScroll.Maximum = 0;
+        _recipeListPanel.HorizontalScroll.Visible = false;
         Controls.Add(_recipeListPanel);
 
         _btnClose = new Button
         {
             Text = "Close (C)",
-            Location = new Point(440, 394),
-            Size = new Size(104, 32),
+            Location = new Point(536, 462),
+            Size = new Size(106, 34),
             FlatStyle = FlatStyle.Flat,
             BackColor = Color.FromArgb(78, 92, 118),
             ForeColor = Color.White,
@@ -108,14 +113,15 @@ public sealed class CraftingOverlayPanel : Panel
 
         bool nearWorkbench = _session.IsPlayerNearWorkbench(_workbenchRadius);
         _lblWorkbenchStatus.Text = nearWorkbench
-            ? "Workbench Nearby: YES — All advanced recipes unlocked!"
-            : "Workbench Nearby: NO — Place a Workbench [RMB] to unlock advanced recipes.";
+            ? "Workbench Nearby: YES — All [WB] recipes unlocked!"
+            : "Workbench Nearby: NO — Craft a Workbench (6 Wood) and place it [RMB] nearby.";
         _lblWorkbenchStatus.ForeColor = nearWorkbench
             ? Color.FromArgb(118, 232, 146)
             : Color.FromArgb(244, 162, 102);
 
         _lblInventorySummary.Text = BuildInventorySummaryText(_session);
 
+        _recipeListPanel.SuspendLayout();
         ClearRecipeRows();
         for (int i = 0; i < _recipes.Count; i++)
         {
@@ -123,6 +129,8 @@ public sealed class CraftingOverlayPanel : Panel
             bool canCraft = _session.CraftingSystem.CanCraft(_session.Inventory, recipe, nearWorkbench);
             _recipeListPanel.Controls.Add(CreateRecipeRow(recipe, canCraft));
         }
+
+        _recipeListPanel.ResumeLayout();
     }
 
     /// <inheritdoc />
@@ -141,13 +149,17 @@ public sealed class CraftingOverlayPanel : Panel
     {
         var row = new Panel
         {
-            Size = new Size(498, 48),
+            Size = new Size(588, 60),
             Margin = new Padding(4, 3, 4, 3),
-            BackColor = canCraft ? Color.FromArgb(32, 68, 46) : Color.FromArgb(68, 34, 38)
+            BackColor = canCraft ? Color.FromArgb(32, 72, 48) : Color.FromArgb(68, 34, 38)
         };
 
-        string ingText = string.Join(", ", recipe.Ingredients.Select(ing => $"{ing.ItemId} x{ing.Quantity}"));
-        string wbTag = recipe.RequiresWorkbench ? " [WB]" : string.Empty;
+        string ingText = string.Join("  |  ", recipe.Ingredients.Select(ing =>
+        {
+            int owned = _session?.Inventory.GetItemCount(ing.ItemId) ?? 0;
+            return $"{FormatDisplayName(ing.ItemId)} {owned}/{ing.Quantity}";
+        }));
+        string wbTag = recipe.RequiresWorkbench ? " [Requires Workbench]" : " [Hand Craft]";
 
         Bitmap? icon = _sprites?.Get(recipe.OutputItemId);
         if (icon is not null)
@@ -156,36 +168,38 @@ public sealed class CraftingOverlayPanel : Panel
             {
                 Image = icon,
                 SizeMode = PictureBoxSizeMode.Zoom,
-                Location = new Point(8, 8),
-                Size = new Size(32, 32),
+                Location = new Point(10, 12),
+                Size = new Size(36, 36),
                 BackColor = Color.Transparent
             });
         }
 
-        int textLeft = icon is not null ? 48 : 10;
+        int textLeft = icon is not null ? 56 : 12;
         row.Controls.Add(new Label
         {
-            Text = $"{recipe.OutputItemId} x{recipe.OutputQuantity}{wbTag}",
-            Location = new Point(textLeft, 5),
-            Size = new Size(340, 18),
+            Text = $"{FormatDisplayName(recipe.OutputItemId)} x{recipe.OutputQuantity}{wbTag}",
+            UseMnemonic = false,
+            Location = new Point(textLeft, 6),
+            Size = new Size(424, 24),
             Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
             ForeColor = canCraft ? Color.FromArgb(174, 248, 188) : Color.FromArgb(246, 174, 174)
         });
 
         row.Controls.Add(new Label
         {
-            Text = $"Needs: {ingText}",
-            Location = new Point(textLeft, 24),
-            Size = new Size(340, 18),
-            Font = new Font("Segoe UI", 8.2f),
-            ForeColor = Color.FromArgb(218, 224, 234)
+            Text = $"Materials: {ingText}",
+            UseMnemonic = false,
+            Location = new Point(textLeft, 32),
+            Size = new Size(424, 22),
+            Font = new Font("Segoe UI", 8.5f),
+            ForeColor = Color.FromArgb(224, 230, 240)
         });
 
         var btnCraft = new Button
         {
             Text = "Craft",
-            Location = new Point(402, 9),
-            Size = new Size(84, 30),
+            Location = new Point(490, 14),
+            Size = new Size(86, 32),
             Enabled = canCraft,
             Tag = recipe,
             FlatStyle = FlatStyle.Flat,
@@ -230,10 +244,21 @@ public sealed class CraftingOverlayPanel : Panel
     {
         if (session.Inventory.Stacks.Count == 0)
         {
-            return "Inventory: (empty)";
+            return "Bag: (empty)";
         }
 
-        string items = string.Join(" | ", session.Inventory.Stacks.Select(s => $"{s.Item.Name} x{s.Quantity}"));
+        string items = string.Join(" • ", session.Inventory.Stacks.Select(s => $"{s.Item.Name} x{s.Quantity}"));
         return $"Bag ({session.Inventory.UsedSlots}/{session.Inventory.Capacity}): {items}";
+    }
+
+    private static string FormatDisplayName(string itemId)
+    {
+        string[] parts = itemId.Split('_', StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < parts.Length; i++)
+        {
+            parts[i] = char.ToUpperInvariant(parts[i][0]) + parts[i][1..];
+        }
+
+        return string.Join(' ', parts);
     }
 }

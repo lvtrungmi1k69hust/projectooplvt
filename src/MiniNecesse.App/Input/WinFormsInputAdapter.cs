@@ -97,6 +97,9 @@ public sealed class WinFormsInputAdapter : IInputProvider
     /// <summary>Records a WinForms MouseMove event.</summary>
     public void HandleMouseMove(Point location) => _mouseScreenPosition = location;
 
+    /// <summary>Selects a specific 0-based hotbar slot directly (e.g., from clicking a hotbar slot or mouse wheel).</summary>
+    public void QueueHotbarSlot(int slotIndex) => _selectedHotbarQueued = slotIndex;
+
     /// <summary>Clears all held key and mouse states (e.g., when focus is lost or overlay opens).</summary>
     public void ClearAllInputs()
     {
