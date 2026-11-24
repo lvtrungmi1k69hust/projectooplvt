@@ -53,13 +53,22 @@ public sealed class RenderResourceCache : IDisposable
     public SolidBrush TextGoldBrush { get; } = new(Color.FromArgb(248, 202, 88));
     public SolidBrush TextMutedBrush { get; } = new(Color.FromArgb(172, 186, 206));
     public SolidBrush TextGreenBrush { get; } = new(Color.FromArgb(118, 230, 146));
+    public SolidBrush BuildValidBrush { get; } = new(Color.FromArgb(72, 86, 234, 128));
+    public SolidBrush BuildInvalidBrush { get; } = new(Color.FromArgb(72, 236, 76, 86));
+    public SolidBrush ShoreFoamBrush { get; } = new(Color.FromArgb(115, 224, 244, 255));
+    public SolidBrush MinimapPlayerBrush { get; } = new(Color.FromArgb(64, 224, 255));
+    public SolidBrush MinimapEnemyBrush { get; } = new(Color.FromArgb(246, 72, 82));
+    public SolidBrush MinimapBossBrush { get; } = new(Color.FromArgb(255, 210, 62));
 
-    public Pen TileGridPen { get; } = new(Color.FromArgb(30, 0, 0, 0), 1f);
+    public Pen TileGridPen { get; } = new(Color.FromArgb(20, 0, 0, 0), 1f);
     public Pen DarkOutlinePen { get; } = new(Color.FromArgb(22, 26, 36), 1.5f);
     public Pen HudBorderPen { get; } = new(Color.FromArgb(95, 118, 152), 1.5f);
     public Pen HotbarSelectedPen { get; } = new(Color.FromArgb(248, 204, 84), 2.5f);
     public Pen SwingArcPen { get; } = new(Color.FromArgb(220, 255, 242, 166), 3.5f);
     public Pen BossAuraPen { get; } = new(Color.FromArgb(190, 255, 76, 98), 2.5f);
+    public Pen BuildValidPen { get; } = new(Color.FromArgb(210, 110, 248, 148), 2f);
+    public Pen BuildInvalidPen { get; } = new(Color.FromArgb(210, 248, 96, 108), 2f);
+    public Pen MinimapViewportPen { get; } = new(Color.FromArgb(190, 255, 255, 255), 1f);
 
     public Font HudTitleFont { get; } = new("Segoe UI", 10.5f, FontStyle.Bold);
     public Font HudBodyFont { get; } = new("Segoe UI", 9.0f, FontStyle.Regular);
@@ -146,6 +155,12 @@ public sealed class RenderResourceCache : IDisposable
         TextGoldBrush.Dispose();
         TextMutedBrush.Dispose();
         TextGreenBrush.Dispose();
+        BuildValidBrush.Dispose();
+        BuildInvalidBrush.Dispose();
+        ShoreFoamBrush.Dispose();
+        MinimapPlayerBrush.Dispose();
+        MinimapEnemyBrush.Dispose();
+        MinimapBossBrush.Dispose();
 
         TileGridPen.Dispose();
         DarkOutlinePen.Dispose();
@@ -153,6 +168,9 @@ public sealed class RenderResourceCache : IDisposable
         HotbarSelectedPen.Dispose();
         SwingArcPen.Dispose();
         BossAuraPen.Dispose();
+        BuildValidPen.Dispose();
+        BuildInvalidPen.Dispose();
+        MinimapViewportPen.Dispose();
 
         HudTitleFont.Dispose();
         HudBodyFont.Dispose();

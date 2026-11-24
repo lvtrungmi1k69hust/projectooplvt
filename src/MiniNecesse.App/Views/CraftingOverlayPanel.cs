@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using MiniNecesse.App.Rendering;
 using MiniNecesse.Core.Crafting;
 using MiniNecesse.Core.Rules;
 
@@ -23,6 +24,7 @@ public sealed class CraftingOverlayPanel : Panel
 
     private GameSession? _session;
     private IReadOnlyList<CraftingRecipe> _recipes = Array.Empty<CraftingRecipe>();
+    private SpriteAtlasCache? _sprites;
     private float _workbenchRadius = 80f;
 
     /// <summary>Raised when the user clicks the Close button.</summary>
@@ -89,12 +91,13 @@ public sealed class CraftingOverlayPanel : Panel
         Controls.Add(_btnClose);
     }
 
-    /// <summary>Binds this panel to the active <see cref="GameSession"/> and loaded recipe catalog.</summary>
-    public void Bind(GameSession session, IReadOnlyList<CraftingRecipe> recipes, float workbenchRadius)
+    /// <summary>Binds this panel to the active <see cref="GameSession"/>, recipe catalog, and sprite atlas.</summary>
+    public void Bind(GameSession session, IReadOnlyList<CraftingRecipe> recipes, float workbenchRadius, SpriteAtlasCache? sprites = null)
     {
         _session = session;
         _recipes = recipes;
         _workbenchRadius = workbenchRadius;
+        _sprites = sprites;
         RefreshView();
     }
 
@@ -146,11 +149,25 @@ public sealed class CraftingOverlayPanel : Panel
         string ingText = string.Join(", ", recipe.Ingredients.Select(ing => $"{ing.ItemId} x{ing.Quantity}"));
         string wbTag = recipe.RequiresWorkbench ? " [WB]" : string.Empty;
 
+        Bitmap? icon = _sprites?.Get(recipe.OutputItemId);
+        if (icon is not null)
+        {
+            row.Controls.Add(new PictureBox
+            {
+                Image = icon,
+                SizeMode = PictureBoxSizeMode.Zoom,
+                Location = new Point(8, 8),
+                Size = new Size(32, 32),
+                BackColor = Color.Transparent
+            });
+        }
+
+        int textLeft = icon is not null ? 48 : 10;
         row.Controls.Add(new Label
         {
             Text = $"{recipe.OutputItemId} x{recipe.OutputQuantity}{wbTag}",
-            Location = new Point(10, 5),
-            Size = new Size(375, 18),
+            Location = new Point(textLeft, 5),
+            Size = new Size(340, 18),
             Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
             ForeColor = canCraft ? Color.FromArgb(174, 248, 188) : Color.FromArgb(246, 174, 174)
         });
@@ -158,8 +175,8 @@ public sealed class CraftingOverlayPanel : Panel
         row.Controls.Add(new Label
         {
             Text = $"Needs: {ingText}",
-            Location = new Point(10, 24),
-            Size = new Size(375, 18),
+            Location = new Point(textLeft, 24),
+            Size = new Size(340, 18),
             Font = new Font("Segoe UI", 8.2f),
             ForeColor = Color.FromArgb(218, 224, 234)
         });
