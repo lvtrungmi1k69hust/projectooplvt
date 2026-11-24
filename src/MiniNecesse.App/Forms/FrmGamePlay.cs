@@ -293,7 +293,8 @@ public sealed class FrmGamePlay : Form
         _session = session;
         _session.AttachHudObserver(_hud);
         _audioManager.AttachToSession(_session);
-        _craftingPanel.Bind(_session, _recipes, _config.WorkbenchInteractRadius);
+        _renderer.ResetForNewIsland();
+        _craftingPanel.Bind(_session, _recipes, _config.WorkbenchInteractRadius, _renderer.Sprites);
         _loopController = new GameLoopController(RunFixedSimulationStep, _config.FixedDeltaTime);
 
         HideAllOverlays();
@@ -337,6 +338,7 @@ public sealed class FrmGamePlay : Form
 
         ProcessModalToggleInputs();
         _loopController.StepFrame(frameDt);
+        _renderer.UpdateVisuals(_session, frameDt);
         _cameraOffset = _renderer.ComputeCameraOffset(_session, _canvas.ClientSize);
         _inputAdapter.UpdateCameraOffset(_cameraOffset);
         _canvas.Invalidate();
