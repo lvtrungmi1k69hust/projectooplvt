@@ -25,7 +25,7 @@ public sealed class TopDownRenderer : IDisposable
     private const int HOTBAR_SLOT_SIZE = 58;
     private const int HOTBAR_GAP = 6;
     private const int HOTBAR_BOTTOM_MARGIN = 14;
-    private const int MINIMAP_TILE_PX = 6;
+    private const int MINIMAP_TILE_PX = 4;
 
     private readonly RenderResourceCache _cache = new();
     private readonly SpriteAtlasCache _sprites = new();
@@ -285,7 +285,9 @@ public sealed class TopDownRenderer : IDisposable
             Bitmap? sprite = ResolveEnemySprite(e, bounceFrame);
             if (sprite is not null)
             {
-                g.DrawImage(sprite, sx - 2, sy - 4, w + 4, h + 4);
+                bool isTanky = !e.IsBoss && (e.Archetype.Contains("Golem", StringComparison.OrdinalIgnoreCase) || e.Archetype.Contains("Orc", StringComparison.OrdinalIgnoreCase));
+                float extra = isTanky ? 8f : 4f;
+                g.DrawImage(sprite, sx - (extra * 0.5f), sy - extra, w + extra, h + extra);
             }
 
             if (e.IsBoss && e.State == EnemyState.Enraged)
@@ -317,6 +319,21 @@ public sealed class TopDownRenderer : IDisposable
         if (enemy.Archetype.Contains("Frost", StringComparison.OrdinalIgnoreCase))
         {
             return _sprites.Get("enemy_frost");
+        }
+
+        if (enemy.Archetype.Contains("Golem", StringComparison.OrdinalIgnoreCase))
+        {
+            return _sprites.Get("enemy_golem");
+        }
+
+        if (enemy.Archetype.Contains("Orc", StringComparison.OrdinalIgnoreCase))
+        {
+            return _sprites.Get("enemy_orc");
+        }
+
+        if (enemy.Archetype.Contains("Mage", StringComparison.OrdinalIgnoreCase))
+        {
+            return _sprites.Get("enemy_mage");
         }
 
         return _sprites.Get("enemy_zombie");

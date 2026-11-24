@@ -67,12 +67,44 @@
     ]
   },
   {
+    "recipeId": "craft_gold_greatsword",
+    "outputItemId": "gold_greatsword",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 3 },
+      { "itemId": "gold_ore", "quantity": 6 }
+    ]
+  },
+  {
     "recipeId": "craft_wooden_bow",
     "outputItemId": "wooden_bow",
     "outputQuantity": 1,
     "requiresWorkbench": true,
     "ingredients": [
       { "itemId": "wood", "quantity": 8 },
+      { "itemId": "slime_gel", "quantity": 2 }
+    ]
+  },
+  {
+    "recipeId": "craft_fire_staff",
+    "outputItemId": "fire_staff",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 4 },
+      { "itemId": "copper_ore", "quantity": 4 },
+      { "itemId": "torch", "quantity": 2 }
+    ]
+  },
+  {
+    "recipeId": "craft_iron_crossbow",
+    "outputItemId": "iron_crossbow",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 4 },
+      { "itemId": "iron_ore", "quantity": 6 },
       { "itemId": "slime_gel", "quantity": 2 }
     ]
   },

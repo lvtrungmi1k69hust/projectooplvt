@@ -197,6 +197,37 @@ public sealed class RaidWaveSpawner
     }
 
     /// <summary>
+    /// Spawns a continuous nighttime skirmish reinforcement wave by cycling the island's configured waves
+    /// so players can keep farming enemies every night indefinitely.
+    /// </summary>
+    public int SpawnNightSkirmishWave(Player player, List<Enemy> spawnedOutput)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(spawnedOutput);
+        spawnedOutput.Clear();
+
+        if (_waves.Count == 0)
+        {
+            return 0;
+        }
+
+        int waveSlot = _nextWaveIndex < _waves.Count ? _nextWaveIndex : _waves.Count - 1;
+        WaveDefinition wave = _waves[waveSlot];
+        float multiplier = DIFFICULTY_COUNT_MULTIPLIERS.TryGetValue(_difficulty, out float m) ? m : 1.0f;
+
+        for (int i = 0; i < wave.Entries.Count; i++)
+        {
+            WaveSpawnEntry entry = wave.Entries[i];
+            int scaledCount = global::System.Math.Max(1, (int)MathF.Round(entry.Count * multiplier));
+            SpawnArchetypeGroup(entry.EnemyArchetype, scaledCount, player.Center, spawnedOutput);
+        }
+
+        _nextWaveIndex++;
+        OnWaveSpawned?.Invoke(_nextWaveIndex, spawnedOutput.Count);
+        return spawnedOutput.Count;
+    }
+
+    /// <summary>
     /// Finds a valid walkable world position outside the player's safe exclusion radius.
     /// Returns <see langword="false"/> if no walkable tile exists outside the exclusion circle.
     /// </summary>

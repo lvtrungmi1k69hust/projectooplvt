@@ -1,80 +1,318 @@
-{
-  "islandId": "ISLAND_05",
-  "name": "Shadow Citadel (Dark Fortress)",
-  "biome": "DarkFortress",
-  "width": 24,
-  "height": 18,
-  "seed": 5005,
-  "playerSpawn": { "x": 12, "y": 9 },
-  "tileLayout": [
-    "WWWWWWWWWWWWWWWWWWWWWWWW",
-    "WDDDDDDDDDDDDDDDDDDDDDDW",
-    "WDDRRRDDDDDDDDDDDDRRRDDW",
-    "WDDWWWDDDDDDDDDDDDWWWDDW",
-    "WDDDDDDDDDRRRRDDDDDDDDDW",
-    "WDDDDDDRRRDDDDRRRDDDDDDW",
-    "WDDDDDRDDDDDDDDDDRDDDDDW",
-    "WDDDDDRDDDDDDDDDDRDDDDDW",
-    "WDDDDDDDDDDDDDDDDDDDDDDW",
-    "WDDDDDDDDDDDDDDDDDDDDDDW",
-    "WDDDDDRDDDDDDDDDDRDDDDDW",
-    "WDDDDDRDDDDDDDDDDRDDDDDW",
-    "WDDDDDDRRRDDDDRRRDDDDDDW",
-    "WDDDDDDDDDRRRRDDDDDDDDDW",
-    "WDDWWWDDDDDDDDDDDDWWWDDW",
-    "WDDRRRDDDDDDDDDDDDRRRDDW",
-    "WDDDDDDDDDDDDDDDDDDDDDDW",
-    "WWWWWWWWWWWWWWWWWWWWWWWW"
-  ],
-  "resourceSpawns": [
-    { "type": "StoneRock", "x": 4, "y": 2 },
-    { "type": "StoneRock", "x": 19, "y": 2 },
-    { "type": "StoneRock", "x": 4, "y": 15 },
-    { "type": "StoneRock", "x": 19, "y": 15 },
-    { "type": "IronDeposit", "x": 8, "y": 5 },
-    { "type": "IronDeposit", "x": 15, "y": 5 },
-    { "type": "IronDeposit", "x": 8, "y": 12 },
-    { "type": "IronDeposit", "x": 15, "y": 12 },
-    { "type": "GoldDeposit", "x": 11, "y": 4 },
-    { "type": "GoldDeposit", "x": 12, "y": 4 },
-    { "type": "GoldDeposit", "x": 11, "y": 13 },
-    { "type": "GoldDeposit", "x": 12, "y": 13 }
-  ],
-  "waves": [
-    {
-      "waveNumber": 1,
-      "enemies": [
-        { "type": "FrostRaider", "count": 5 },
-        { "type": "SkeletonArcher", "count": 4 }
-      ]
-    },
-    {
-      "waveNumber": 2,
-      "enemies": [
-        { "type": "SwampZombie", "count": 5 },
-        { "type": "FrostRaider", "count": 4 },
-        { "type": "SkeletonArcher", "count": 4 }
-      ]
-    },
-    {
-      "waveNumber": 3,
-      "enemies": [
-        { "type": "FrostRaider", "count": 7 },
-        { "type": "SkeletonArcher", "count": 5 }
-      ]
-    }
-  ],
-  "boss": {
-    "type": "ShadowLord",
-    "displayName": "Shadow Lord",
-    "maxHp": 600,
-    "moveSpeed": 92.0,
-    "attackDamage": 30,
-    "attackRange": 180.0,
-    "attackCooldown": 1.00,
-    "scoreReward": 800,
-    "initialStrategy": "ranged",
-    "enrageStrategy": "boss_enrage_heavy",
-    "enrageThresholdRatio": 0.30
-  }
+﻿{
+    "islandId":  "ISLAND_05",
+    "name":  "Shadow Citadel (Dark Fortress)",
+    "biome":  "DarkFortress",
+    "width":  48,
+    "height":  36,
+    "seed":  5005,
+    "playerSpawn":  {
+                        "x":  24,
+                        "y":  18
+                    },
+    "tileLayout":  [
+                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+                       "WWWWWWWWWWWWWWDDDDDDDDDDDDDDDDDDDDWWWWWWWWWWWWWW",
+                       "WWWWWWWWWWWWWWDDDDDDDDDDDDDDRRRRDDDWWWWWWWWWWWWW",
+                       "WWWWWWWWWWWWWDDDDDDDDDDDDDDRRRRRDDDWWWWWWWWWWWWW",
+                       "WWWWWWWWWWWWWDDDDDDDDDDDDDDDDDDDDDDWWWWWWWWWWWWW",
+                       "WWWWWWWWWWWWDDDDDDDDDDDDDDDDDDDDDDDDWWWWWWWWWWWW",
+                       "WWWWWWWWWWWWDDDDDDDDDDDDDDDDDDDDDDDDDWWWWWWWWWWW",
+                       "WWWWWWWWWWDDDDDDDDDDDDDDDDDDDDDDDDDDDDDWWWWWWWWW",
+                       "WWWWDDDDDDDDWWWRRRRDDDDDDDDDDDDDDDDDDDDDDDDDDWWW",
+                       "WWDDDDDDDDDWWWWWRRRRDDDDDDDDDDDDDDDDDRRRRRRDDDWW",
+                       "WWDDDDDDDDWWWWWWWRRRDDDDDDDDDDDDDDDDDRRRRRRRRDWW",
+                       "WWDDDDDDDDDWWWWWRRRRDDDDDDDDDDDDDDDDRRRRRRRRRDWW",
+                       "WWDDDDDDDDDRWWWRRRRRDDDDDDDDDDDDDDDDDRRRRRRRRDWW",
+                       "WWDDDDDDDDDDRRRRRRRRDDDDDDDDDDDDDDDDDRRRRRRRRDWW",
+                       "WWDDDDDDDDDDRRRRRRRDDDDDDDDDDDDDDDDDDRRRRRRRDDWW",
+                       "WWDDDDDDDDDDDDDRRDDDDDDDDDDDDDDDDDDDDDDDRRDDDDWW",
+                       "WWDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDWW",
+                       "WWDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDWW",
+                       "WWDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDWW",
+                       "WWDDRRDDDDDDDDDDDDDDDDDDDDDDRRRDDDDDDDDDDDDDDDWW",
+                       "WWDRRRRDDDDDDDDDDDDDDDDDDDDDRRRRDDDDDDDDDDDDDDWW",
+                       "WWDRRRRDDDDDDDDDDDDDDDDDRRRRRRRRRWWWWWDDDDDDDDWW",
+                       "WWDRRRRRDDDDDDDDDDDDDDDDRRRRRRRRWWWWWWWDDDDDDDWW",
+                       "WWDRRRRRDDDDDDDDDDDDDDDDRRRRRRRRWWWWWWWDDDDDDDWW",
+                       "WWDDRRRDDDDDDDDDDDDDDDDDRRRRRRRRWWWWWWWDDDDDDDWW",
+                       "WWDDDDDDDDDDDDDDDDDDDDDDDRRRRRRRDWWWWWDDDDDDDDWW",
+                       "WWWWDDDDDDDDDDDDDDDDDDDDDDRRRRDDDDDDDDDDDDDDDWWW",
+                       "WWWWWWWWWWDDDDDDDDDDDDDDDDDDDDDDDDDDDDDWWWWWWWWW",
+                       "WWWWWWWWWWWWDDDDDDDDDDDDDDDDDDDDDDDDDWWWWWWWWWWW",
+                       "WWWWWWWWWWWWDDDDDDDDDDDDDDDDDDDDDDDDWWWWWWWWWWWW",
+                       "WWWWWWWWWWWWWDDRRRDDDDDDDDDDDDDDDDDWWWWWWWWWWWWW",
+                       "WWWWWWWWWWWWWDDDRRRDDDDDDDDDDDDDDDDWWWWWWWWWWWWW",
+                       "WWWWWWWWWWWWWWDDRRRDDDDDDDDDDDDDDDDWWWWWWWWWWWWW",
+                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+                   ],
+    "resourceSpawns":  [
+                           {
+                               "type":  "IronDeposit",
+                               "x":  22,
+                               "y":  14
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  11,
+                               "y":  28
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  40,
+                               "y":  15
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  21,
+                               "y":  14
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  29,
+                               "y":  31
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  16,
+                               "y":  13
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  17,
+                               "y":  25
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  34,
+                               "y":  5
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  9,
+                               "y":  11
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  39,
+                               "y":  18
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  12,
+                               "y":  22
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  5,
+                               "y":  27
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  41,
+                               "y":  27
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  41,
+                               "y":  17
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  14,
+                               "y":  23
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  41,
+                               "y":  11
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  22,
+                               "y":  27
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  37,
+                               "y":  9
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  32,
+                               "y":  22
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  33,
+                               "y":  14
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  7,
+                               "y":  24
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  40,
+                               "y":  17
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  17,
+                               "y":  24
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  24,
+                               "y":  23
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  29,
+                               "y":  10
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  18,
+                               "y":  21
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  18,
+                               "y":  11
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  42,
+                               "y":  27
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  5,
+                               "y":  23
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  38,
+                               "y":  17
+                           },
+                           {
+                               "type":  "StoneRock",
+                               "x":  29,
+                               "y":  13
+                           },
+                           {
+                               "type":  "StoneRock",
+                               "x":  21,
+                               "y":  21
+                           },
+                           {
+                               "type":  "StoneRock",
+                               "x":  4,
+                               "y":  9
+                           },
+                           {
+                               "type":  "StoneRock",
+                               "x":  35,
+                               "y":  27
+                           },
+                           {
+                               "type":  "StoneRock",
+                               "x":  24,
+                               "y":  8
+                           },
+                           {
+                               "type":  "StoneRock",
+                               "x":  33,
+                               "y":  10
+                           },
+                           {
+                               "type":  "StoneRock",
+                               "x":  3,
+                               "y":  16
+                           },
+                           {
+                               "type":  "StoneRock",
+                               "x":  8,
+                               "y":  20
+                           },
+                           {
+                               "type":  "StoneRock",
+                               "x":  9,
+                               "y":  9
+                           },
+                           {
+                               "type":  "StoneRock",
+                               "x":  30,
+                               "y":  9
+                           }
+                       ],
+    "waves":  [
+                  {
+                      "waveNumber":  1,
+                      "enemies":  [
+                                      {
+                                          "type":  "FrostRaider",
+                                          "count":  5
+                                      },
+                                      {
+                                          "type":  "OrcBrute",
+                                          "count":  3
+                                      },
+                                      {
+                                          "type":  "DarkMage",
+                                          "count":  3
+                                      }
+                                  ]
+                  },
+                  {
+                      "waveNumber":  2,
+                      "enemies":  [
+                                      {
+                                          "type":  "StoneGolem",
+                                          "count":  3
+                                      },
+                                      {
+                                          "type":  "OrcBrute",
+                                          "count":  4
+                                      },
+                                      {
+                                          "type":  "DarkMage",
+                                          "count":  3
+                                      }
+                                  ]
+                  },
+                  {
+                      "waveNumber":  3,
+                      "enemies":  [
+                                      {
+                                          "type":  "StoneGolem",
+                                          "count":  4
+                                      },
+                                      {
+                                          "type":  "OrcBrute",
+                                          "count":  4
+                                      },
+                                      {
+                                          "type":  "DarkMage",
+                                          "count":  4
+                                      }
+                                  ]
+                  }
+              ],
+    "boss":  {
+                 "displayName":  "Shadow Lord",
+                 "enrageStrategy":  "boss_enrage_heavy",
+                 "initialStrategy":  "ranged",
+                 "attackRange":  180,
+                 "scoreReward":  800,
+                 "enrageThresholdRatio":  0.3,
+                 "type":  "ShadowLord",
+                 "attackCooldown":  1,
+                 "attackDamage":  30,
+                 "maxHp":  640,
+                 "moveSpeed":  92
+             }
 }

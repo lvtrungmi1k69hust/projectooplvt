@@ -87,4 +87,31 @@ public sealed class DesignPatternsTests
         Tile tileB = level.GetTile(4, 4);
         Assert.Same(tileA.Flyweight, tileB.Flyweight);
     }
+
+    [Fact]
+    public void Factories_NewWeaponsAndTankyEnemies_CreateConfiguredArchetypesAndDropLoot()
+    {
+        var itemFactory = ItemFactory.CreateDefault();
+        var enemyFactory = EnemyFactory.CreateDefault();
+
+        IWeapon greatsword = Assert.IsType<WeaponItem>(itemFactory.CreateItem("gold_greatsword"));
+        IWeapon fireStaff = Assert.IsType<WeaponItem>(itemFactory.CreateItem("fire_staff"));
+        IWeapon crossbow = Assert.IsType<WeaponItem>(itemFactory.CreateItem("iron_crossbow"));
+
+        Assert.Equal(54, greatsword.ComputeDamage());
+        Assert.True(fireStaff.IsRanged);
+        Assert.True(crossbow.IsRanged);
+        Assert.True(crossbow.ProjectileSpeed > fireStaff.ProjectileSpeed);
+
+        Enemy golem = enemyFactory.CreateEnemy("StoneGolem", new Vector2D(200f, 200f));
+        Enemy orc = enemyFactory.CreateEnemy("OrcBrute", new Vector2D(240f, 200f));
+        Enemy mage = enemyFactory.CreateEnemy("DarkMage", new Vector2D(280f, 200f));
+
+        Assert.Equal(170, golem.MaxHp);
+        Assert.Equal(145, orc.MaxHp);
+        Assert.Equal(115, mage.MaxHp);
+        Assert.Equal("copper_ore", golem.LootDropItemId);
+        Assert.Equal("iron_ore", orc.LootDropItemId);
+        Assert.Equal("gold_ore", mage.LootDropItemId);
+    }
 }

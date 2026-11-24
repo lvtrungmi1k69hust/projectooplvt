@@ -104,7 +104,7 @@ public sealed class SaveLoadAndJsonIntegrationTests
         Assert.True(config.PlayerBaseHp > 0);
 
         var recipes = loader.LoadRecipes();
-        Assert.True(recipes.Count >= 8);
+        Assert.True(recipes.Count >= 13);
 
         var islandIds = loader.GetAvailableIslandIds();
         Assert.Equal(5, islandIds.Count);
@@ -113,10 +113,10 @@ public sealed class SaveLoadAndJsonIntegrationTests
         foreach (string islandId in islandIds)
         {
             LoadedIslandPackage package = loader.LoadIsland(islandId);
-            Assert.Equal(24, package.Level.Width);
-            Assert.Equal(18, package.Level.Height);
-            Assert.NotEmpty(package.ResourceSpawns);
-            Assert.NotEmpty(package.Waves);
+            Assert.Equal(48, package.Level.Width);
+            Assert.Equal(36, package.Level.Height);
+            Assert.True(package.ResourceSpawns.Count >= 35);
+            Assert.True(package.Waves.Count >= 3);
             Assert.True(package.Boss.MaxHp > previousBossHp);
             previousBossHp = package.Boss.MaxHp;
         }

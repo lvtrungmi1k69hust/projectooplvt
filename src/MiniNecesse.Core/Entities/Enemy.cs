@@ -13,6 +13,8 @@ public class Enemy : Character
     private readonly string _archetype;
     private readonly int _scoreReward;
     private readonly float _attackRange;
+    private readonly string? _lootDropItemId;
+    private readonly int _lootDropQuantity;
     private EnemyState _state;
     private IAIStrategy? _aiStrategy;
     private int _attackDamage;
@@ -46,6 +48,12 @@ public class Enemy : Character
     /// <summary>Gets a value indicating whether this enemy is an island boss.</summary>
     public virtual bool IsBoss => false;
 
+    /// <summary>Gets the optional item identifier dropped when this enemy is defeated.</summary>
+    public string? LootDropItemId => _lootDropItemId;
+
+    /// <summary>Gets the quantity of loot dropped when defeated.</summary>
+    public int LootDropQuantity => _lootDropQuantity;
+
     /// <summary>Raised whenever the enemy's FSM state changes.</summary>
     public event Action<Enemy, EnemyState>? OnStateChanged;
 
@@ -66,7 +74,9 @@ public class Enemy : Character
         float attackCooldown,
         int scoreReward = 50,
         IAIStrategy? initialStrategy = null,
-        Vector2D? size = null)
+        Vector2D? size = null,
+        string? lootDropItemId = null,
+        int lootDropQuantity = 0)
         : base(id, spawnPosition, size ?? new Vector2D(24f, 24f), maxHp, moveSpeed)
     {
         if (string.IsNullOrWhiteSpace(archetype))
@@ -100,6 +110,8 @@ public class Enemy : Character
         _attackCooldown = attackCooldown;
         _scoreReward = scoreReward;
         _aiStrategy = initialStrategy;
+        _lootDropItemId = lootDropItemId;
+        _lootDropQuantity = global::System.Math.Max(0, lootDropQuantity);
         _state = EnemyState.Idle;
     }
 

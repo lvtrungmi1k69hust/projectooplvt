@@ -78,7 +78,9 @@ public sealed class EnemyFactory : IEntityFactory
             bp.AttackRange,
             bp.AttackCooldown,
             bp.ScoreReward,
-            strategy);
+            strategy,
+            lootDropItemId: bp.LootDropItemId,
+            lootDropQuantity: bp.LootDropQuantity);
     }
 
     /// <inheritdoc />
@@ -188,11 +190,14 @@ public sealed class EnemyFactory : IEntityFactory
 
     private static void RegisterDefaultEnemiesAndBosses(EnemyFactory factory)
     {
-        factory.RegisterEnemyBlueprint(new EnemyBlueprint("Slime", "Forest Slime", 35, 65f, 8, 28f, 1.1f, 50, "melee"));
-        factory.RegisterEnemyBlueprint(new EnemyBlueprint("ZombieRaider", "Zombie Raider", 60, 75f, 12, 32f, 1.0f, 65, "melee"));
-        factory.RegisterEnemyBlueprint(new EnemyBlueprint("SkeletonArcher", "Skeleton Archer", 45, 70f, 10, 185f, 1.4f, 75, "ranged"));
-        factory.RegisterEnemyBlueprint(new EnemyBlueprint("SwampZombie", "Swamp Zombie", 85, 72f, 15, 32f, 0.95f, 80, "melee"));
-        factory.RegisterEnemyBlueprint(new EnemyBlueprint("FrostRaider", "Frost Raider", 105, 85f, 18, 34f, 0.9f, 95, "melee"));
+        factory.RegisterEnemyBlueprint(new EnemyBlueprint("Slime", "Forest Slime", 35, 65f, 8, 28f, 1.1f, 50, "melee", LootDropItemId: "slime_gel", LootDropQuantity: 2));
+        factory.RegisterEnemyBlueprint(new EnemyBlueprint("ZombieRaider", "Zombie Raider", 60, 75f, 12, 32f, 1.0f, 65, "melee", LootDropItemId: "slime_gel", LootDropQuantity: 1));
+        factory.RegisterEnemyBlueprint(new EnemyBlueprint("SkeletonArcher", "Skeleton Archer", 45, 70f, 10, 185f, 1.4f, 75, "ranged", LootDropItemId: "wood", LootDropQuantity: 2));
+        factory.RegisterEnemyBlueprint(new EnemyBlueprint("SwampZombie", "Swamp Zombie", 85, 72f, 15, 32f, 0.95f, 80, "melee", LootDropItemId: "slime_gel", LootDropQuantity: 2));
+        factory.RegisterEnemyBlueprint(new EnemyBlueprint("FrostRaider", "Frost Raider", 105, 85f, 18, 34f, 0.9f, 95, "melee", LootDropItemId: "iron_ore", LootDropQuantity: 1));
+        factory.RegisterEnemyBlueprint(new EnemyBlueprint("StoneGolem", "Stone Golem", 170, 54f, 22, 38f, 1.35f, 120, "melee", LootDropItemId: "copper_ore", LootDropQuantity: 2));
+        factory.RegisterEnemyBlueprint(new EnemyBlueprint("OrcBrute", "Orc Brute", 145, 82f, 20, 36f, 0.95f, 110, "melee", LootDropItemId: "iron_ore", LootDropQuantity: 2));
+        factory.RegisterEnemyBlueprint(new EnemyBlueprint("DarkMage", "Dark Mage", 115, 74f, 18, 220f, 1.20f, 130, "ranged", LootDropItemId: "gold_ore", LootDropQuantity: 2));
         factory.RegisterEnemyBlueprint(new EnemyBlueprint("KingSlime", "King Slime", 260, 72f, 16, 44f, 1.15f, 500, "melee", true, "boss_enrage"));
         factory.RegisterEnemyBlueprint(new EnemyBlueprint("ForestGuardian", "Forest Guardian", 340, 78f, 20, 48f, 1.1f, 550, "melee", true, "boss_enrage"));
         factory.RegisterEnemyBlueprint(new EnemyBlueprint("SwampWitch", "Swamp Witch", 390, 82f, 22, 190f, 1.2f, 600, "ranged", true, "boss_enrage"));
