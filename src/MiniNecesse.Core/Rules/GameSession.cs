@@ -22,6 +22,8 @@ public sealed class GameSession : IDisposable
     private const float DEFAULT_WORKBENCH_RADIUS = 80f;
     private const float DEFAULT_PICKUP_RADIUS = 28f;
     private const float DEFAULT_PROJECTILE_LIFETIME = 2.5f;
+    private const float NIGHT_REINFORCEMENT_INTERVAL = 18f;
+    private const int MAX_ACTIVE_NIGHT_ENEMIES = 18;
 
     private readonly IslandLevel _level;
     private readonly Player _player;
@@ -57,6 +59,7 @@ public sealed class GameSession : IDisposable
     private bool _bossDefeated;
     private bool _disposed;
     private float _swingEffectRemaining;
+    private float _nightReinforcementTimer;
     private Vector2D _lastAimDirection = Vector2D.Right;
 
     /// <summary>Gets remaining visual swing animation time in seconds (read-only render hint).</summary>
@@ -552,6 +555,7 @@ public sealed class GameSession : IDisposable
 
         _dayNightCycle.Advance(deltaTime);
         NotifyDayPhase();
+        UpdateNightReinforcements(deltaTime);
         _player.Update(deltaTime);
         UpdateEnemies(deltaTime);
         RebuildSpatialGrids();
@@ -912,17 +916,43 @@ public sealed class GameSession : IDisposable
     private void HandleDayPhaseChanged(int dayNumber, DayPhase phase)
     {
         NotifyDayPhase();
-        if (phase == DayPhase.Night && _waveSpawner is not null && !_waveSpawner.HasCompletedAllWaves)
+        if (phase == DayPhase.Night && _waveSpawner is not null)
         {
-            int spawned = _waveSpawner.SpawnNextWave(_player, _waveSpawnBuffer);
-            for (int i = 0; i < spawned; i++)
-            {
-                AddEnemy(_waveSpawnBuffer[i]);
-            }
-
-            _currentWaveIndex = _waveSpawner.NextWaveIndex;
-            RequestSound("raid_horn");
+            _nightReinforcementTimer = NIGHT_REINFORCEMENT_INTERVAL;
+            DispatchNightWave();
         }
+    }
+
+    private void UpdateNightReinforcements(float deltaTime)
+    {
+        if (_waveSpawner is null || _dayNightCycle.CurrentPhase != DayPhase.Night)
+        {
+            return;
+        }
+
+        _nightReinforcementTimer -= deltaTime;
+        if (_nightReinforcementTimer <= 0f)
+        {
+            _nightReinforcementTimer = NIGHT_REINFORCEMENT_INTERVAL;
+            if (_enemies.Count < MAX_ACTIVE_NIGHT_ENEMIES)
+            {
+                DispatchNightWave();
+            }
+        }
+    }
+
+    private void DispatchNightWave()
+    {
+        if (_waveSpawner is null) return;
+
+        int spawned = _waveSpawner.SpawnNightSkirmishWave(_player, _waveSpawnBuffer);
+        for (int i = 0; i < spawned && _enemies.Count < MAX_ACTIVE_NIGHT_ENEMIES; i++)
+        {
+            AddEnemy(_waveSpawnBuffer[i]);
+        }
+
+        _currentWaveIndex = _waveSpawner.NextWaveIndex;
+        RequestSound("raid_horn");
     }
 
     private void NotifyDayPhase()
@@ -947,6 +977,11 @@ public sealed class GameSession : IDisposable
 
         _ruleEngine.ResolveEnemyDefeated(matched);
         RequestSound("enemy_defeated");
+
+        if (!string.IsNullOrWhiteSpace(matched.LootDropItemId) && matched.LootDropQuantity > 0)
+        {
+            SpawnPooledDroppedItem(matched.LootDropItemId, matched.LootDropQuantity, matched.Center);
+        }
 
         if (matched.IsBoss)
         {

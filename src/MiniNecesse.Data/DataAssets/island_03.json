@@ -1,72 +1,318 @@
-{
-  "islandId": "ISLAND_03",
-  "name": "Murkwood Mire (Swamp)",
-  "biome": "Swamp",
-  "width": 24,
-  "height": 18,
-  "seed": 3003,
-  "playerSpawn": { "x": 12, "y": 9 },
-  "tileLayout": [
-    "WWWWWWWWWWWWWWWWWWWWWWWW",
-    "WMMMMMMMMMMMMMMMMMMMMMMW",
-    "WMGGGGMMMMMMWWMMMMMGGGGW",
-    "WMGGGGMMMMMWWWWMMMMGGGGW",
-    "WMMMMMMMMMMMWWMMMMMMMMMW",
-    "WMMMMWWMMMMMMMMMMWWMMMMW",
-    "WMMMMWWMMGGGGGGMMWWMMMMW",
-    "WMMMMMMMMGGGGGGMMMMMMMMW",
-    "WMMMMMMMMGGGGGGMMMMMMMMW",
-    "WMMMMMMMMGGGGGGMMMMMMMMW",
-    "WMMMMMMMMGGGGGGMMMMMMMMW",
-    "WMMMMWWMMGGGGGGMMWWMMMMW",
-    "WMMMMWWMMMMMMMMMMWWMMMMW",
-    "WMMMMMMMMMMMWWMMMMMMMMMW",
-    "WMGGGGMMMMMWWWWMMMMGGGGW",
-    "WMGGGGMMMMMMWWMMMMMGGGGW",
-    "WMMMMMMMMMMMMMMMMMMMMMMW",
-    "WWWWWWWWWWWWWWWWWWWWWWWW"
-  ],
-  "resourceSpawns": [
-    { "type": "Tree", "x": 3, "y": 2 },
-    { "type": "Tree", "x": 20, "y": 2 },
-    { "type": "Tree", "x": 3, "y": 15 },
-    { "type": "Tree", "x": 20, "y": 15 },
-    { "type": "Tree", "x": 9, "y": 7 },
-    { "type": "CopperDeposit", "x": 4, "y": 8 },
-    { "type": "CopperDeposit", "x": 19, "y": 8 },
-    { "type": "IronDeposit", "x": 7, "y": 4 },
-    { "type": "IronDeposit", "x": 16, "y": 4 },
-    { "type": "IronDeposit", "x": 7, "y": 13 },
-    { "type": "IronDeposit", "x": 16, "y": 13 }
-  ],
-  "waves": [
-    {
-      "waveNumber": 1,
-      "enemies": [
-        { "type": "SwampZombie", "count": 4 },
-        { "type": "SkeletonArcher", "count": 2 }
-      ]
-    },
-    {
-      "waveNumber": 2,
-      "enemies": [
-        { "type": "SwampZombie", "count": 4 },
-        { "type": "FrostRaider", "count": 2 },
-        { "type": "SkeletonArcher", "count": 2 }
-      ]
-    }
-  ],
-  "boss": {
-    "type": "SwampWitch",
-    "displayName": "Swamp Witch",
-    "maxHp": 390,
-    "moveSpeed": 84.0,
-    "attackDamage": 22,
-    "attackRange": 190.0,
-    "attackCooldown": 1.15,
-    "scoreReward": 600,
-    "initialStrategy": "ranged",
-    "enrageStrategy": "boss_enrage",
-    "enrageThresholdRatio": 0.30
-  }
+﻿{
+    "islandId":  "ISLAND_03",
+    "name":  "Murkwood Mire (Swamp)",
+    "biome":  "Swamp",
+    "width":  48,
+    "height":  36,
+    "seed":  3003,
+    "playerSpawn":  {
+                        "x":  24,
+                        "y":  18
+                    },
+    "tileLayout":  [
+                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+                       "WWWWWWWWWWWWWWWWWWWWWWMMMMMMMWWWWWWWWWWWWWWWWWWW",
+                       "WWWWWWWWWWWMMMMMMMMMMMMMMMMMMMMMWWWWWWWWWWWWWWWW",
+                       "WWWWWWWWWMMMMMMMMMMMMMMMMMMMMGMMMMMMMMMMMWWWWWWW",
+                       "WWWWWWWWMMGMMMMMMMMMMMMMMMMMGGGGGMMMMMMMMMWWWWWW",
+                       "WWWWWWWWMMGMMMMMMMMMMMMMMMMMGGGGGGGGGMMMMMMWWWWW",
+                       "WWWWWWWMMGGGMMMMMMMMMMMMMMMMGGGGGGGGGMMMMMMWWWWW",
+                       "WWWWWWWMMGGGMMMMMMMMMMMMMMMMGGGGGGGGGMMMMMMWWWWW",
+                       "WWWWWWWMMGGMWWWMMMMMMMMMMMMMGGGGGGGGMMMMMMMWWWWW",
+                       "WWWWWWWMMGGWWWWWMMMMMMMMMMMMMGGGGGGGMMMMMMMWWWWW",
+                       "WWWWWWWMMMWWWWWWWMMMMMMMMMMMMMGGGGMMMMMMMMMWWWWW",
+                       "WWWWWWMMMMMWWWWWMMMMMMMMMMMMMMMMMMMMMMMMMMMMWWWW",
+                       "WWWWWMMMMMMMWWWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWWW",
+                       "WWWWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWWW",
+                       "WWMMMMMMMMMMMMMMMGGGGMMMMMMMMMMMMMMMMMMMMMGGMMWW",
+                       "WWMMMMMMMMMMMMMMGGGGGMMMMMMMMMMMMMMMMMMMMGGGGMWW",
+                       "WWMMMMMMMMMMMMMGGGGGGMMMMMMMMMMMMMMMMMMMMGGGGMWW",
+                       "WWMMMMMMMMMMMMMGGGGGGMMMMMMMMMMMMMMMMMMMGGGGMMWW",
+                       "WWWMMMMMMMMMMMMGGGGGGMMMMMMMMMMMMMMMMMMMGGGGMMWW",
+                       "WWWWMMMMMMMMMMMGGGGGGMMMMMMMMMMMMMMMMMMMMGGMMWWW",
+                       "WWWWWMMMMMMMMMMMGGGGGMMMMMMMMMMMMMMMMMMMMGGMMWWW",
+                       "WWWWWWMMMMMMMMMMMGGGGGMMMMMMMMMMMWWWWWMMMMMMWWWW",
+                       "WWWWWWMMMMMMMMMMMMMMMMMMMMMMMMMMWWWWWWWMMMMMWWWW",
+                       "WWWWWWMMMMMMMMMMMMMMMMMMMMMMMMMMWWWWWWWMMMMMWWWW",
+                       "WWWWWWMMMMMMMMMMMMMMMMMMMMMMMMMMWWWWWWWMMMMMWWWW",
+                       "WWWWWWMMGMMMMMMMMMMMMMMMMMMMMMGGGWWWWWMMMMMMWWWW",
+                       "WWWWWWMMGGGMMMMMMMMMMMMMMMMMMGGGGGGGMMMMMMMMWWWW",
+                       "WWWWWWMMGGGMMMMMMMMMMMMMMMMMGGGGGGGGMMMMMMMMWWWW",
+                       "WWWWWWWMMGGGMMMMMMMMMMMMMMMMGGGGGGGGGMMMMMMWWWWW",
+                       "WWWWWWWWMMGGMMMMMMMMMMMMMMMMGGGGGMMGGMMMMMWWWWWW",
+                       "WWWWWWWWWMMMMMMMMMMMMMMMMMMMGGMMMMMMMMMMMWWWWWWW",
+                       "WWWWWWWWWWWMMMMMWWWMMMMMMMMMMMMWWWWWWWWWWWWWWWWW",
+                       "WWWWWWWWWWWWWWWWWWWWWWMMMMMMMWWWWWWWWWWWWWWWWWWW",
+                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+                   ],
+    "resourceSpawns":  [
+                           {
+                               "type":  "IronDeposit",
+                               "x":  26,
+                               "y":  31
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  37,
+                               "y":  18
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  20,
+                               "y":  3
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  23,
+                               "y":  21
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  32,
+                               "y":  31
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  44,
+                               "y":  16
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  11,
+                               "y":  28
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  37,
+                               "y":  20
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  24,
+                               "y":  6
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  36,
+                               "y":  14
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  37,
+                               "y":  16
+                           },
+                           {
+                               "type":  "IronDeposit",
+                               "x":  39,
+                               "y":  11
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  12,
+                               "y":  30
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  26,
+                               "y":  30
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  28,
+                               "y":  5
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  14,
+                               "y":  6
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  11,
+                               "y":  13
+                           },
+                           {
+                               "type":  "GoldDeposit",
+                               "x":  3,
+                               "y":  18
+                           },
+                           {
+                               "type":  "Tree",
+                               "x":  15,
+                               "y":  8
+                           },
+                           {
+                               "type":  "Tree",
+                               "x":  23,
+                               "y":  32
+                           },
+                           {
+                               "type":  "Tree",
+                               "x":  21,
+                               "y":  24
+                           },
+                           {
+                               "type":  "Tree",
+                               "x":  24,
+                               "y":  3
+                           },
+                           {
+                               "type":  "Tree",
+                               "x":  36,
+                               "y":  9
+                           },
+                           {
+                               "type":  "Tree",
+                               "x":  6,
+                               "y":  26
+                           },
+                           {
+                               "type":  "Tree",
+                               "x":  26,
+                               "y":  5
+                           },
+                           {
+                               "type":  "Tree",
+                               "x":  40,
+                               "y":  11
+                           },
+                           {
+                               "type":  "Tree",
+                               "x":  13,
+                               "y":  29
+                           },
+                           {
+                               "type":  "Tree",
+                               "x":  11,
+                               "y":  27
+                           },
+                           {
+                               "type":  "Tree",
+                               "x":  16,
+                               "y":  15
+                           },
+                           {
+                               "type":  "Tree",
+                               "x":  41,
+                               "y":  22
+                           },
+                           {
+                               "type":  "Tree",
+                               "x":  38,
+                               "y":  29
+                           },
+                           {
+                               "type":  "Tree",
+                               "x":  14,
+                               "y":  22
+                           },
+                           {
+                               "type":  "CopperDeposit",
+                               "x":  19,
+                               "y":  20
+                           },
+                           {
+                               "type":  "CopperDeposit",
+                               "x":  36,
+                               "y":  10
+                           },
+                           {
+                               "type":  "CopperDeposit",
+                               "x":  22,
+                               "y":  28
+                           },
+                           {
+                               "type":  "CopperDeposit",
+                               "x":  20,
+                               "y":  20
+                           },
+                           {
+                               "type":  "CopperDeposit",
+                               "x":  15,
+                               "y":  32
+                           },
+                           {
+                               "type":  "CopperDeposit",
+                               "x":  42,
+                               "y":  15
+                           },
+                           {
+                               "type":  "CopperDeposit",
+                               "x":  12,
+                               "y":  3
+                           },
+                           {
+                               "type":  "CopperDeposit",
+                               "x":  42,
+                               "y":  8
+                           }
+                       ],
+    "waves":  [
+                  {
+                      "waveNumber":  1,
+                      "enemies":  [
+                                      {
+                                          "type":  "SwampZombie",
+                                          "count":  5
+                                      },
+                                      {
+                                          "type":  "SkeletonArcher",
+                                          "count":  3
+                                      },
+                                      {
+                                          "type":  "OrcBrute",
+                                          "count":  2
+                                      }
+                                  ]
+                  },
+                  {
+                      "waveNumber":  2,
+                      "enemies":  [
+                                      {
+                                          "type":  "SwampZombie",
+                                          "count":  4
+                                      },
+                                      {
+                                          "type":  "OrcBrute",
+                                          "count":  3
+                                      },
+                                      {
+                                          "type":  "DarkMage",
+                                          "count":  2
+                                      }
+                                  ]
+                  },
+                  {
+                      "waveNumber":  3,
+                      "enemies":  [
+                                      {
+                                          "type":  "StoneGolem",
+                                          "count":  2
+                                      },
+                                      {
+                                          "type":  "OrcBrute",
+                                          "count":  3
+                                      },
+                                      {
+                                          "type":  "DarkMage",
+                                          "count":  3
+                                      }
+                                  ]
+                  }
+              ],
+    "boss":  {
+                 "displayName":  "Swamp Witch",
+                 "enrageStrategy":  "boss_enrage",
+                 "initialStrategy":  "ranged",
+                 "attackRange":  190,
+                 "scoreReward":  600,
+                 "enrageThresholdRatio":  0.3,
+                 "type":  "SwampWitch",
+                 "attackCooldown":  1.15,
+                 "attackDamage":  22,
+                 "maxHp":  420,
+                 "moveSpeed":  84
+             }
 }

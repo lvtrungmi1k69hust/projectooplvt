@@ -17,7 +17,9 @@ public sealed record EnemyBlueprint(
     string StrategyKey,
     bool IsBoss = false,
     string? EnrageStrategyKey = null,
-    float EnrageThresholdRatio = 0.30f);
+    float EnrageThresholdRatio = 0.30f,
+    string? LootDropItemId = null,
+    int LootDropQuantity = 1);
 
 /// <summary>
 /// Data-driven blueprint describing a harvestable natural resource node.

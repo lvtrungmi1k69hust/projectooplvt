@@ -437,6 +437,91 @@ public sealed class SpriteAtlasCache : IDisposable
 
         Register("boss_normal", () => BuildBossSprite(enraged: false));
         Register("boss_enraged", () => BuildBossSprite(enraged: true));
+
+        Register("enemy_golem", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "...KKKKKKKKKK...",
+            "..KLLLLLLLLLLK..",
+            ".KLLMMMMMMMMLLK.",
+            ".KLMYYMMMMYYMLK.",
+            ".KLMMMMMMMMMMLK.",
+            "KKMMMMMMMMMMMMKK",
+            "KLLMMCCMMCCMMLLK",
+            "KMMMMCCHHCCMMMMK",
+            "KMMMMMMMMMMMMMMK",
+            "KDDMMMMMMMMMMDDK",
+            ".KKDDDDDDDDDDKK.",
+            "..KDDDDKKDDDDK..",
+            "..KDDDDKKDDDDK..",
+            "..KKKKKKKKKKKK..",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(26, 30, 38),
+            ['D'] = Color.FromArgb(84, 92, 104),
+            ['M'] = Color.FromArgb(128, 138, 152),
+            ['L'] = Color.FromArgb(174, 184, 198),
+            ['C'] = Color.FromArgb(228, 134, 56),
+            ['H'] = Color.FromArgb(255, 206, 86),
+            ['Y'] = Color.FromArgb(255, 232, 92)
+        }));
+
+        Register("enemy_orc", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "...KKKKKKKKKK...",
+            "..KGGGGGGGGGGK..",
+            "..KGGRRGGGRRGK..",
+            "..KGGWGGGGWGGK..",
+            "..KGGGDDDDGGGK..",
+            ".KKBBBBBBBBBBKK.",
+            "KGGBBIIIIIIBBGGK",
+            "KGGBBIIIIIIBBGGK",
+            ".KKBBBBBBBBBBKK.",
+            "...KDDDDDDDDK...",
+            "...KDDDKKDDDK...",
+            "...KBBBKKBBBK...",
+            "...KKKKKKKKKK...",
+            "................",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(22, 30, 18),
+            ['G'] = Color.FromArgb(86, 152, 62),
+            ['D'] = Color.FromArgb(56, 98, 42),
+            ['R'] = Color.FromArgb(236, 62, 62),
+            ['W'] = Color.FromArgb(245, 240, 215),
+            ['B'] = Color.FromArgb(116, 68, 38),
+            ['I'] = Color.FromArgb(164, 174, 188)
+        }));
+
+        Register("enemy_mage", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "......KKKK......",
+            ".....KPPPPK.....",
+            "....KPPPPPPK....",
+            "...KPPGGGGPPK...",
+            "..KKPDDDDDDPKK..",
+            "...KDYYDDYYDK...",
+            "...KDDDDDDDDK...",
+            "..KKPPPPPPPPKK..",
+            ".KPPPPPGGPPPPPK.",
+            ".KPPPPGGGGPPPPK.",
+            "..KPPPPGGPPPPK..",
+            "...KPPPPPPPPK...",
+            "...KDDDDDDDDK...",
+            "...KKKKKKKKKK...",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(22, 14, 34),
+            ['P'] = Color.FromArgb(98, 46, 154),
+            ['D'] = Color.FromArgb(46, 22, 74),
+            ['G'] = Color.FromArgb(246, 198, 72),
+            ['Y'] = Color.FromArgb(255, 92, 232)
+        }));
     }
 
     private static Bitmap BuildPlayerSprite(int step)
@@ -608,6 +693,87 @@ public sealed class SpriteAtlasCache : IDisposable
 
         Register("copper_sword", () => BuildSwordIcon(Color.FromArgb(242, 152, 74), Color.FromArgb(196, 102, 40)));
         Register("iron_sword", () => BuildSwordIcon(Color.FromArgb(224, 236, 248), Color.FromArgb(148, 166, 188)));
+        Register("gold_greatsword", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "..........KKKK..",
+            ".........KLLLLK.",
+            "........KLLGDLK.",
+            ".......KLLGDLK..",
+            "......KLLGDLK...",
+            ".....KLLGDLK....",
+            "....KLLGDLK.....",
+            "...KLLGDLK......",
+            "..KGGGGDK.......",
+            "..KGGGGK........",
+            "...KBBGK........",
+            "..KBBK..........",
+            ".KGGK...........",
+            ".KKK............",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(44, 28, 12),
+            ['L'] = Color.FromArgb(255, 242, 148),
+            ['G'] = Color.FromArgb(244, 194, 48),
+            ['D'] = Color.FromArgb(192, 132, 24),
+            ['B'] = Color.FromArgb(132, 64, 34)
+        }));
+
+        Register("fire_staff", () => PixelArtBuilder.FromGrid(new[]
+        {
+            ".........KKK....",
+            "........KOOOK...",
+            ".......KOYWYOK..",
+            ".......KOYYWOK..",
+            "........KOOOK...",
+            "........KGGK....",
+            ".......KBBK.....",
+            "......KBBK......",
+            ".....KBBK.......",
+            "....KBBK........",
+            "...KBBK.........",
+            "..KBBK..........",
+            ".KGGK...........",
+            ".KKK............",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(40, 20, 14),
+            ['O'] = Color.FromArgb(238, 92, 32),
+            ['Y'] = Color.FromArgb(255, 204, 58),
+            ['W'] = Color.FromArgb(255, 250, 206),
+            ['G'] = Color.FromArgb(232, 178, 52),
+            ['B'] = Color.FromArgb(128, 74, 38)
+        }));
+
+        Register("iron_crossbow", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "......KKKK......",
+            ".....KIIIIK.....",
+            "....KIIKKIIK....",
+            "...KIIK..KIIK...",
+            "..KIIKSSSSKIIK..",
+            "..KIKBBYYBBKIK..",
+            "..KKBBBBBBBBKK..",
+            "....KKBBBBKK....",
+            "......KBBK......",
+            ".....KBBBBK.....",
+            "....KBBKKBBK....",
+            "....KK....KK....",
+            "................",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(26, 28, 36),
+            ['I'] = Color.FromArgb(196, 210, 226),
+            ['S'] = Color.FromArgb(228, 224, 206),
+            ['B'] = Color.FromArgb(146, 92, 46),
+            ['Y'] = Color.FromArgb(255, 218, 84)
+        }));
 
         Register("wooden_bow", () => PixelArtBuilder.FromGrid(new[]
         {
