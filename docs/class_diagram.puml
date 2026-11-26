@@ -128,8 +128,28 @@ package "MiniNecesse.Core.Interfaces" {
 
     interface IHighScoreRepository {
         + LoadTopScores() : IReadOnlyList<HighScoreEntry>
+        + LoadTopScores(mode : GameMode, difficulty : Difficulty) : IReadOnlyList<HighScoreEntry>
         + RecordScore(entry : HighScoreEntry) : void
         + Clear() : void
+    }
+
+    interface ILevelGenerator {
+        + GenerateWorld(seed : int, options : EndlessWorldOptions?) : LoadedIslandPackage
+    }
+
+    interface IDamageMitigationStrategy {
+        + ComputeFinalDamage(rawDamage : int, totalDefense : int) : int
+        + ComputeDirectDamage(rawDamage : int) : int
+    }
+
+    interface IFoodBuffStrategy {
+        + BuffId : string
+        + DurationSeconds : float
+    }
+
+    interface ISettlerStrategy {
+        + StrategyName : string
+        + Execute(settler : Settler, player : Player, level : IslandLevel, deltaTime : float) : void
     }
 }
 
@@ -169,18 +189,37 @@ package "MiniNecesse.Core.Entities" {
 
     class Player {
         - _inventory : Inventory
-        - _selectedHotbarIndex : int
+        - _equipment : EquipmentLoadout
+        - _buffs : PlayerBuffManager
+        - _damageMitigationStrategy : IDamageMitigationStrategy
         - _equippedWeapon : IWeapon?
-        - _equippedToolType : ToolType
-        - _harvestPower : int
+        - _effectiveEquippedWeapon : IWeapon?
+        - _currentHunger : float
         + Inventory : Inventory
-        + EquippedWeapon : IWeapon?
-        + CanAct : bool
-        + EquipWeapon(weapon : IWeapon?) : void
-        + EquipTool(toolType : ToolType, harvestPower : int) : void
-        + SelectHotbarSlot(slotIndex : int) : void
-        + SyncEquippedFromSelectedSlot() : void
+        + Equipment : EquipmentLoadout
+        + TotalDefense : int
+        + EffectiveEquippedWeapon : IWeapon?
+        + CurrentHunger : float
+        + SetDamageMitigationStrategy(strategy : IDamageMitigationStrategy) : void
+        + TryEquipArmor(armor : ArmorItem) : bool
+        + TakeDamage(amount : int) : void
+        + TakeDirectDamage(amount : int) : void
         + Update(deltaTime : float) : void
+    }
+
+    class Settler {
+        + Name : string
+        + Profession : SettlerProfession
+        + State : SettlerState
+        + Happiness : int
+        + HomeTile : GridPoint?
+        + Stockpile : Inventory
+        + ExecuteAI(player : Player, level : IslandLevel, deltaTime : float) : void
+    }
+
+    class Animal {
+        + AnimalType : AnimalType
+        + UpdateBehavior(player : Player, level : IslandLevel, collision : CollisionDetector, dt : float) : void
     }
 
     class Enemy {
@@ -427,16 +466,46 @@ package "MiniNecesse.Core.Rules" {
         - _stateMachine : GameStateMachine
         - _dayNightCycle : DayNightCycle
         - _ruleEngine : RuleEngine
+        - _chunkManager : ChunkManager
+        - _farmingSystem : FarmingSystem
+        - _lootTableRegistry : LootTableRegistry
+        - _settlementManager : SettlementManager
+        - _tutorialTracker : TutorialTracker
+        - _weatherSystem : WeatherSystem
+        - _questSystem : QuestSystem
         - _projectilePool : ObjectPool<Projectile>
         - _droppedItemPool : ObjectPool<DroppedItem>
         - _hudObservers : List<IHudObserver>
+        + GameMode : GameMode
+        + WorldSeed : int
+        + DifficultyProfile : DifficultyProfile
         + ExecutePrimaryAction(aimWorldPosition : Vector2D) : bool
         + ExecuteSecondaryAction(aimWorldPosition : Vector2D, entityFactory : IEntityFactory) : bool
         + TryCraft(recipe : CraftingRecipe, workbenchRadius : float) : bool
+        + TryRecruitSettler(professionId : string, out Settler? recruited) : bool
         + Update(deltaTime : float) : void
         + CreateSnapshot() : GameStateDTO
         + RestoreFromSnapshot(snapshot : GameStateDTO, entityFactory : IEntityFactory) : void
     }
+
+    class DifficultyDamageMitigationDecorator
+    class FlatDefenseMitigationStrategy
+    class WeatherSystem
+}
+
+package "MiniNecesse.Core.Subsystems" {
+    class SeedItem
+    class ArmorItem
+    class EquipmentLoadout
+    class FoodDamageBuffDecorator
+    class FarmingSystem
+    class LootTableRegistry
+    class HousingValidator
+    class SettlementManager
+    class ChunkManager
+    class SeededEndlessLevelGenerator
+    class TutorialTracker
+    class QuestSystem
 }
 
 ' =============================================================================
@@ -453,8 +522,13 @@ package "MiniNecesse.App" {
     class AudioManager
     class HudViewModel
     class TopDownRenderer
+    class UiTheme
+    class SegmentedTabControl
+    class LeaderboardCanvasControl
     class FrmMainMenu
     class FrmGamePlay
+    class FrmSettingsDialog
+    class FrmHighScoresDialog
 }
 
 ' =============================================================================
@@ -465,6 +539,8 @@ package "MiniNecesse.App" {
 Entity <|-- Character
 Character <|-- Player
 Character <|-- Enemy
+Character <|-- Animal
+Character <|-- Settler
 Enemy <|-- Boss
 Entity <|-- ResourceNode
 Entity <|-- Structure
@@ -476,9 +552,12 @@ Item <|-- ToolItem
 Item <|-- ConsumableItem
 Item <|-- MaterialItem
 Item <|-- StructureItem
+Item <|-- SeedItem
+Item <|-- ArmorItem
 
 WeaponUpgradeDecorator <|-- FireDamageDecorator
 WeaponUpgradeDecorator <|-- SwiftAttackDecorator
+WeaponUpgradeDecorator <|-- FoodDamageBuffDecorator
 
 ' 2. Realization (<|..)
 IDamageable <|.. Character
@@ -489,6 +568,8 @@ IDamageable <|.. Structure
 ICollectible <|.. DroppedItem
 IWeapon <|.. WeaponItem
 IWeapon <|.. WeaponUpgradeDecorator
+IDamageMitigationStrategy <|.. FlatDefenseMitigationStrategy
+IDamageMitigationStrategy <|.. DifficultyDamageMitigationDecorator
 
 IAIStrategy <|.. MeleeChaseStrategy
 IAIStrategy <|.. RangedKiteStrategy
@@ -502,6 +583,7 @@ IGameState <|.. GameOverState
 
 IEntityFactory <|.. EnemyFactory
 ILevelLoader <|.. JsonLevelLoader
+ILevelGenerator <|.. SeededEndlessLevelGenerator
 ISaveStorage <|.. JsonSaveStorage
 IHighScoreRepository <|.. JsonHighScoreRepository
 IInputProvider <|.. WinFormsInputAdapter
@@ -512,16 +594,26 @@ IslandLevel "1" *-- "1..*" Tile : owns
 GameSession "1" *-- "1" GameStateMachine : owns
 GameSession "1" *-- "1" DayNightCycle : owns
 GameSession "1" *-- "1" RuleEngine : owns
+GameSession "1" *-- "1" ChunkManager : owns
+GameSession "1" *-- "1" FarmingSystem : owns
+GameSession "1" *-- "1" SettlementManager : owns
+GameSession "1" *-- "1" WeatherSystem : owns
+GameSession "1" *-- "1" QuestSystem : owns
 GameSession "1" *-- "2" ObjectPool : owns
 
 ' 4. Aggregation (o--)
 Player "1" o-- "1" Inventory : carries
+Player "1" o-- "1" EquipmentLoadout : equips
 Inventory "1" o-- "0..*" ItemStack : contains
+SettlementManager "1" o-- "0..*" Settler : manages
 GameSession "1" o-- "0..*" IHudObserver : notifies
 
 ' 5. Association (-->)
 Player "1" --> "0..1" IWeapon : equipped
+Player "1" --> "1" IDamageMitigationStrategy : mitigation
+DifficultyDamageMitigationDecorator "1" --> "1" IDamageMitigationStrategy : wraps
 Enemy "1" --> "0..1" IAIStrategy : strategy
+Settler "1" --> "0..1" ISettlerStrategy : strategy
 Tile "0..*" --> "1" TileDataFlyweight : shares
 TileDataFlyweightFactory "1" --> "1..*" TileDataFlyweight : caches
 WeaponUpgradeDecorator "1" --> "1" IWeapon : wraps
@@ -529,14 +621,20 @@ GameStateMachine "1" --> "1..5" IGameState : manages
 FrmGamePlay "1" --> "1" GameSession : drives
 FrmGamePlay "1" --> "1" IInputProvider : reads
 FrmGamePlay "1" --> "1" TopDownRenderer : renders
+FrmHighScoresDialog "1" --> "1" LeaderboardCanvasControl : displays
+FrmHighScoresDialog "1" --> "2" SegmentedTabControl : filters
 
 ' 6. Dependency (..>)
 RuleEngine ..> CollisionInfo : <<use>>
 CraftingSystem ..> CraftingRecipe : <<use>>
 CraftingSystem ..> Inventory : <<use>>
+SettlementManager ..> HousingValidator : <<use>>
 MeleeChaseStrategy ..> AStarPathfinder : <<use>>
 MeleeChaseStrategy ..> EnemyFSM : <<use>>
 RangedKiteStrategy ..> EnemyFSM : <<use>>
 GameSession ..> CollisionDetector : <<use>>
 GameSession ..> SpatialHashGrid : <<use>>
+GameSession ..> TutorialTracker : <<use>>
+FrmGamePlay ..> ILevelGenerator : <<use>>
+FrmHighScoresDialog ..> UiTheme : <<use>>
 @enduml

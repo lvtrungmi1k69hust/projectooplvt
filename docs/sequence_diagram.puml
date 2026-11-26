@@ -10,9 +10,10 @@ participant "GameLoopController\n(Core)" as Loop
 participant "WinFormsInputAdapter\n(IInputProvider)" as Input
 participant "GameSession\n(Core)" as Session
 participant "PlayingState\n(IGameState)" as State
-participant "Enemy & IAIStrategy\n(Core.AI)" as AI
+participant "ChunkManager &\nPathfindingCoordinator" as World
+participant "Settlement & Enemy AI" as AI
 participant "CollisionDetector &\nSpatialHashGrid" as Physics
-participant "RuleEngine\n(Core.Rules)" as Rules
+participant "RuleEngine & Quests\n(Core)" as Rules
 participant "HudViewModel &\nAudioManager" as Obs
 participant "TopDownRenderer\n(App)" as Render
 
@@ -20,76 +21,97 @@ UI -> UI : Timer.Tick (measure Stopwatch frameDt)
 UI -> Loop : StepFrame(frameDt)
 loop while accumulator >= FIXED_DELTA_TIME (1/60s)
     Loop -> UI : RunFixedSimulationStep(fixedDt)
+    UI -> Session : CapturePreviousPositions()
     UI -> Input : GetMovementAxis(), GetAimWorldPosition(),\nIsPrimaryActionPressed(), IsSecondaryActionPressed()
     UI -> Session : MovePlayer(axis, fixedDt)
     Session -> Physics : MoveWithTileCollision(player, delta, size, level)
-    opt Primary Action Pressed
-        UI -> Session : ExecutePrimaryAction(aimWorld)
-        Session -> Rules : ResolveMeleeAttack / ResolveHarvest
+    opt Primary / Secondary Action Pressed
+        UI -> Session : ExecutePrimaryAction / ExecuteSecondaryAction
+        Session -> Rules : ResolveMeleeAttack / TryResolveHarvest / TryTill / TryPlant
         Rules --> Obs : OnScoreChanged / OnSoundEffectRequested
     end
     UI -> Session : Update(fixedDt)
     Session -> State : Update(fixedDt)
     State -> Session : StepPlayingSimulation(fixedDt)
-    Session -> AI : enemy.Update(dt) & enemy.ExecuteAI(player, level, dt)
-    Session -> Physics : Clear() & InsertRange(enemies)\nTryAdvanceProjectileSwept(proj, dt, level, grid)
-    Session -> Rules : ResolveProjectileHit() / ResolvePickup()
-    Session -> Session : CleanupInactiveEntities()\n(Release back to ObjectPool<T>)
+    Session -> World : BeginTick(dt) & UpdateAround(player, chunkBudget)
+    Session -> Session : Player.Update(dt) [Hunger, Buffs], FarmingSystem.Update(dt)
+    Session -> AI : SettlementManager.Update(...) & Enemy.ExecuteAI(...)
+    Session -> Physics : RebuildSpatialGrids() & TryAdvanceProjectileSwept(...)
+    Session -> Rules : ResolveProjectileHit / Roll LootTableRegistry / Quests.NotifyAction
     Session -> Rules : EvaluateOutcome(player, bossDefeated)
-    opt Player HP == 0 or Boss Defeated
-        Session -> Obs : OnGameStateUpdated(GameOver / Victory)
-    end
 end
-UI -> Render : ComputeCameraOffset(session, viewport)
+UI -> Render : ComputeCameraOffset(session, viewport, alpha)
 UI -> UI : canvas.Invalidate() -> OnPaint
-UI -> Render : Render(graphics, viewport, session, hud, cam, aim)
+UI -> Render : Render(graphics, viewport, session, hud, cam, aim, alpha)
 
 newpage
 
 ' =============================================================================
-' SEQUENCE DIAGRAM 2: Crafting Workflow (CraftItem)
+' SEQUENCE DIAGRAM 2: Endless Seed World Generation & Save/Load Persistence
 ' =============================================================================
-title Sequence 2: Crafting Item Workflow (CraftItem)
+title Sequence 2: Endless Seed World Generation & Difficulty Damage Decorator
 
 actor Player as User
-participant "CraftingOverlayPanel\n(App)" as Panel
+participant "FrmMainMenu\n(App)" as Menu
+participant "FrmGamePlay\n(App)" as Play
+participant "SeededEndlessLevelGenerator\n(ILevelGenerator)" as Gen
+participant "DifficultyDamageMitigation\nDecorator" as DmgDec
 participant "GameSession\n(Core)" as Session
-participant "CraftingSystem\n(Core.Crafting)" as Craft
-participant "ItemFactory\n(Core.Patterns)" as Factory
-participant "Inventory\n(Core.Crafting)" as Inv
-participant "RuleEngine\n(Core.Rules)" as Rules
-participant "HudViewModel &\nAudioManager" as Obs
+participant "JsonSaveStorage\n(ISaveStorage)" as Save
 
-User -> Panel : Press [C] to open Crafting Panel
-Panel -> Session : IsPlayerNearWorkbench(radius)
-loop for each CraftingRecipe from recipes.json
-    Panel -> Craft : CanCraft(inventory, recipe, nearWorkbench)
-    Craft -> Inv : HasItem(ingredient.ItemId, ingredient.Quantity)
-    Craft --> Panel : bool (highlight Green / Red)
-end
+User -> Menu : Select Mode=Endless, Seed=202601, Difficulty=Tutorial/Hard
+Menu -> Play : Launch(GameMode.Endless, Difficulty, seed)
+Play -> Gen : GenerateWorld(seed)
+Gen --> Play : LoadedIslandPackage (384x384 IslandLevel lazy, 5 Biomes, Waves, Boss)
+Play -> DmgDec : new(FlatDefenseMitigationStrategy, difficultyProfile)
+Play -> Session : new GameSession(..., gameMode=Endless, worldSeed=seed, difficultyProfile)
+Session -> Session : InitializeChunksAroundPlayer() [(2R+1)^2 chunks loaded]
 
-User -> Panel : Click [Craft] on selected recipe
-Panel -> Session : TryCraft(recipe, workbenchRadius)
-Session -> Session : IsPlayerNearWorkbench(workbenchRadius)
-Session -> Craft : TryCraft(inventory, recipe, nearWorkbench, out stack)
-Craft -> Craft : CanCraft(...)
-alt requirements satisfied
-    Craft -> Factory : ResolveItem(recipe.OutputItemId)
-    Factory --> Craft : Item (Weapon/Tool/Structure/Consumable)
-    loop for each ingredient
-        Craft -> Inv : TryRemoveItem(itemId, quantity)
+opt Enemy hits Player or Starvation ticks
+    Session -> DmgDec : ComputeFinalDamage(raw, TotalDefense) / ComputeDirectDamage(raw)
+    alt Tutorial Mode (DamageTakenMultiplier == 0)
+        DmgDec --> Session : 0 damage taken (Player cannot die)
+    else Normal / Hard
+        DmgDec --> Session : Scaled final HP damage
     end
-    Craft -> Inv : TryAddItem(outputItem, recipe.OutputQuantity)
-    Inv --> Obs : OnInventoryChanged -> OnInventoryUpdated()
-    Craft --> Session : true (OnItemCrafted)
-    Session -> Rules : RecordCraftCompleted() (+15 score)
-    Rules --> Obs : OnScoreChanged -> OnScoreUpdated(score)
-    Session -> Session : Player.SyncEquippedFromSelectedSlot()
-    Session --> Obs : OnSoundEffectRequested("craft")
-    Session --> Panel : true
-    Panel -> Panel : RefreshView()
-else missing materials or no nearby workbench
-    Craft --> Session : false (Inventory untouched)
-    Session --> Panel : false
 end
+
+User -> Play : Pause -> Save Game (Slot 1)
+Play -> Session : CreateSnapshot() [GameMode, WorldSeed, Difficulty, TutorialStep, Weather, Quests, Settlers, Chests, FarmPlots]
+Play -> Save : Save(1, dto)
+
+User -> Menu : Continue (Slot 1)
+Play -> Save : Load(1)
+Play -> Gen : GenerateWorld(dto.WorldSeed) [Deterministic identical terrain]
+Play -> Session : RestoreFromSnapshot(dto, enemyFactory)
+
+newpage
+
+' =============================================================================
+' SEQUENCE DIAGRAM 3: Bucketed HighScore Recording & GDI+ Leaderboard
+' =============================================================================
+title Sequence 3: Bucketed HighScore Persistence & GDI+ Leaderboard Display
+
+actor User
+participant "FrmGamePlay\n(App)" as Play
+participant "JsonHighScoreRepository\n(IHighScoreRepository)" as Repo
+participant "FrmHighScoresDialog\n(App)" as Dialog
+participant "SegmentedTabControl &\nLeaderboardCanvasControl" as Canvas
+
+User -> Play : Victory / GameOver -> Click [Save Score]
+Play -> Repo : RecordScore(HighScoreEntry with Mode, Difficulty, PlayTimeSeconds)
+Repo -> Repo : LoadAllNormalizedEntriesSafe()\n(DTO handles missing legacy fields & invalid JSON)
+Repo -> Repo : Trim Top 10 per (Mode, Difficulty) bucket
+Repo -> Repo : WriteEntriesAtomically(highscore.json)
+
+Play -> Dialog : new FrmHighScoresDialog(repo, mode, difficulty, highlightedEntry)
+Dialog -> Repo : LoadTopScores(mode, difficulty)
+Repo --> Dialog : Top 10 isolated entries for (Mode x Difficulty)
+Dialog -> Canvas : SetEntries(entries, highlightedEntry)\n(Pre-formats strings outside OnPaint)
+Dialog -> Dialog : Start 180ms slide + opacity Timer
+Canvas -> Canvas : OnPaint() [Cached Paths/Brushes, Vector Top-3 Medals, 0 GC allocs]
+
+User -> Dialog : Press [Left/Right] or [Up/Down/Tab]
+Dialog -> Repo : LoadTopScores(nextMode, nextDifficulty)
+Dialog -> Canvas : SetEntries(filteredEntries, highlightedEntry)
 @enduml
