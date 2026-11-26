@@ -139,7 +139,9 @@ public sealed record HighScoreEntry(
     int Score,
     string IslandId,
     string Difficulty,
-    DateTime AchievedAtUtc);
+    DateTime AchievedAtUtc,
+    string Mode = "Campaign",
+    double PlayTimeSeconds = 0.0);
 
 /// <summary>
 /// Immutable resource placement coordinate loaded from an island JSON definition.

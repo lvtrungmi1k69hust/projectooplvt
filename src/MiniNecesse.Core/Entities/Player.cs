@@ -331,8 +331,28 @@ public sealed class Player : Character
         base.TakeDamage(finalDamage);
     }
 
-    /// <summary>Applies direct damage bypassing armor mitigation (e.g. starvation).</summary>
-    public void TakeDirectDamage(int amount) => base.TakeDamage(amount);
+    /// <summary>Applies direct damage bypassing armor mitigation (e.g. starvation) while respecting active difficulty rules.</summary>
+    public void TakeDirectDamage(int amount)
+    {
+        if (amount < 0)
+        {
+            base.TakeDamage(amount);
+            return;
+        }
+
+        if (amount == 0 || !IsAlive)
+        {
+            return;
+        }
+
+        int finalDamage = _damageMitigationStrategy.ComputeDirectDamage(amount);
+        if (finalDamage <= 0)
+        {
+            return;
+        }
+
+        base.TakeDamage(finalDamage);
+    }
 
     /// <summary>Applies a temporary <see cref="IFoodBuffStrategy"/> to this player.</summary>
     public void ApplyBuff(IFoodBuffStrategy buffStrategy)

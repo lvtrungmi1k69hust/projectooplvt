@@ -1,0 +1,46 @@
+[
+  {
+    "difficulty": "Tutorial",
+    "displayName": "Tutorial",
+    "description": "Guided step-by-step onboarding. Enemies spawn and attack, but incoming damage to the player is 0.",
+    "damageTakenMultiplier": 0.0,
+    "enemyDamageMultiplier": 1.0,
+    "enemyHpMultiplier": 0.75,
+    "raidIntensity": 0.75,
+    "enableTutorialGuide": true,
+    "preventPlayerDeath": true
+  },
+  {
+    "difficulty": "Easy",
+    "displayName": "Easy",
+    "description": "Forgiving survival balance with reduced enemy lethality and lighter raids.",
+    "damageTakenMultiplier": 0.85,
+    "enemyDamageMultiplier": 0.75,
+    "enemyHpMultiplier": 0.80,
+    "raidIntensity": 0.75,
+    "enableTutorialGuide": false,
+    "preventPlayerDeath": false
+  },
+  {
+    "difficulty": "Normal",
+    "displayName": "Normal",
+    "description": "Standard balanced survival crafting, raids, and boss progression.",
+    "damageTakenMultiplier": 1.0,
+    "enemyDamageMultiplier": 1.0,
+    "enemyHpMultiplier": 1.0,
+    "raidIntensity": 1.0,
+    "enableTutorialGuide": false,
+    "preventPlayerDeath": false
+  },
+  {
+    "difficulty": "Hard",
+    "displayName": "Hard",
+    "description": "Relentless raids, stronger bosses, and heightened incoming damage.",
+    "damageTakenMultiplier": 1.30,
+    "enemyDamageMultiplier": 1.35,
+    "enemyHpMultiplier": 1.35,
+    "raidIntensity": 1.5,
+    "enableTutorialGuide": false,
+    "preventPlayerDeath": false
+  }
+]

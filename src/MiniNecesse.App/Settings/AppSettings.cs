@@ -19,6 +19,12 @@ public sealed class AppSettings
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
+    /// <summary>Gets or sets the selected world mode (Campaign or Endless).</summary>
+    public GameMode GameMode { get; set; } = GameMode.Campaign;
+
+    /// <summary>Gets or sets the world generation seed used for Endless mode.</summary>
+    public int EndlessSeed { get; set; } = 202601;
+
     /// <summary>Gets or sets the selected gameplay difficulty.</summary>
     public Difficulty Difficulty { get; set; } = Difficulty.Normal;
 
@@ -57,6 +63,10 @@ public sealed class AppSettings
 
             return new AppSettings
             {
+                GameMode = Enum.TryParse(dto.GameMode, ignoreCase: true, out GameMode parsedMode)
+                    ? parsedMode
+                    : GameMode.Campaign,
+                EndlessSeed = dto.EndlessSeed,
                 Difficulty = Enum.TryParse(dto.Difficulty, ignoreCase: true, out Difficulty parsedDiff)
                     ? parsedDiff
                     : Difficulty.Normal,
@@ -88,6 +98,8 @@ public sealed class AppSettings
 
         var snapshot = new SettingsSnapshot
         {
+            GameMode = GameMode.ToString(),
+            EndlessSeed = EndlessSeed,
             Difficulty = Difficulty.ToString(),
             IsMuted = IsMuted,
             Volume = Math.Clamp(Volume, 0, 100),
@@ -110,6 +122,8 @@ public sealed class AppSettings
 
     private sealed class SettingsSnapshot
     {
+        public string GameMode { get; set; } = "Campaign";
+        public int EndlessSeed { get; set; } = 202601;
         public string Difficulty { get; set; } = "Normal";
         public bool IsMuted { get; set; }
         public int Volume { get; set; } = 80;

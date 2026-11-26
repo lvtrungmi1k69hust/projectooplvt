@@ -69,8 +69,10 @@ public sealed class FrmSettingsDialog : Form
             BackColor = Color.FromArgb(35, 43, 60),
             ForeColor = Color.White
         };
-        _cmbDifficulty.Items.AddRange(new object[] { Difficulty.Easy, Difficulty.Normal, Difficulty.Hard });
-        _cmbDifficulty.SelectedItem = _settings.Difficulty;
+        _cmbDifficulty.Items.AddRange(new object[] { Difficulty.Tutorial, Difficulty.Normal, Difficulty.Hard });
+        _cmbDifficulty.SelectedItem = _cmbDifficulty.Items.Contains(_settings.Difficulty)
+            ? _settings.Difficulty
+            : Difficulty.Normal;
         Controls.Add(_cmbDifficulty);
 
         _chkMute = new CheckBox

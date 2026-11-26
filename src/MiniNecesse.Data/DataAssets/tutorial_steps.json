@@ -1,0 +1,37 @@
+[
+  {
+    "stepId": "chop_tree",
+    "title": "Chop a Tree",
+    "instruction": "Select your Axe [1] and Left-Click a tree to gather Wood.",
+    "triggerType": "HarvestResource",
+    "targetPattern": "Tree"
+  },
+  {
+    "stepId": "craft_workbench",
+    "title": "Craft a Workbench",
+    "instruction": "Press [C] to open Crafting and craft a Workbench using Wood.",
+    "triggerType": "CraftItem",
+    "targetPattern": "workbench"
+  },
+  {
+    "stepId": "craft_sword",
+    "title": "Forge a Sword",
+    "instruction": "Place your Workbench with Right-Click and craft a Sword nearby.",
+    "triggerType": "CraftItem",
+    "targetPattern": "*sword*"
+  },
+  {
+    "stepId": "attack_enemy",
+    "title": "Strike an Enemy",
+    "instruction": "Equip your Sword and Left-Click an enemy to fight (no damage taken in Tutorial!).",
+    "triggerType": "DamageEnemy",
+    "targetPattern": "*"
+  },
+  {
+    "stepId": "place_wall",
+    "title": "Build a Wall",
+    "instruction": "Select Wooden Wall on your hotbar and Right-Click to place shelter walls.",
+    "triggerType": "PlaceStructure",
+    "targetPattern": "*Wall*"
+  }
+]

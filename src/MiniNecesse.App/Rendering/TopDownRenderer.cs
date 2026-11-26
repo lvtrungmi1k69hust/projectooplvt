@@ -11,6 +11,7 @@ using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Farming;
 using MiniNecesse.Core.Math;
 using MiniNecesse.Core.Rules;
+using MiniNecesse.Core.Tutorial;
 using MiniNecesse.Core.World;
 
 namespace MiniNecesse.App.Rendering;
@@ -92,6 +93,10 @@ public sealed class TopDownRenderer : IDisposable
     private int _lastEquippedQty = -1;
     private string _cachedEquippedText = "Equipped: Bare Hands (Empty Slot)";
 
+    private int _lastTutorialStepIndex = -1;
+    private string _cachedTutorialTitle = string.Empty;
+    private string _cachedTutorialInstruction = string.Empty;
+
     private float _animTime;
     private bool _disposed;
 
@@ -110,6 +115,7 @@ public sealed class TopDownRenderer : IDisposable
         _cachedMinimapIslandId = string.Empty;
         _lastMinimapStructureVersion = -1;
         _lastTitleIslandName = string.Empty;
+        _lastTutorialStepIndex = -1;
     }
 
     /// <summary>Advances presentation-only animation clocks and visual hit particles.</summary>
@@ -172,6 +178,7 @@ public sealed class TopDownRenderer : IDisposable
         DrawTopHud(g, session, hud);
         DrawMinimap(g, viewportSize, session, cameraOffset);
         DrawBossBar(g, viewportSize, hud);
+        DrawTutorialBanner(g, viewportSize, session, hud);
         DrawHotbar(g, viewportSize, session);
     }
 
@@ -899,6 +906,45 @@ public sealed class TopDownRenderer : IDisposable
         g.FillRectangle(_cache.HpBackgroundBrush, x, y + 24, barWidth, 14);
         g.FillRectangle(_cache.BossHpFillBrush, x, y + 24, barWidth * ratio, 14);
         g.DrawRectangle(_cache.DarkOutlinePen, x, y + 24, barWidth, 14);
+    }
+
+    private void DrawTutorialBanner(Graphics g, Size viewport, GameSession session, HudViewModel hud)
+    {
+        if (!session.Tutorial.IsEnabled)
+        {
+            return;
+        }
+
+        int stepIdx = session.Tutorial.CurrentStepIndex;
+        int totalSteps = session.Tutorial.Steps.Count;
+        TutorialStepDefinition? active = session.Tutorial.CurrentStep;
+        if (_lastTutorialStepIndex != stepIdx)
+        {
+            _lastTutorialStepIndex = stepIdx;
+            if (active is null)
+            {
+                _cachedTutorialTitle = "TUTORIAL COMPLETE! Explore, survive nights, and defeat the boss!";
+                _cachedTutorialInstruction = "All tutorial steps finished (0 incoming damage in Tutorial mode).";
+            }
+            else
+            {
+                _cachedTutorialTitle = $"TUTORIAL [{stepIdx + 1}/{totalSteps}]: {active.Title}";
+                _cachedTutorialInstruction = active.Instruction;
+            }
+        }
+
+        int boxW = 360;
+        int x = Math.Max(366, (viewport.Width - boxW) / 2);
+        int y = hud.BossBarVisible ? 70 : 12;
+        if (x + boxW > viewport.Width - 220)
+        {
+            return;
+        }
+
+        g.FillRectangle(_cache.HudPanelBrush, x, y, boxW, 44);
+        g.DrawRectangle(_cache.HudBorderPen, x, y, boxW, 44);
+        g.DrawString(_cachedTutorialTitle, _cache.SmallFont, active is null ? _cache.TextGreenBrush : _cache.TextGoldBrush, x + 10, y + 6);
+        g.DrawString(_cachedTutorialInstruction, _cache.SmallFont, _cache.TextWhiteBrush, x + 10, y + 23);
     }
 
     /// <summary>Checks whether a screen click landed on a hotbar slot (0..8) and returns that slot index.</summary>

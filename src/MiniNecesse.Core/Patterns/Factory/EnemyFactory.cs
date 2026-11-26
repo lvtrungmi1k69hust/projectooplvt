@@ -24,12 +24,19 @@ public sealed class EnemyFactory : IEntityFactory
         [Difficulty.Hard] = (1.35f, 1.35f)
     };
 
+    private readonly DifficultyCatalog _difficultyCatalog;
     private readonly Dictionary<string, EnemyBlueprint> _enemyBlueprints = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Func<IAIStrategy>> _strategyCreators = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<ResourceType, ResourceBlueprint> _resourceBlueprints = new();
     private readonly Dictionary<StructureType, StructureBlueprint> _structureBlueprints = new();
     private readonly Dictionary<AnimalType, AnimalBlueprint> _animalBlueprints = new();
     private int _entitySequence;
+
+    /// <summary>Initializes a new instance of the <see cref="EnemyFactory"/> class.</summary>
+    public EnemyFactory(DifficultyCatalog? difficultyCatalog = null)
+    {
+        _difficultyCatalog = difficultyCatalog ?? DifficultyCatalog.CreateDefault();
+    }
 
     /// <summary>Registers an enemy or boss archetype blueprint.</summary>
     public void RegisterEnemyBlueprint(EnemyBlueprint blueprint)
@@ -214,9 +221,10 @@ public sealed class EnemyFactory : IEntityFactory
     public static EnemyFactory CreateDefault(
         Action<Vector2D, Vector2D, int, string>? projectileSpawner = null,
         Func<GridPoint, Structure?>? structureLookup = null,
-        PathfindingCoordinator? pathCoordinator = null)
+        PathfindingCoordinator? pathCoordinator = null,
+        DifficultyCatalog? difficultyCatalog = null)
     {
-        var factory = new EnemyFactory();
+        var factory = new EnemyFactory(difficultyCatalog);
         var sharedCollision = new CollisionDetector();
         int staggerSequence = 0;
 
@@ -255,9 +263,11 @@ public sealed class EnemyFactory : IEntityFactory
             : null;
     }
 
-    private static (int Hp, int Damage) ScaleByDifficulty(int baseHp, int baseDamage, Difficulty difficulty)
+    private (int Hp, int Damage) ScaleByDifficulty(int baseHp, int baseDamage, Difficulty difficulty)
     {
-        (float hpMult, float dmgMult) = DIFFICULTY_SCALING.TryGetValue(difficulty, out var mult) ? mult : (1f, 1f);
+        DifficultyProfile profile = _difficultyCatalog.GetProfile(difficulty);
+        float hpMult = profile.EnemyHpMultiplier > 0f ? profile.EnemyHpMultiplier : (DIFFICULTY_SCALING.TryGetValue(difficulty, out var mult) ? mult.HpMult : 1f);
+        float dmgMult = profile.EnemyDamageMultiplier > 0f ? profile.EnemyDamageMultiplier : (DIFFICULTY_SCALING.TryGetValue(difficulty, out var mult2) ? mult2.DamageMult : 1f);
         int hp = global::System.Math.Max(1, (int)MathF.Round(baseHp * hpMult));
         int damage = global::System.Math.Max(1, (int)MathF.Round(baseDamage * dmgMult));
         return (hp, damage);

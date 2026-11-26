@@ -27,6 +27,12 @@ public sealed class GameStateDTO
     /// <summary>Gets or sets the difficulty preset name.</summary>
     public string Difficulty { get; set; } = "Normal";
 
+    /// <summary>Gets or sets elapsed gameplay seconds in this run.</summary>
+    public double PlayTimeSeconds { get; set; }
+
+    /// <summary>Gets or sets completed tutorial checklist step count.</summary>
+    public int TutorialStepIndex { get; set; }
+
     /// <summary>Gets or sets the accumulated player score.</summary>
     public int Score { get; set; }
 

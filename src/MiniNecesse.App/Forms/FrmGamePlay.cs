@@ -20,6 +20,7 @@ using MiniNecesse.Core.Math;
 using MiniNecesse.Core.Patterns.Factory;
 using MiniNecesse.Core.Rules;
 using MiniNecesse.Core.Settlement;
+using MiniNecesse.Core.Tutorial;
 using MiniNecesse.Core.World;
 using MiniNecesse.Data;
 
@@ -71,6 +72,8 @@ public sealed class FrmGamePlay : Form
     private readonly CropRegistry _cropRegistry;
     private readonly LootTableRegistry _lootTableRegistry;
     private readonly SettlerCatalog _settlerCatalog;
+    private readonly DifficultyCatalog _difficultyCatalog;
+    private readonly IReadOnlyList<TutorialStepDefinition> _tutorialSteps;
     private readonly ILevelGenerator _levelGenerator;
     private readonly ItemFactory _itemFactory;
 
@@ -80,6 +83,9 @@ public sealed class FrmGamePlay : Form
     private GameLoopController? _loopController;
     private Vector2D _cameraOffset;
     private float _renderInterpolationAlpha = 1f;
+    private GameMode _activeMode;
+    private Difficulty _activeDifficulty;
+    private int _activeWorldSeed;
     private string _currentIslandId;
     private bool _highScoreRecordedForRun;
 
@@ -91,7 +97,10 @@ public sealed class FrmGamePlay : Form
         AudioManager audioManager,
         AppSettings settings,
         string startingIslandId,
-        bool loadSavedSlot)
+        bool loadSavedSlot,
+        GameMode? startingMode = null,
+        Difficulty? startingDifficulty = null,
+        int? worldSeed = null)
     {
         ArgumentNullException.ThrowIfNull(levelLoader);
         ArgumentNullException.ThrowIfNull(saveStorage);
@@ -104,6 +113,9 @@ public sealed class FrmGamePlay : Form
         _highScoreRepository = highScoreRepository;
         _audioManager = audioManager;
         _settings = settings;
+        _activeMode = startingMode ?? settings.GameMode;
+        _activeDifficulty = startingDifficulty ?? settings.Difficulty;
+        _activeWorldSeed = worldSeed ?? settings.EndlessSeed;
         _currentIslandId = startingIslandId;
         _inputAdapter = new WinFormsInputAdapter(settings.KeyBindings);
 
@@ -114,6 +126,8 @@ public sealed class FrmGamePlay : Form
         _cropRegistry = CropRegistry.CreateDefault();
         _lootTableRegistry = LootTableRegistry.CreateDefault();
         _settlerCatalog = SettlerCatalog.CreateDefault();
+        _difficultyCatalog = DifficultyCatalog.CreateDefault();
+        _tutorialSteps = TutorialTracker.CreateDefaultSteps();
         if (_levelLoader is JsonLevelLoader jsonLoader)
         {
             IReadOnlyList<FoodDefinition> foods = jsonLoader.LoadFoods();
@@ -142,6 +156,8 @@ public sealed class FrmGamePlay : Form
             }
 
             _settlerCatalog = jsonLoader.LoadSettlerCatalog();
+            _difficultyCatalog = jsonLoader.LoadDifficultyCatalog();
+            _tutorialSteps = jsonLoader.LoadTutorialSteps();
             _levelGenerator = new SeededEndlessLevelGenerator(jsonLoader.LoadEndlessBiomeCatalog());
         }
         else
@@ -188,6 +204,10 @@ public sealed class FrmGamePlay : Form
         if (loadSavedSlot && _saveStorage.Exists(DEFAULT_SAVE_SLOT))
         {
             LoadFromSaveSlot(DEFAULT_SAVE_SLOT);
+        }
+        else if (_activeMode == GameMode.Endless)
+        {
+            InitializeNewEndlessSession(_activeWorldSeed);
         }
         else
         {
@@ -284,12 +304,29 @@ public sealed class FrmGamePlay : Form
     {
         try
         {
+            _activeMode = GameMode.Campaign;
             LoadedIslandPackage package = _levelLoader.LoadIsland(islandId);
             BuildSessionFromPackage(package, seedStarterInventory: true);
         }
         catch (InvalidLevelDataException ex)
         {
             MessageBox.Show(this, $"Failed to load island '{islandId}': {ex.Message}", "Level Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            Close();
+        }
+    }
+
+    private void InitializeNewEndlessSession(int seed)
+    {
+        try
+        {
+            _activeMode = GameMode.Endless;
+            _activeWorldSeed = seed;
+            LoadedIslandPackage package = _levelGenerator.GenerateWorld(seed);
+            BuildSessionFromPackage(package, seedStarterInventory: true);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"Failed to generate Endless world (seed {seed}): {ex.Message}", "Generator Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             Close();
         }
     }
@@ -301,6 +338,13 @@ public sealed class FrmGamePlay : Form
             GameStateDTO dto = _saveStorage.Load(slotIndex);
             bool isEndlessSave = string.Equals(dto.GameMode, GameMode.Endless.ToString(), StringComparison.OrdinalIgnoreCase) ||
                                  dto.IslandId.StartsWith("ENDLESS_", StringComparison.OrdinalIgnoreCase);
+            _activeMode = isEndlessSave ? GameMode.Endless : GameMode.Campaign;
+            _activeWorldSeed = dto.WorldSeed;
+            if (Enum.TryParse(dto.Difficulty, ignoreCase: true, out Difficulty parsedDiff))
+            {
+                _activeDifficulty = parsedDiff;
+            }
+
             LoadedIslandPackage package = isEndlessSave
                 ? _levelGenerator.GenerateWorld(dto.WorldSeed)
                 : _levelLoader.LoadIsland(dto.IslandId);
@@ -347,26 +391,32 @@ public sealed class FrmGamePlay : Form
 
         var dayNight = new DayNightCycle(_config.DayDurationSeconds, _config.NightDurationSeconds);
         bool isEndlessPackage = package.Level.IslandId.StartsWith("ENDLESS_", StringComparison.OrdinalIgnoreCase);
+        GameMode sessionMode = isEndlessPackage ? GameMode.Endless : _activeMode;
+        DifficultyProfile difficultyProfile = _difficultyCatalog.GetProfile(_activeDifficulty);
         var session = new GameSession(
             package.Level,
             player,
             _itemFactory.ResolveItem,
             dayNight,
-            difficulty: _settings.Difficulty,
+            difficulty: _activeDifficulty,
             viewDistanceChunks: viewDistance,
             minViewDistanceChunks: _config.MinViewDistanceChunks,
             maxViewDistanceChunks: _config.MaxViewDistanceChunks,
             cropRegistry: _cropRegistry,
             lootTableRegistry: _lootTableRegistry,
             settlerCatalog: _settlerCatalog,
-            gameMode: isEndlessPackage ? GameMode.Endless : GameMode.Campaign,
-            worldSeed: package.Seed);
+            gameMode: sessionMode,
+            worldSeed: package.Seed,
+            difficultyCatalog: _difficultyCatalog,
+            difficultyProfile: difficultyProfile,
+            tutorialSteps: _tutorialSteps);
 
         EnemyFactory enemyFactory = EnemyFactory.CreateDefault(
             projectileSpawner: (origin, velocity, dmg, ownerId) =>
                 session.SpawnPooledProjectile(origin, velocity, dmg, ownerId, isFromPlayer: false),
             structureLookup: session.FindStructureAtTile,
-            pathCoordinator: session.PathfindingCoordinator);
+            pathCoordinator: session.PathfindingCoordinator,
+            difficultyCatalog: _difficultyCatalog);
 
         session.SetVillages(package.Villages);
         session.ConfigureChunkWorldSpawners(
@@ -379,10 +429,11 @@ public sealed class FrmGamePlay : Form
 
         var spawner = new RaidWaveSpawner(
             package.Level,
-            _settings.Difficulty,
+            _activeDifficulty,
             package.Waves,
             enemyFactory.CreateEnemy,
-            seed: package.Seed);
+            seed: package.Seed,
+            difficultyProfile: difficultyProfile);
         session.AttachWaveSpawner(spawner);
 
         if (seedStarterInventory)
@@ -793,12 +844,17 @@ public sealed class FrmGamePlay : Form
 
         try
         {
+            GameMode mode = _session?.GameMode ?? _activeMode;
+            Difficulty diff = _session?.Difficulty ?? _activeDifficulty;
+            double playTime = _session?.ElapsedPlayTimeSeconds ?? 0.0;
             _highScoreRepository.RecordScore(new HighScoreEntry(
                 playerName,
                 _hud.Score,
                 _currentIslandId,
-                _settings.Difficulty.ToString(),
-                DateTime.UtcNow));
+                diff.ToString(),
+                DateTime.UtcNow,
+                mode.ToString(),
+                playTime));
 
             _highScoreRecordedForRun = true;
             _btnSaveHighScore.Enabled = false;
@@ -818,7 +874,17 @@ public sealed class FrmGamePlay : Form
         }
     }
 
-    private void HandlePlayAgainClick(object? sender, EventArgs e) => InitializeNewIslandSession(_currentIslandId);
+    private void HandlePlayAgainClick(object? sender, EventArgs e)
+    {
+        if (_activeMode == GameMode.Endless)
+        {
+            InitializeNewEndlessSession(_activeWorldSeed);
+        }
+        else
+        {
+            InitializeNewIslandSession(_currentIslandId);
+        }
+    }
     private void HandleReturnMenuClick(object? sender, EventArgs e) => Close();
 
     private (Panel Panel, Button Resume, Button Save, Button Load, Button Settings, Button Menu) BuildPauseOverlay()

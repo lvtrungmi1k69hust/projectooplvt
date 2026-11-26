@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using MiniNecesse.Core.Entities;
 using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Math;
+using MiniNecesse.Core.Rules;
 using MiniNecesse.Core.World;
 
 namespace MiniNecesse.Core.AI;
@@ -103,6 +104,7 @@ public sealed class RaidWaveSpawner
 
     private readonly IslandLevel _level;
     private readonly Difficulty _difficulty;
+    private readonly float _raidIntensityMultiplier;
     private readonly List<WaveDefinition> _waves;
     private readonly Func<string, Vector2D, Difficulty, Enemy> _enemyCreator;
     private readonly float _minSafeRadius;
@@ -133,7 +135,8 @@ public sealed class RaidWaveSpawner
         IEnumerable<WaveDefinition> waves,
         Func<string, Vector2D, Difficulty, Enemy> enemyCreator,
         float minSafeRadius = DEFAULT_MIN_SAFE_RADIUS,
-        int? seed = null)
+        int? seed = null,
+        DifficultyProfile? difficultyProfile = null)
     {
         ArgumentNullException.ThrowIfNull(level);
         ArgumentNullException.ThrowIfNull(waves);
@@ -146,6 +149,9 @@ public sealed class RaidWaveSpawner
 
         _level = level;
         _difficulty = difficulty;
+        _raidIntensityMultiplier = difficultyProfile is { RaidIntensity: > 0f }
+            ? difficultyProfile.RaidIntensity
+            : (DIFFICULTY_COUNT_MULTIPLIERS.TryGetValue(difficulty, out float m) ? m : 1.0f);
         _waves = new List<WaveDefinition>(waves);
         _enemyCreator = enemyCreator;
         _minSafeRadius = minSafeRadius;
@@ -179,7 +185,7 @@ public sealed class RaidWaveSpawner
         }
 
         WaveDefinition wave = _waves[_nextWaveIndex];
-        float multiplier = DIFFICULTY_COUNT_MULTIPLIERS.TryGetValue(_difficulty, out float m) ? m : 1.0f;
+        float multiplier = _raidIntensityMultiplier;
 
         for (int i = 0; i < wave.Entries.Count; i++)
         {

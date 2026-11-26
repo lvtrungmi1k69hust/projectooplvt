@@ -12,6 +12,7 @@ using MiniNecesse.Core.Patterns.Pool;
 using MiniNecesse.Core.Patterns.State;
 using MiniNecesse.Core.Physics;
 using MiniNecesse.Core.Settlement;
+using MiniNecesse.Core.Tutorial;
 using MiniNecesse.Core.World;
 
 namespace MiniNecesse.Core.Rules;
@@ -38,6 +39,10 @@ public sealed class GameSession : IDisposable
     private GameMode _gameMode;
     private int _worldSeed;
     private Difficulty _difficulty;
+    private DifficultyCatalog _difficultyCatalog;
+    private DifficultyProfile _difficultyProfile;
+    private readonly TutorialTracker _tutorialTracker;
+    private double _elapsedPlayTimeSeconds;
 
     private readonly GameStateMachine _stateMachine = new();
     private readonly CollisionDetector _collisionDetector = new();
@@ -162,6 +167,15 @@ public sealed class GameSession : IDisposable
     /// <summary>Gets the configured difficulty preset.</summary>
     public Difficulty Difficulty => _difficulty;
 
+    /// <summary>Gets the active JSON difficulty rule profile.</summary>
+    public DifficultyProfile DifficultyProfile => _difficultyProfile;
+
+    /// <summary>Gets the step-by-step tutorial tracker active in Tutorial mode.</summary>
+    public TutorialTracker Tutorial => _tutorialTracker;
+
+    /// <summary>Gets total accumulated active play time in seconds for high-score telemetry.</summary>
+    public double ElapsedPlayTimeSeconds => _elapsedPlayTimeSeconds;
+
     /// <summary>Gets the current high-level game state from the state machine.</summary>
     public GameState CurrentState => _stateMachine.CurrentStateType;
 
@@ -231,7 +245,10 @@ public sealed class GameSession : IDisposable
         LootTableRegistry? lootTableRegistry = null,
         SettlerCatalog? settlerCatalog = null,
         GameMode gameMode = GameMode.Campaign,
-        int worldSeed = 0)
+        int worldSeed = 0,
+        DifficultyCatalog? difficultyCatalog = null,
+        DifficultyProfile? difficultyProfile = null,
+        IReadOnlyList<TutorialStepDefinition>? tutorialSteps = null)
     {
         ArgumentNullException.ThrowIfNull(level);
         ArgumentNullException.ThrowIfNull(player);
@@ -246,6 +263,11 @@ public sealed class GameSession : IDisposable
         _gameMode = gameMode;
         _worldSeed = worldSeed;
         _difficulty = difficulty;
+        _difficultyCatalog = difficultyCatalog ?? DifficultyCatalog.CreateDefault();
+        _difficultyProfile = difficultyProfile ?? _difficultyCatalog.GetProfile(difficulty);
+        _tutorialTracker = new TutorialTracker(_difficultyProfile.EnableTutorialGuide, tutorialSteps);
+        _player.SetDamageMitigationStrategy(
+            new DifficultyDamageMitigationDecorator(FlatDefenseMitigationStrategy.Instance, _difficultyProfile));
         _chunkManager = new ChunkManager(level, viewDistanceChunks, minViewDistanceChunks, maxViewDistanceChunks);
         _farmingSystem = new FarmingSystem(cropRegistry);
         _lootTableRegistry = lootTableRegistry ?? LootTableRegistry.CreateDefault();
@@ -710,6 +732,7 @@ public sealed class GameSession : IDisposable
         }
 
         _ruleEngine.RecordCraftCompleted();
+        _tutorialTracker.NotifyAction(TutorialTriggerType.CraftItem, recipe.OutputItemId);
         _player.SyncEquippedFromSelectedSlot();
         RequestSound("craft");
         return true;
@@ -863,6 +886,8 @@ public sealed class GameSession : IDisposable
             GameMode = _gameMode.ToString(),
             WorldSeed = _worldSeed,
             Difficulty = _difficulty.ToString(),
+            PlayTimeSeconds = _elapsedPlayTimeSeconds,
+            TutorialStepIndex = _tutorialTracker.CurrentStepIndex,
             Score = _ruleEngine.Score,
             DayNumber = _dayNightCycle.DayNumber,
             TimeOfDaySeconds = _dayNightCycle.ElapsedSecondsInCycle,
@@ -898,7 +923,14 @@ public sealed class GameSession : IDisposable
         if (Enum.TryParse(snapshot.Difficulty, ignoreCase: true, out Difficulty restoredDifficulty))
         {
             _difficulty = restoredDifficulty;
+            _difficultyProfile = _difficultyCatalog.GetProfile(_difficulty);
+            _player.SetDamageMitigationStrategy(
+                new DifficultyDamageMitigationDecorator(FlatDefenseMitigationStrategy.Instance, _difficultyProfile));
+            _tutorialTracker.SetEnabled(_difficultyProfile.EnableTutorialGuide);
         }
+
+        _elapsedPlayTimeSeconds = snapshot.PlayTimeSeconds >= 0.0 ? snapshot.PlayTimeSeconds : 0.0;
+        _tutorialTracker.RestoreProgress(snapshot.TutorialStepIndex);
 
         RestorePlayerFromSnapshot(snapshot.Player);
         _ruleEngine.RestoreScore(snapshot.Score);
@@ -977,6 +1009,7 @@ public sealed class GameSession : IDisposable
 
     private void StepPlayingSimulation(float deltaTime)
     {
+        _elapsedPlayTimeSeconds += deltaTime;
         if (_swingEffectRemaining > 0f)
         {
             _swingEffectRemaining = MathF.Max(0f, _swingEffectRemaining - deltaTime);
@@ -1038,6 +1071,7 @@ public sealed class GameSession : IDisposable
         bool struck = _ruleEngine.ResolveMeleeAttack(_player, bestTarget);
         if (struck)
         {
+            _tutorialTracker.NotifyAction(TutorialTriggerType.DamageEnemy, bestTarget.Archetype);
             RequestSound("hit");
         }
 
@@ -1149,6 +1183,7 @@ public sealed class GameSession : IDisposable
                 out int dropQuantity,
                 out Vector2D dropPosition))
         {
+            _tutorialTracker.NotifyAction(TutorialTriggerType.HarvestResource, bestNode.ResourceType.ToString());
             SpawnPooledDroppedItem(dropItemId, dropQuantity, dropPosition);
         }
 
@@ -1259,6 +1294,7 @@ public sealed class GameSession : IDisposable
 
         Structure structure = entityFactory.CreateStructure(structureType, col, row, _level.TileSize);
         AddStructure(structure);
+        _tutorialTracker.NotifyAction(TutorialTriggerType.PlaceStructure, structureType.ToString());
         _player.Inventory.TryRemoveItem(selected.Item.Id, 1);
         _player.SyncEquippedFromSelectedSlot();
         return true;
@@ -1442,6 +1478,11 @@ public sealed class GameSession : IDisposable
         if (hit && hitTarget is not null)
         {
             _ruleEngine.ResolveProjectileHit(projectile, hitTarget);
+            if (hitTarget is Enemy hitEnemy)
+            {
+                _tutorialTracker.NotifyAction(TutorialTriggerType.DamageEnemy, hitEnemy.Archetype);
+            }
+
             RequestSound("hit");
         }
     }

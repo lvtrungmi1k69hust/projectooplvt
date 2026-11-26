@@ -12,5 +12,8 @@ public enum Difficulty
     Normal = 1,
 
     /// <summary>Increased enemy lethality and aggressive AI scaling.</summary>
-    Hard = 2
+    Hard = 2,
+
+    /// <summary>Guided survival mode with step-by-step tutorial objectives and 0 incoming player damage.</summary>
+    Tutorial = 3
 }

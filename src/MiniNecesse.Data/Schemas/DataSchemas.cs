@@ -203,3 +203,25 @@ internal sealed class EndlessBiomeJson
     public List<string>? EnemyArchetypes { get; set; }
     public string? BossType { get; set; }
 }
+
+internal sealed class DifficultyProfileJson
+{
+    public string? Difficulty { get; set; }
+    public string? DisplayName { get; set; }
+    public string? Description { get; set; }
+    public float DamageTakenMultiplier { get; set; } = 1f;
+    public float EnemyDamageMultiplier { get; set; } = 1f;
+    public float EnemyHpMultiplier { get; set; } = 1f;
+    public float RaidIntensity { get; set; } = 1f;
+    public bool EnableTutorialGuide { get; set; }
+    public bool PreventPlayerDeath { get; set; }
+}
+
+internal sealed class TutorialStepJson
+{
+    public string? StepId { get; set; }
+    public string? Title { get; set; }
+    public string? Instruction { get; set; }
+    public string? TriggerType { get; set; }
+    public string? TargetPattern { get; set; }
+}

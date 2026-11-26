@@ -13,6 +13,7 @@ using MiniNecesse.Core.Interfaces;
 using MiniNecesse.Core.Loot;
 using MiniNecesse.Core.Rules;
 using MiniNecesse.Core.Settlement;
+using MiniNecesse.Core.Tutorial;
 using MiniNecesse.Core.World;
 using MiniNecesse.Data.Schemas;
 
@@ -33,6 +34,8 @@ public sealed class JsonLevelLoader : ILevelLoader
     private const string LOOT_TABLES_FILE_NAME = "loot_tables.json";
     private const string SETTLERS_FILE_NAME = "settlers.json";
     private const string ENDLESS_BIOMES_FILE_NAME = "endless_biomes.json";
+    private const string DIFFICULTIES_FILE_NAME = "difficulties.json";
+    private const string TUTORIAL_STEPS_FILE_NAME = "tutorial_steps.json";
 
     private static readonly JsonSerializerOptions JSON_OPTIONS = new()
     {
@@ -415,6 +418,86 @@ public sealed class JsonLevelLoader : ILevelLoader
         }
 
         return catalog;
+    }
+
+    /// <summary>Loads data-driven difficulty rules from <c>difficulties.json</c>.</summary>
+    public DifficultyCatalog LoadDifficultyCatalog()
+    {
+        string path = Path.Combine(_assetsDirectory, DIFFICULTIES_FILE_NAME);
+        if (!File.Exists(path))
+        {
+            return DifficultyCatalog.CreateDefault();
+        }
+
+        List<DifficultyProfileJson> rawList = ReadJsonOrThrow<List<DifficultyProfileJson>>(path, "DIFFICULTIES");
+        if (rawList.Count == 0)
+        {
+            throw new InvalidLevelDataException("difficulties.json must define at least one difficulty profile.", "DIFFICULTIES");
+        }
+
+        var catalog = new DifficultyCatalog();
+        for (int i = 0; i < rawList.Count; i++)
+        {
+            DifficultyProfileJson raw = rawList[i];
+            if (!Enum.TryParse(raw.Difficulty, ignoreCase: true, out Difficulty diff))
+            {
+                throw new InvalidLevelDataException($"Unknown difficulty '{raw.Difficulty}' at index {i}.", "DIFFICULTIES");
+            }
+
+            if (raw.DamageTakenMultiplier < 0f || raw.EnemyDamageMultiplier <= 0f || raw.EnemyHpMultiplier <= 0f || raw.RaidIntensity <= 0f)
+            {
+                throw new InvalidLevelDataException($"Invalid multipliers for difficulty '{raw.Difficulty}'.", "DIFFICULTIES");
+            }
+
+            catalog.Register(new DifficultyProfile(
+                diff,
+                string.IsNullOrWhiteSpace(raw.DisplayName) ? diff.ToString() : raw.DisplayName.Trim(),
+                raw.Description ?? string.Empty,
+                raw.DamageTakenMultiplier,
+                raw.EnemyDamageMultiplier,
+                raw.EnemyHpMultiplier,
+                raw.RaidIntensity,
+                raw.EnableTutorialGuide,
+                raw.PreventPlayerDeath));
+        }
+
+        return catalog;
+    }
+
+    /// <summary>Loads step-by-step tutorial onboarding definitions from <c>tutorial_steps.json</c>.</summary>
+    public IReadOnlyList<TutorialStepDefinition> LoadTutorialSteps()
+    {
+        string path = Path.Combine(_assetsDirectory, TUTORIAL_STEPS_FILE_NAME);
+        if (!File.Exists(path))
+        {
+            return TutorialTracker.CreateDefaultSteps();
+        }
+
+        List<TutorialStepJson> rawList = ReadJsonOrThrow<List<TutorialStepJson>>(path, "TUTORIAL_STEPS");
+        if (rawList.Count == 0)
+        {
+            return TutorialTracker.CreateDefaultSteps();
+        }
+
+        var steps = new List<TutorialStepDefinition>(rawList.Count);
+        for (int i = 0; i < rawList.Count; i++)
+        {
+            TutorialStepJson raw = rawList[i];
+            if (string.IsNullOrWhiteSpace(raw.StepId) || string.IsNullOrWhiteSpace(raw.Title) ||
+                !Enum.TryParse(raw.TriggerType, ignoreCase: true, out TutorialTriggerType trigger))
+            {
+                throw new InvalidLevelDataException($"Invalid tutorial step at index {i}.", "TUTORIAL_STEPS");
+            }
+
+            steps.Add(new TutorialStepDefinition(
+                raw.StepId,
+                raw.Title,
+                raw.Instruction ?? string.Empty,
+                trigger,
+                raw.TargetPattern ?? "*"));
+        }
+
+        return steps.AsReadOnly();
     }
 
     /// <inheritdoc />
