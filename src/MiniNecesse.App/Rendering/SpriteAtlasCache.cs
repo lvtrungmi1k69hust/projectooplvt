@@ -544,6 +544,34 @@ public sealed class SpriteAtlasCache : IDisposable
             ['G'] = Color.FromArgb(248, 212, 74)
         }));
         _sprites["wooden_chest"] = _sprites["str_chest"];
+
+        Register("str_door", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "..KKKKKKKKKKKK..",
+            "..KLLLLLLLLLLK..",
+            "..KMMKMMMMKMMK..",
+            "..KMMMMMMMMMMK..",
+            "..KMMKMMMMKMMK..",
+            "..KMMMMMMMMMMK..",
+            "..KMMMMMMGGMMK..",
+            "..KMMMMMMGGMMK..",
+            "..KMMKMMMMKMMK..",
+            "..KMMMMMMMMMMK..",
+            "..KMMKMMMMKMMK..",
+            "..KDDDDDDDDDDK..",
+            "..KKKKKKKKKKKK..",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(40, 24, 14),
+            ['L'] = Color.FromArgb(196, 134, 68),
+            ['M'] = Color.FromArgb(154, 96, 44),
+            ['D'] = Color.FromArgb(110, 66, 30),
+            ['G'] = Color.FromArgb(242, 204, 68)
+        }));
+        _sprites["wooden_door"] = _sprites["str_door"];
     }
 
     private static Bitmap BuildTorch(bool flickerRight)
@@ -781,6 +809,68 @@ public sealed class SpriteAtlasCache : IDisposable
             ['D'] = Color.FromArgb(46, 22, 74),
             ['G'] = Color.FromArgb(246, 198, 72),
             ['Y'] = Color.FromArgb(255, 92, 232)
+        }));
+
+        Register("settler_miner", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "....KKKKKKKK....",
+            "...KYYYYYYYYK...",
+            "..KYYWWWWWWYYK..",
+            "..KSSSSSSSSSSK..",
+            "..KSSESSSSESKK..",
+            "..KSSSSSSSSSSK..",
+            "...KKKKKKKKKK...",
+            "..KKBBBBBBBBKK..",
+            ".KBBBBBBBBBBBBK.",
+            ".KSBBGGGGGGGBSK.",
+            "..KBBBBBBBBBBK..",
+            "...KDDDDDDDDK...",
+            "...KPPK..KPPK...",
+            "...KFFK..KFFK...",
+            "...KKKK..KKKK...",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(24, 24, 34),
+            ['Y'] = Color.FromArgb(244, 198, 62),
+            ['W'] = Color.FromArgb(255, 244, 186),
+            ['S'] = Color.FromArgb(246, 206, 166),
+            ['E'] = Color.FromArgb(28, 34, 48),
+            ['B'] = Color.FromArgb(72, 128, 184),
+            ['G'] = Color.FromArgb(202, 146, 62),
+            ['D'] = Color.FromArgb(108, 78, 52),
+            ['P'] = Color.FromArgb(66, 74, 92),
+            ['F'] = Color.FromArgb(74, 46, 26)
+        }));
+
+        Register("settler_hunter", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "....KKKKKKKK....",
+            "...KGGGGGGGGK...",
+            "..KGGLLLLLLGGK..",
+            "..KSSSSSSSSSSK..",
+            "..KSSESSSSESKK..",
+            "..KSSSSSSSSSSK..",
+            "...KKKKKKKKKK...",
+            "..KKGGGGGGGGKK..",
+            ".KGGGGGGGGGGGGK.",
+            ".KSGGGBBBGGGGGk.".Replace('k', 'K'),
+            "..KGGGGGGGGGGK..",
+            "...KBBBBBBBBK...",
+            "...KPPK..KPPK...",
+            "...KFFK..KFFK...",
+            "...KKKK..KKKK...",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(24, 28, 24),
+            ['G'] = Color.FromArgb(46, 134, 62),
+            ['L'] = Color.FromArgb(92, 178, 96),
+            ['S'] = Color.FromArgb(246, 206, 166),
+            ['E'] = Color.FromArgb(28, 34, 48),
+            ['B'] = Color.FromArgb(148, 94, 48),
+            ['P'] = Color.FromArgb(62, 68, 56),
+            ['F'] = Color.FromArgb(74, 46, 26)
         }));
     }
 

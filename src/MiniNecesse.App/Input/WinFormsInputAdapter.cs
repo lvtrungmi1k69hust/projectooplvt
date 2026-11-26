@@ -24,6 +24,7 @@ public sealed class WinFormsInputAdapter : IInputProvider
     private bool _interactQueued;
     private bool _pauseQueued;
     private bool _craftingQueued;
+    private bool _settlementQueued;
     private int? _selectedHotbarQueued;
 
     /// <summary>Gets the active key binding configuration.</summary>
@@ -56,6 +57,12 @@ public sealed class WinFormsInputAdapter : IInputProvider
         if (keyCode == _bindings.ToggleCrafting || keyCode == Keys.Tab)
         {
             _craftingQueued = true;
+            return;
+        }
+
+        if (keyCode == _bindings.ToggleSettlement)
+        {
+            _settlementQueued = true;
             return;
         }
 
@@ -109,6 +116,7 @@ public sealed class WinFormsInputAdapter : IInputProvider
         _interactQueued = false;
         _pauseQueued = false;
         _craftingQueued = false;
+        _settlementQueued = false;
         _selectedHotbarQueued = null;
     }
 
@@ -166,6 +174,14 @@ public sealed class WinFormsInputAdapter : IInputProvider
     {
         bool queued = _craftingQueued;
         _craftingQueued = false;
+        return queued;
+    }
+
+    /// <summary>Returns whether the colony/settler panel toggle key was pressed.</summary>
+    public bool IsSettlementTogglePressed()
+    {
+        bool queued = _settlementQueued;
+        _settlementQueued = false;
         return queued;
     }
 

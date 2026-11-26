@@ -11,6 +11,7 @@ using MiniNecesse.Core.Math;
 using MiniNecesse.Core.Patterns.Pool;
 using MiniNecesse.Core.Patterns.State;
 using MiniNecesse.Core.Physics;
+using MiniNecesse.Core.Settlement;
 using MiniNecesse.Core.World;
 
 namespace MiniNecesse.Core.Rules;
@@ -67,10 +68,14 @@ public sealed class GameSession : IDisposable
     private readonly Action<Structure> _onActivateChunkStructure;
     private readonly Action<ChunkCoord> _onDeactivateChunkEntities;
     private readonly Action<Animal> _onActivateChunkAnimal;
+    private readonly Action<Settler> _onActivateChunkSettler;
+    private readonly Func<GridPoint, Structure?> _structureLookup;
+    private readonly Action<Vector2D, Vector2D, int, string> _settlerProjectileSpawner;
 
     private readonly ChunkManager _chunkManager;
     private readonly FarmingSystem _farmingSystem;
     private readonly LootTableRegistry _lootTableRegistry;
+    private readonly SettlementManager _settlementManager;
     private readonly List<LootDropResult> _lootRollBuffer = new(8);
     private readonly Random _gameplayRng;
     private IReadOnlyList<VillageSite> _villages = Array.Empty<VillageSite>();
@@ -103,6 +108,9 @@ public sealed class GameSession : IDisposable
 
     /// <summary>Gets the active data-driven loot table registry.</summary>
     public LootTableRegistry LootTables => _lootTableRegistry;
+
+    /// <summary>Gets the settlement housing, NPC settler AI, and trading coordinator.</summary>
+    public SettlementManager Settlement => _settlementManager;
 
     /// <summary>Gets the player's equipped Head/Body/Legs armor loadout.</summary>
     public EquipmentLoadout Equipment => _player.Equipment;
@@ -212,7 +220,8 @@ public sealed class GameSession : IDisposable
         int maxViewDistanceChunks = ChunkManager.DEFAULT_MAX_VIEW_DISTANCE,
         CropRegistry? cropRegistry = null,
         int? gameplaySeed = null,
-        LootTableRegistry? lootTableRegistry = null)
+        LootTableRegistry? lootTableRegistry = null,
+        SettlerCatalog? settlerCatalog = null)
     {
         ArgumentNullException.ThrowIfNull(level);
         ArgumentNullException.ThrowIfNull(player);
@@ -229,6 +238,15 @@ public sealed class GameSession : IDisposable
         _farmingSystem = new FarmingSystem(cropRegistry);
         _lootTableRegistry = lootTableRegistry ?? LootTableRegistry.CreateDefault();
         _gameplayRng = gameplaySeed.HasValue ? new Random(gameplaySeed.Value) : new Random();
+        _structureLookup = FindStructureAtTile;
+        _settlerProjectileSpawner = (origin, velocity, dmg, ownerId) =>
+            SpawnPooledProjectile(origin, velocity, dmg, ownerId, isFromPlayer: true);
+        _settlementManager = new SettlementManager(
+            itemResolver,
+            _pathfindingCoordinator,
+            _collisionDetector,
+            settlerCatalog,
+            _settlerProjectileSpawner);
 
         _enemiesView = _enemies.AsReadOnly();
         _animalsView = _animals.AsReadOnly();
@@ -241,6 +259,7 @@ public sealed class GameSession : IDisposable
         _onActivateChunkStructure = ActivateChunkStructure;
         _onDeactivateChunkEntities = DeactivateChunkEntities;
         _onActivateChunkAnimal = ActivateChunkAnimal;
+        _onActivateChunkSettler = ActivateChunkSettler;
 
         _projectilePool = new ObjectPool<Projectile>(CreatePooledProjectile, p => p.Deactivate(), initialCapacity: 32, maxCapacity: 256);
         _droppedItemPool = new ObjectPool<DroppedItem>(CreatePooledDrop, d => d.Deactivate(), initialCapacity: 24, maxCapacity: 128);
@@ -309,15 +328,53 @@ public sealed class GameSession : IDisposable
                 _onActivateChunkStructure,
                 _onDeactivateChunkEntities,
                 maxChunksPerTick: _level.TotalChunkCount,
-                onActivateAnimal: _onActivateChunkAnimal);
+                onActivateAnimal: _onActivateChunkAnimal,
+                onActivateSettler: _onActivateChunkSettler);
         }
     }
 
     /// <summary>Immediately streams the initial view-distance neighborhood around the player.</summary>
     public void InitializeChunksAroundPlayer()
     {
-        _chunkManager.InitializeAround(_player.Center, _onActivateChunkResource, _onActivateChunkStructure, _onActivateChunkAnimal);
+        _chunkManager.InitializeAround(_player.Center, _onActivateChunkResource, _onActivateChunkStructure, _onActivateChunkAnimal, _onActivateChunkSettler);
         _chunksInitialized = true;
+    }
+
+    /// <summary>Recruits a friendly settler NPC near the player using configured <c>settlers.json</c> cost.</summary>
+    public bool TryRecruitSettler(string professionId, out Settler? recruited, string? customName = null)
+    {
+        if (_settlementManager.TryRecruit(
+                professionId,
+                _player,
+                _player.Center + new Vector2D(24f, 0f),
+                _level,
+                _structuresView,
+                _structureLookup,
+                out recruited,
+                customName))
+        {
+            RequestSound("build");
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>Registers a colony settler (hibernating if its chunk is currently unloaded).</summary>
+    public void AddSettler(Settler settler)
+    {
+        ArgumentNullException.ThrowIfNull(settler);
+        if (_level.UsesLazyChunkLoading)
+        {
+            ChunkCoord coord = _level.GetChunkCoordForWorld(settler.Center);
+            if (!_level.IsChunkLoaded(coord))
+            {
+                _chunkManager.HibernateSettler(coord, settler);
+                return;
+            }
+        }
+
+        ActivateChunkSettler(settler);
     }
 
     /// <summary>Attaches a <see cref="RaidWaveSpawner"/> triggered automatically on night transitions.</summary>
@@ -771,6 +828,8 @@ public sealed class GameSession : IDisposable
             }
         }
 
+        _settlementManager.CapturePreviousPositions();
+
         for (int i = 0; i < _projectiles.Count; i++)
         {
             if (_projectiles[i].IsActive)
@@ -905,13 +964,23 @@ public sealed class GameSession : IDisposable
             _onActivateChunkResource,
             _onActivateChunkStructure,
             _onDeactivateChunkEntities,
-            onActivateAnimal: _onActivateChunkAnimal);
+            onActivateAnimal: _onActivateChunkAnimal,
+            onActivateSettler: _onActivateChunkSettler);
         _dayNightCycle.Advance(deltaTime);
         NotifyDayPhase();
         UpdateNightReinforcements(deltaTime);
         _player.Update(deltaTime);
         _farmingSystem.Update(deltaTime);
         UpdateAnimals(deltaTime);
+        _settlementManager.Update(
+            deltaTime,
+            _player,
+            _level,
+            _enemiesView,
+            _resourcesView,
+            _structuresView,
+            _structureLookup,
+            _dayNightCycle.CurrentPhase);
         UpdateEnemies(deltaTime);
         RebuildSpatialGrids();
         UpdateProjectiles(deltaTime);
@@ -1694,6 +1763,14 @@ public sealed class GameSession : IDisposable
         animal.OnDefeated += HandleAnimalDefeated;
     }
 
+    private void ActivateChunkSettler(Settler settler)
+    {
+        if (settler.IsAlive)
+        {
+            _settlementManager.AddActiveSettler(settler);
+        }
+    }
+
     private void HandleAnimalDefeated(IDamageable defeated)
     {
         defeated.OnDefeated -= HandleAnimalDefeated;
@@ -1782,6 +1859,23 @@ public sealed class GameSession : IDisposable
                 animal.OnDefeated -= HandleAnimalDefeated;
                 _chunkManager.HibernateAnimal(coord, animal);
                 _animals.RemoveAt(i);
+            }
+        }
+
+        IReadOnlyList<Settler> activeSettlers = _settlementManager.Settlers;
+        for (int i = activeSettlers.Count - 1; i >= 0; i--)
+        {
+            Settler settler = activeSettlers[i];
+            if (!settler.IsAlive)
+            {
+                _settlementManager.RemoveActiveSettlerAt(i);
+                continue;
+            }
+
+            if (_level.GetChunkCoordForWorld(settler.Center) == coord)
+            {
+                _chunkManager.HibernateSettler(coord, settler);
+                _settlementManager.RemoveActiveSettlerAt(i);
             }
         }
     }
@@ -1923,6 +2017,17 @@ public sealed class GameSession : IDisposable
                 GrowthSeconds = plot.GrowthElapsedSeconds
             });
         }
+
+        IReadOnlyList<Settler> activeSettlers = _settlementManager.Settlers;
+        for (int i = 0; i < activeSettlers.Count; i++)
+        {
+            snapshot.Settlers.Add(BuildSettlerSnapshot(activeSettlers[i]));
+        }
+
+        foreach (Settler s in _chunkManager.GetHibernatedSettlers())
+        {
+            snapshot.Settlers.Add(BuildSettlerSnapshot(s));
+        }
     }
 
     private void ClearActiveWorldEntities()
@@ -1983,6 +2088,7 @@ public sealed class GameSession : IDisposable
         _projectiles.Clear();
         _droppedItems.Clear();
         _farmingSystem.Clear();
+        _settlementManager.Clear();
         _player.Equipment.Clear();
         _chunkManager.ClearHibernatedState();
         _pathfindingCoordinator.ClearCache();
@@ -2040,6 +2146,40 @@ public sealed class GameSession : IDisposable
             {
                 ItemStack stack = chestInv.Stacks[i];
                 dto.StoredItems.Add(new InventoryItemSnapshot
+                {
+                    ItemId = stack.Item.Id,
+                    Quantity = stack.Quantity
+                });
+            }
+        }
+
+        return dto;
+    }
+
+    private static SettlerStateSnapshot BuildSettlerSnapshot(Settler settler)
+    {
+        var dto = new SettlerStateSnapshot
+        {
+            Id = settler.Id,
+            Name = settler.Name,
+            ProfessionId = settler.ProfessionId,
+            X = settler.Position.X,
+            Y = settler.Position.Y,
+            Hp = settler.CurrentHp,
+            Happiness = settler.Happiness,
+            HasHome = settler.HomeTile.HasValue,
+            HomeTileCol = settler.HomeTile?.Col ?? 0,
+            HomeTileRow = settler.HomeTile?.Row ?? 0,
+            WorkTimer = settler.WorkTimer
+        };
+
+        if (settler.Stockpile.UsedSlots > 0)
+        {
+            dto.Stockpile = new List<InventoryItemSnapshot>(settler.Stockpile.Stacks.Count);
+            for (int i = 0; i < settler.Stockpile.Stacks.Count; i++)
+            {
+                ItemStack stack = settler.Stockpile.Stacks[i];
+                dto.Stockpile.Add(new InventoryItemSnapshot
                 {
                     ItemId = stack.Item.Id,
                     Quantity = stack.Quantity
@@ -2121,6 +2261,41 @@ public sealed class GameSession : IDisposable
                 FarmPlotSnapshot fp = snapshot.FarmPlots[i];
                 _farmingSystem.RestorePlot(fp.TileCol, fp.TileRow, fp.CropId, fp.GrowthSeconds);
             }
+        }
+
+        if (snapshot.Settlers is not null)
+        {
+            for (int i = 0; i < snapshot.Settlers.Count; i++)
+            {
+                SettlerStateSnapshot st = snapshot.Settlers[i];
+                GridPoint? homeTile = st.HasHome ? new GridPoint(st.HomeTileCol, st.HomeTileRow) : null;
+                Settler? settler = _settlementManager.CreateSettlerFromSnapshot(
+                    st.Id,
+                    st.Name,
+                    st.ProfessionId,
+                    new Vector2D(st.X, st.Y),
+                    st.Hp,
+                    st.Happiness,
+                    homeTile,
+                    st.WorkTimer);
+                if (settler is null)
+                {
+                    continue;
+                }
+
+                if (st.Stockpile is not null)
+                {
+                    for (int j = 0; j < st.Stockpile.Count; j++)
+                    {
+                        InventoryItemSnapshot entry = st.Stockpile[j];
+                        settler.Stockpile.TryAddItem(_itemResolver(entry.ItemId), entry.Quantity);
+                    }
+                }
+
+                AddSettler(settler);
+            }
+
+            _settlementManager.RefreshHousing(_level, _structuresView, _structureLookup, _enemiesView);
         }
     }
 }

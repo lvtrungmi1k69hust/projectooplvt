@@ -56,6 +56,28 @@ public sealed class GameStateDTO
 
     /// <summary>Gets or sets tilled farm plot snapshots and planted crop progress.</summary>
     public List<FarmPlotSnapshot> FarmPlots { get; set; } = new();
+
+    /// <summary>Gets or sets recruited colony settler NPC snapshots.</summary>
+    public List<SettlerStateSnapshot> Settlers { get; set; } = new();
+}
+
+/// <summary>
+/// Serializable recruited settler state stored inside <see cref="GameStateDTO"/>.
+/// </summary>
+public sealed class SettlerStateSnapshot
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string ProfessionId { get; set; } = string.Empty;
+    public float X { get; set; }
+    public float Y { get; set; }
+    public int Hp { get; set; }
+    public int Happiness { get; set; }
+    public bool HasHome { get; set; }
+    public int HomeTileCol { get; set; }
+    public int HomeTileRow { get; set; }
+    public float WorkTimer { get; set; }
+    public List<InventoryItemSnapshot>? Stockpile { get; set; }
 }
 
 /// <summary>

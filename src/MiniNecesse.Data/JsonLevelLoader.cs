@@ -12,6 +12,7 @@ using MiniNecesse.Core.Farming;
 using MiniNecesse.Core.Interfaces;
 using MiniNecesse.Core.Loot;
 using MiniNecesse.Core.Rules;
+using MiniNecesse.Core.Settlement;
 using MiniNecesse.Core.World;
 using MiniNecesse.Data.Schemas;
 
@@ -30,6 +31,7 @@ public sealed class JsonLevelLoader : ILevelLoader
     private const string CROPS_FILE_NAME = "crops.json";
     private const string ARMOR_FILE_NAME = "armor.json";
     private const string LOOT_TABLES_FILE_NAME = "loot_tables.json";
+    private const string SETTLERS_FILE_NAME = "settlers.json";
 
     private static readonly JsonSerializerOptions JSON_OPTIONS = new()
     {
@@ -265,6 +267,92 @@ public sealed class JsonLevelLoader : ILevelLoader
         }
 
         return tables.AsReadOnly();
+    }
+
+    /// <summary>Loads data-driven settler professions, recruitment costs, and barter offers from <c>settlers.json</c>.</summary>
+    public SettlerCatalog LoadSettlerCatalog()
+    {
+        string path = Path.Combine(_assetsDirectory, SETTLERS_FILE_NAME);
+        if (!File.Exists(path))
+        {
+            return SettlerCatalog.CreateDefault();
+        }
+
+        SettlerCatalogJson raw = ReadJsonOrThrow<SettlerCatalogJson>(path, "SETTLERS");
+        var catalog = new SettlerCatalog();
+        if (raw.Names is { Count: > 0 })
+        {
+            catalog.SetNames(raw.Names);
+        }
+
+        if (raw.Professions is null || raw.Professions.Count == 0)
+        {
+            throw new InvalidLevelDataException("settlers.json must define at least one profession.", "SETTLERS");
+        }
+
+        for (int i = 0; i < raw.Professions.Count; i++)
+        {
+            SettlerProfessionJson p = raw.Professions[i];
+            if (string.IsNullOrWhiteSpace(p.ProfessionId) ||
+                !Enum.TryParse(p.ProfessionId, ignoreCase: true, out SettlerProfession profession))
+            {
+                throw new InvalidLevelDataException($"Unknown settler profession '{p.ProfessionId}' at index {i}.", "SETTLERS");
+            }
+
+            if (p.MaxHp <= 0 || p.MoveSpeed <= 0f || p.WorkIntervalSeconds <= 0f ||
+                string.IsNullOrWhiteSpace(p.RecruitCostItemId) || p.RecruitCostQuantity <= 0)
+            {
+                throw new InvalidLevelDataException($"Invalid settler stats/recruit cost for '{p.ProfessionId}'.", "SETTLERS");
+            }
+
+            var produced = new List<SettlerProducedEntry>();
+            if (p.ProducedItems is not null)
+            {
+                for (int j = 0; j < p.ProducedItems.Count; j++)
+                {
+                    SettlerProducedJson pi = p.ProducedItems[j];
+                    if (string.IsNullOrWhiteSpace(pi.ItemId) || pi.Quantity <= 0)
+                    {
+                        throw new InvalidLevelDataException($"Invalid produced item in '{p.ProfessionId}'.", "SETTLERS");
+                    }
+
+                    produced.Add(new SettlerProducedEntry(pi.ItemId, pi.Quantity));
+                }
+            }
+
+            var trades = new List<SettlerTradeOffer>();
+            if (p.Trades is not null)
+            {
+                for (int j = 0; j < p.Trades.Count; j++)
+                {
+                    SettlerTradeJson tr = p.Trades[j];
+                    if (string.IsNullOrWhiteSpace(tr.OfferId) ||
+                        string.IsNullOrWhiteSpace(tr.CostItemId) ||
+                        string.IsNullOrWhiteSpace(tr.RewardItemId) ||
+                        tr.CostQuantity <= 0 ||
+                        tr.RewardQuantity <= 0)
+                    {
+                        throw new InvalidLevelDataException($"Invalid trade offer in '{p.ProfessionId}'.", "SETTLERS");
+                    }
+
+                    trades.Add(new SettlerTradeOffer(tr.OfferId, tr.CostItemId, tr.CostQuantity, tr.RewardItemId, tr.RewardQuantity));
+                }
+            }
+
+            catalog.RegisterProfession(new SettlerProfessionDefinition(
+                p.ProfessionId,
+                profession,
+                p.DisplayName ?? p.ProfessionId,
+                p.MaxHp,
+                p.MoveSpeed,
+                p.WorkIntervalSeconds,
+                p.RecruitCostItemId,
+                p.RecruitCostQuantity,
+                produced.AsReadOnly(),
+                trades.AsReadOnly()));
+        }
+
+        return catalog;
     }
 
     /// <inheritdoc />

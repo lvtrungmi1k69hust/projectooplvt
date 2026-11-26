@@ -31,6 +31,9 @@ public sealed class KeyBindingConfig
     /// <summary>Gets or sets the key toggling the crafting panel.</summary>
     public Keys ToggleCrafting { get; set; } = Keys.C;
 
+    /// <summary>Gets or sets the key toggling the colony/settler overlay.</summary>
+    public Keys ToggleSettlement { get; set; } = Keys.V;
+
     /// <summary>Gets or sets the key triggering interaction / boss summoning.</summary>
     public Keys Interact { get; set; } = Keys.E;
 

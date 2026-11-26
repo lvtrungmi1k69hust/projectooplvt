@@ -144,6 +144,7 @@ public sealed class ItemFactory
             new ItemBlueprint("stone_wall", "Stone Wall", ItemCategory.Structure, 50, "Reinforced stone defensive barrier.", StructureType: StructureType.StoneWall),
             new ItemBlueprint("torch", "Torch", ItemCategory.Structure, 50, "Illuminates nearby ground at night.", StructureType: StructureType.Torch),
             new ItemBlueprint("wooden_fence", "Wooden Fence", ItemCategory.Structure, 50, "Solid wooden fence for pens and perimeters.", StructureType: StructureType.WoodenFence),
+            new ItemBlueprint("wooden_door", "Wooden Door", ItemCategory.Structure, 20, "Walk-through door enclosing valid settler housing.", StructureType: StructureType.WoodenDoor),
             new ItemBlueprint("wooden_chest", "Wooden Chest", ItemCategory.Structure, 10, "Placeable 16-slot storage chest.", StructureType: StructureType.Chest),
             new ItemBlueprint("leather_helmet", "Leather Helmet", ItemCategory.Armor, 1, "Light stitched leather cap (+2 Defense).", ArmorSlot: ArmorSlot.Head, Defense: 2),
             new ItemBlueprint("leather_chestplate", "Leather Tunic", ItemCategory.Armor, 1, "Supple hide armor (+3 Defense).", ArmorSlot: ArmorSlot.Body, Defense: 3),

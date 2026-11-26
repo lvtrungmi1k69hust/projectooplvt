@@ -183,7 +183,8 @@ public sealed class EnemyFactory : IEntityFactory
             bp.IsCraftingStation,
             bp.LightRadius,
             new Vector2D(tileSize, tileSize),
-            bp.StorageCapacity);
+            bp.StorageCapacity,
+            bp.IsDoor);
     }
 
     /// <inheritdoc />
@@ -303,6 +304,7 @@ public sealed class EnemyFactory : IEntityFactory
         factory.RegisterStructureBlueprint(new StructureBlueprint(StructureType.Torch, 40, IsSolid: false, LightRadius: 150f));
         factory.RegisterStructureBlueprint(new StructureBlueprint(StructureType.WoodenFence, 50, IsSolid: true));
         factory.RegisterStructureBlueprint(new StructureBlueprint(StructureType.Chest, 120, IsSolid: true, StorageCapacity: 16));
+        factory.RegisterStructureBlueprint(new StructureBlueprint(StructureType.WoodenDoor, 70, IsSolid: false, IsDoor: true));
 
         factory.RegisterAnimalBlueprint(new AnimalBlueprint(AnimalType.Chicken, "Chicken", 20, 72f, "raw_meat", 1, "feather", 2, 10, 18f, 18f));
         factory.RegisterAnimalBlueprint(new AnimalBlueprint(AnimalType.Sheep, "Sheep", 35, 58f, "wool", 2, "raw_meat", 1, 15, 22f, 22f));

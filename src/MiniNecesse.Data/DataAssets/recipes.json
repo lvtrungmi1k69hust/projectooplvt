@@ -367,5 +367,14 @@
       { "itemId": "iron_ore", "quantity": 6 },
       { "itemId": "leather", "quantity": 2 }
     ]
+  },
+  {
+    "recipeId": "craft_wooden_door",
+    "outputItemId": "wooden_door",
+    "outputQuantity": 1,
+    "requiresWorkbench": false,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 4 }
+    ]
   }
 ]

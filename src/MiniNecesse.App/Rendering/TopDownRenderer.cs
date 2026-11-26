@@ -162,6 +162,7 @@ public sealed class TopDownRenderer : IDisposable
         DrawStructures(g, viewportSize, session.Structures, cameraOffset);
         DrawDroppedItems(g, viewportSize, session.DroppedItems, cameraOffset);
         DrawAnimals(g, viewportSize, session.Animals, cameraOffset, interpolationAlpha);
+        DrawSettlers(g, viewportSize, session.Settlement.Settlers, cameraOffset, interpolationAlpha);
         DrawEnemies(g, viewportSize, session.Enemies, cameraOffset, interpolationAlpha);
         DrawPlayerWithHeldItem(g, session, cameraOffset, aimWorldPos, interpolationAlpha);
         DrawProjectiles(g, viewportSize, session.Projectiles, cameraOffset, interpolationAlpha);
@@ -418,6 +419,7 @@ public sealed class TopDownRenderer : IDisposable
                 StructureType.Torch => torchFrame == 0 ? "str_torch_0" : "str_torch_1",
                 StructureType.WoodenFence => "str_wood_fence",
                 StructureType.Chest => "str_chest",
+                StructureType.WoodenDoor => "str_door",
                 _ => "str_wood_wall"
             };
 
@@ -495,6 +497,36 @@ public sealed class TopDownRenderer : IDisposable
             if (a.CurrentHp < a.MaxHp)
             {
                 DrawMiniHealthBar(g, sx, sy - 7, w, a.CurrentHp, a.MaxHp, _cache.AnimalHpFillBrush);
+            }
+        }
+    }
+
+    private void DrawSettlers(Graphics g, Size viewport, IReadOnlyList<Settler> settlers, Vector2D cam, float alpha)
+    {
+        for (int i = 0; i < settlers.Count; i++)
+        {
+            Settler s = settlers[i];
+            if (!s.IsAlive) continue;
+
+            Vector2D pos = s.GetInterpolatedPosition(alpha);
+            float sx = pos.X - cam.X;
+            float sy = pos.Y - cam.Y;
+            float w = s.Size.X;
+            float h = s.Size.Y;
+            if (!IsInViewport(sx, sy, w, h, viewport)) continue;
+
+            g.FillEllipse(_cache.ShadowBrush, sx + 1, sy + h - 4, w - 2, 6);
+            string key = s.Profession == SettlerProfession.Hunter ? "settler_hunter" : "settler_miner";
+            Bitmap? sprite = _sprites.Get(key);
+            if (sprite is not null)
+            {
+                g.DrawImage(sprite, sx - 3, sy - 5, w + 6, h + 6);
+            }
+
+            g.DrawString(s.Name, _cache.SmallFont, _cache.BuffTextBrush, sx - 4, sy - 16);
+            if (s.CurrentHp < s.MaxHp)
+            {
+                DrawMiniHealthBar(g, sx, sy - 6, w, s.CurrentHp, s.MaxHp, _cache.AnimalHpFillBrush);
             }
         }
     }
@@ -847,7 +879,7 @@ public sealed class TopDownRenderer : IDisposable
             session.Player.Buffs.ActiveBuffCount > 0 ? _cache.BuffTextBrush : _cache.TextMutedBrush,
             22,
             138);
-        g.DrawString("[WASD] Move [LMB] Act/Till [RMB] Use/Plant/Build [C] Craft [E] Boss [Esc] Pause", _cache.SmallFont, _cache.TextMutedBrush, 22, 155);
+        g.DrawString("[WASD] Move [LMB] Act [RMB] Use/Plant [C] Craft [V] Colony [E] Open/Boss [Esc] Pause", _cache.SmallFont, _cache.TextMutedBrush, 22, 155);
     }
 
     private void DrawBossBar(Graphics g, Size viewport, HudViewModel hud)

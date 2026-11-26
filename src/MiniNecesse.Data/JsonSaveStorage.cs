@@ -229,5 +229,17 @@ public sealed class JsonSaveStorage : ISaveStorage
                 }
             }
         }
+
+        if (snapshot.Settlers is not null)
+        {
+            for (int i = 0; i < snapshot.Settlers.Count; i++)
+            {
+                SettlerStateSnapshot st = snapshot.Settlers[i];
+                if (string.IsNullOrWhiteSpace(st.ProfessionId) || st.Hp < 0 || st.Happiness < 0)
+                {
+                    throw new SaveCorruptedException($"Invalid settler snapshot at index {i}.", slotIndex);
+                }
+            }
+        }
     }
 }

@@ -19,6 +19,7 @@ public sealed class Structure : Entity, IDamageable
     private readonly int _tileRow;
     private readonly int _maxHp;
     private readonly Inventory? _storageInventory;
+    private readonly bool _isDoor;
     private int _currentHp;
 
     /// <summary>Gets the structure archetype.</summary>
@@ -32,6 +33,9 @@ public sealed class Structure : Entity, IDamageable
 
     /// <summary>Gets the illumination radius in world units (positive for torches).</summary>
     public float LightRadius => _lightRadius;
+
+    /// <summary>Gets a value indicating whether this structure acts as a passable room door.</summary>
+    public bool IsDoor => _isDoor;
 
     /// <summary>Gets the grid column occupied by this structure.</summary>
     public int TileCol => _tileCol;
@@ -74,7 +78,8 @@ public sealed class Structure : Entity, IDamageable
         bool isCraftingStation = false,
         float lightRadius = 0f,
         Vector2D? size = null,
-        int storageCapacity = 0)
+        int storageCapacity = 0,
+        bool isDoor = false)
         : base(id, position, size ?? new Vector2D(32f, 32f))
     {
         if (maxHp <= 0)
@@ -101,6 +106,7 @@ public sealed class Structure : Entity, IDamageable
         _isCraftingStation = isCraftingStation;
         _lightRadius = lightRadius;
         _storageInventory = storageCapacity > 0 ? new Inventory(storageCapacity) : null;
+        _isDoor = isDoor;
     }
 
     /// <inheritdoc />

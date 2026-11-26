@@ -81,6 +81,40 @@ internal sealed class LootTableJson
     public List<LootEntryJson>? Entries { get; set; }
 }
 
+internal sealed class SettlerCatalogJson
+{
+    public List<string>? Names { get; set; }
+    public List<SettlerProfessionJson>? Professions { get; set; }
+}
+
+internal sealed class SettlerProfessionJson
+{
+    public string? ProfessionId { get; set; }
+    public string? DisplayName { get; set; }
+    public int MaxHp { get; set; }
+    public float MoveSpeed { get; set; }
+    public float WorkIntervalSeconds { get; set; }
+    public string? RecruitCostItemId { get; set; }
+    public int RecruitCostQuantity { get; set; }
+    public List<SettlerProducedJson>? ProducedItems { get; set; }
+    public List<SettlerTradeJson>? Trades { get; set; }
+}
+
+internal sealed class SettlerProducedJson
+{
+    public string? ItemId { get; set; }
+    public int Quantity { get; set; }
+}
+
+internal sealed class SettlerTradeJson
+{
+    public string? OfferId { get; set; }
+    public string? CostItemId { get; set; }
+    public int CostQuantity { get; set; }
+    public string? RewardItemId { get; set; }
+    public int RewardQuantity { get; set; }
+}
+
 internal sealed class RecipeJson
 {
     public string? RecipeId { get; set; }

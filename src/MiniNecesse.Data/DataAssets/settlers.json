@@ -1,0 +1,43 @@
+{
+  "names": [ "Aldric", "Freya", "Bram", "Elara", "Torin", "Mira", "Garrick", "Sera" ],
+  "professions": [
+    {
+      "professionId": "Miner",
+      "displayName": "Miner",
+      "maxHp": 90,
+      "moveSpeed": 82.0,
+      "workIntervalSeconds": 12.0,
+      "recruitCostItemId": "bread",
+      "recruitCostQuantity": 2,
+      "producedItems": [
+        { "itemId": "stone", "quantity": 2 },
+        { "itemId": "copper_ore", "quantity": 1 },
+        { "itemId": "coal", "quantity": 1 }
+      ],
+      "trades": [
+        { "offerId": "miner_copper", "costItemId": "wood", "costQuantity": 4, "rewardItemId": "copper_ore", "rewardQuantity": 2 },
+        { "offerId": "miner_iron", "costItemId": "stone", "costQuantity": 6, "rewardItemId": "iron_ore", "rewardQuantity": 2 },
+        { "offerId": "miner_coal", "costItemId": "wood", "costQuantity": 3, "rewardItemId": "coal", "rewardQuantity": 2 }
+      ]
+    },
+    {
+      "professionId": "Hunter",
+      "displayName": "Hunter",
+      "maxHp": 95,
+      "moveSpeed": 92.0,
+      "workIntervalSeconds": 12.0,
+      "recruitCostItemId": "cooked_meat",
+      "recruitCostQuantity": 1,
+      "producedItems": [
+        { "itemId": "raw_meat", "quantity": 1 },
+        { "itemId": "leather", "quantity": 1 },
+        { "itemId": "feather", "quantity": 2 }
+      ],
+      "trades": [
+        { "offerId": "hunter_meat", "costItemId": "wood", "costQuantity": 3, "rewardItemId": "raw_meat", "rewardQuantity": 2 },
+        { "offerId": "hunter_leather", "costItemId": "wheat", "costQuantity": 4, "rewardItemId": "leather", "rewardQuantity": 2 },
+        { "offerId": "hunter_feathers", "costItemId": "stone", "costQuantity": 3, "rewardItemId": "feather", "rewardQuantity": 3 }
+      ]
+    }
+  ]
+}

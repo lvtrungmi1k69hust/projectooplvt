@@ -40,7 +40,8 @@ public sealed record StructureBlueprint(
     bool IsSolid,
     bool IsCraftingStation = false,
     float LightRadius = 0f,
-    int StorageCapacity = 0);
+    int StorageCapacity = 0,
+    bool IsDoor = false);
 
 /// <summary>
 /// Data-driven blueprint describing a passive wildlife or livestock animal species.

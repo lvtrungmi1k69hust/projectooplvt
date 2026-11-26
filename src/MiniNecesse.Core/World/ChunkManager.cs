@@ -36,6 +36,7 @@ public sealed class ChunkManager
     private readonly Dictionary<ChunkCoord, List<ResourceNode>> _hibernatedResources = new();
     private readonly Dictionary<ChunkCoord, List<Structure>> _hibernatedStructures = new();
     private readonly Dictionary<ChunkCoord, List<Animal>> _hibernatedAnimals = new();
+    private readonly Dictionary<ChunkCoord, List<Settler>> _hibernatedSettlers = new();
     private readonly List<ChunkCoord> _pendingLoads = new(64);
     private readonly List<ChunkCoord> _unloadBuffer = new(64);
     private readonly List<ResourceSpawnPoint> _spawnScratch = new(32);
@@ -143,7 +144,8 @@ public sealed class ChunkManager
         Vector2D playerWorldPos,
         Action<ResourceNode> onActivateResource,
         Action<Structure> onActivateStructure,
-        Action<Animal>? onActivateAnimal = null)
+        Action<Animal>? onActivateAnimal = null,
+        Action<Settler>? onActivateSettler = null)
     {
         ArgumentNullException.ThrowIfNull(onActivateResource);
         ArgumentNullException.ThrowIfNull(onActivateStructure);
@@ -156,7 +158,8 @@ public sealed class ChunkManager
             onActivateStructure,
             _ => { },
             maxChunksPerTick: _level.TotalChunkCount,
-            onActivateAnimal: onActivateAnimal);
+            onActivateAnimal: onActivateAnimal,
+            onActivateSettler: onActivateSettler);
     }
 
     /// <summary>
@@ -169,7 +172,8 @@ public sealed class ChunkManager
         Action<Structure> onActivateStructure,
         Action<ChunkCoord> onDeactivateChunkEntities,
         int maxChunksPerTick = DEFAULT_MAX_CHUNKS_PER_TICK,
-        Action<Animal>? onActivateAnimal = null)
+        Action<Animal>? onActivateAnimal = null,
+        Action<Settler>? onActivateSettler = null)
     {
         ArgumentNullException.ThrowIfNull(onActivateResource);
         ArgumentNullException.ThrowIfNull(onActivateStructure);
@@ -193,7 +197,7 @@ public sealed class ChunkManager
             _streamingDirty = false;
         }
 
-        ProcessPendingLoads(center, onActivateResource, onActivateStructure, onActivateAnimal, maxChunksPerTick);
+        ProcessPendingLoads(center, onActivateResource, onActivateStructure, onActivateAnimal, onActivateSettler, maxChunksPerTick);
     }
 
     /// <summary>Stores an off-screen <see cref="ResourceNode"/> until its chunk reloads.</summary>
@@ -248,6 +252,39 @@ public sealed class ChunkManager
         }
 
         bucket.Add(animal);
+    }
+
+    /// <summary>Stores an off-screen <see cref="Settler"/> until its chunk reloads.</summary>
+    public void HibernateSettler(ChunkCoord coord, Settler settler)
+    {
+        ArgumentNullException.ThrowIfNull(settler);
+        if (!settler.IsAlive)
+        {
+            return;
+        }
+
+        if (!_hibernatedSettlers.TryGetValue(coord, out List<Settler>? bucket))
+        {
+            bucket = new List<Settler>(2);
+            _hibernatedSettlers[coord] = bucket;
+        }
+
+        bucket.Add(settler);
+    }
+
+    /// <summary>Enumerates all currently hibernated settlers across unloaded chunks (used for snapshots).</summary>
+    public IEnumerable<Settler> GetHibernatedSettlers()
+    {
+        foreach (List<Settler> list in _hibernatedSettlers.Values)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (list[i].IsAlive)
+                {
+                    yield return list[i];
+                }
+            }
+        }
     }
 
     /// <summary>Enumerates all currently hibernated resources across unloaded chunks (used for snapshots).</summary>
@@ -315,6 +352,7 @@ public sealed class ChunkManager
         _hibernatedResources.Clear();
         _hibernatedStructures.Clear();
         _hibernatedAnimals.Clear();
+        _hibernatedSettlers.Clear();
         _generatedChunks.Clear();
         _pendingLoads.Clear();
         _unloadBuffer.Clear();
@@ -378,6 +416,7 @@ public sealed class ChunkManager
         Action<ResourceNode> onActivateResource,
         Action<Structure> onActivateStructure,
         Action<Animal>? onActivateAnimal,
+        Action<Settler>? onActivateSettler,
         int maxChunksPerTick)
     {
         if (_pendingLoads.Count == 0)
@@ -392,7 +431,7 @@ public sealed class ChunkManager
             if (coord.ChebyshevDistanceTo(center) <= 1)
             {
                 _pendingLoads.RemoveAt(i);
-                LoadAndActivateSingleChunk(coord, onActivateResource, onActivateStructure, onActivateAnimal);
+                LoadAndActivateSingleChunk(coord, onActivateResource, onActivateStructure, onActivateAnimal, onActivateSettler);
             }
         }
 
@@ -409,7 +448,7 @@ public sealed class ChunkManager
                 continue;
             }
 
-            LoadAndActivateSingleChunk(coord, onActivateResource, onActivateStructure, onActivateAnimal);
+            LoadAndActivateSingleChunk(coord, onActivateResource, onActivateStructure, onActivateAnimal, onActivateSettler);
             loadedThisTick++;
         }
     }
@@ -418,7 +457,8 @@ public sealed class ChunkManager
         ChunkCoord coord,
         Action<ResourceNode> onActivateResource,
         Action<Structure> onActivateStructure,
-        Action<Animal>? onActivateAnimal)
+        Action<Animal>? onActivateAnimal,
+        Action<Settler>? onActivateSettler)
     {
         if (!_level.IsChunkInBounds(coord))
         {
@@ -496,6 +536,18 @@ public sealed class ChunkManager
                 AnimalSpawnPoint ap = _animalSpawnScratch[i];
                 Vector2D worldPos = new((ap.TileCol * _level.TileSize) + 4f, (ap.TileRow * _level.TileSize) + 4f);
                 onActivateAnimal(_animalFactory(ap.AnimalType, worldPos));
+            }
+        }
+
+        // 4. Hibernated colony settlers returning to loaded chunks.
+        if (onActivateSettler is not null && _hibernatedSettlers.Remove(coord, out List<Settler>? savedSettlers))
+        {
+            for (int i = 0; i < savedSettlers.Count; i++)
+            {
+                if (savedSettlers[i].IsAlive)
+                {
+                    onActivateSettler(savedSettlers[i]);
+                }
             }
         }
     }

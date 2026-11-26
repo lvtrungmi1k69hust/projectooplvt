@@ -21,5 +21,8 @@ public enum StructureType
     WoodenFence = 4,
 
     /// <summary>Interactive wooden storage chest holding an internal item inventory.</summary>
-    Chest = 5
+    Chest = 5,
+
+    /// <summary>Walk-through wooden door that seals enclosed rooms for settler housing.</summary>
+    WoodenDoor = 6
 }
