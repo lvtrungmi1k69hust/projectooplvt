@@ -31,7 +31,7 @@ public sealed class TopDownRenderer : IDisposable
     private const int HOTBAR_BOTTOM_MARGIN = 14;
     private const int MINIMAP_SIZE_PX = 192;
 
-    private static readonly string[] SLOT_LABELS = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+    private static readonly string[] SLOT_LABELS = { "1W", "2W", "3W", "4", "5", "6", "7", "8", "9" };
     private static readonly string[] QUANTITY_LABELS = BuildQuantityLabels(100);
 
     private readonly RenderResourceCache _cache = new();
@@ -1051,27 +1051,36 @@ public sealed class TopDownRenderer : IDisposable
         g.DrawString(equippedText, _cache.SmallFont, _cache.TextGoldBrush, startX + 8, startY - 22);
 
         g.InterpolationMode = InterpolationMode.NearestNeighbor;
-        Inventory inventory = session.Inventory;
         int selectedIndex = session.Player.SelectedHotbarIndex;
         for (int i = 0; i < HOTBAR_DISPLAY_SLOTS; i++)
         {
             int x = startX + (i * (HOTBAR_SLOT_SIZE + HOTBAR_GAP));
             bool selected = selectedIndex == i;
+            bool isWeaponSlot = i < Player.WEAPON_ONLY_SLOT_COUNT;
 
-            g.FillRectangle(selected ? _cache.HotbarSelectedBrush : _cache.HotbarSlotBrush, x, startY, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE);
-            g.DrawRectangle(selected ? _cache.HotbarSelectedPen : _cache.HudBorderPen, x, startY, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE);
+            SolidBrush slotBrush = selected
+                ? _cache.HotbarSelectedBrush
+                : (isWeaponSlot ? _cache.HotbarWeaponSlotBrush : _cache.HotbarSlotBrush);
+            Pen borderPen = selected
+                ? _cache.HotbarSelectedPen
+                : (isWeaponSlot ? _cache.HotbarWeaponBorderPen : _cache.HudBorderPen);
+
+            g.FillRectangle(slotBrush, x, startY, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE);
+            g.DrawRectangle(borderPen, x, startY, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE);
             g.DrawString(SLOT_LABELS[i], _cache.SmallFont, _cache.TextGoldBrush, x + 4, startY + 3);
 
-            ItemStack? stack = inventory.GetStackAt(i);
-            if (stack is null) continue;
+            if (!session.Player.TryGetHotbarEntry(i, out Item? slotItem, out int slotQuantity) || slotItem is null)
+            {
+                continue;
+            }
 
-            Bitmap? icon = _sprites.Get(stack.Item.Id);
+            Bitmap? icon = _sprites.Get(slotItem.Id);
             if (icon is not null)
             {
                 g.DrawImage(icon, x + 13, startY + 11, 32, 32);
             }
 
-            g.DrawString(GetQuantityLabel(stack.Quantity), _cache.SmallFont, _cache.TextGreenBrush, x + HOTBAR_SLOT_SIZE - 26, startY + HOTBAR_SLOT_SIZE - 16);
+            g.DrawString(GetQuantityLabel(slotQuantity), _cache.SmallFont, _cache.TextGreenBrush, x + HOTBAR_SLOT_SIZE - 26, startY + HOTBAR_SLOT_SIZE - 16);
         }
     }
 

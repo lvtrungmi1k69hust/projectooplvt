@@ -380,7 +380,7 @@ public sealed class FrmGamePlay : Form
         _highScoreRecordedForRun = false;
         _lastRecordedScore = null;
 
-        var inventory = new Inventory(_config.InventorySlots);
+        var inventory = Inventory.CreateUnlimited();
         var player = new Player(
             "player_1",
             package.Level.PlayerSpawnWorldPosition,
@@ -472,6 +472,7 @@ public sealed class FrmGamePlay : Form
 
     private void SeedStarterResourcesAndGear(GameSession session, LoadedIslandPackage package, IEntityFactory factory)
     {
+        session.Player.EnableExplicitHotbar();
         session.Inventory.TryAddItem(_itemFactory.ResolveItem("wood_axe"), 1);
         session.Inventory.TryAddItem(_itemFactory.ResolveItem("wood_pickaxe"), 1);
         session.Inventory.TryAddItem(_itemFactory.ResolveItem("copper_sword"), 1);
@@ -479,7 +480,15 @@ public sealed class FrmGamePlay : Form
         session.Inventory.TryAddItem(_itemFactory.ResolveItem("wooden_wall"), 6);
         session.Inventory.TryAddItem(_itemFactory.ResolveItem("wood_hoe"), 1);
         session.Inventory.TryAddItem(_itemFactory.ResolveItem("wheat_seed"), 4);
-        session.Player.SelectHotbarSlot(0);
+
+        session.Player.TryReplaceHotbarSlot("copper_sword", 0, out _);
+        session.Player.TryReplaceHotbarSlot("wood_axe", 3, out _);
+        session.Player.TryReplaceHotbarSlot("wood_pickaxe", 4, out _);
+        session.Player.TryReplaceHotbarSlot("wood_hoe", 5, out _);
+        session.Player.TryReplaceHotbarSlot("health_potion", 6, out _);
+        session.Player.TryReplaceHotbarSlot("wooden_wall", 7, out _);
+        session.Player.TryReplaceHotbarSlot("wheat_seed", 8, out _);
+        session.Player.SelectHotbarSlot(3);
 
         for (int i = 0; i < package.ResourceSpawns.Count; i++)
         {

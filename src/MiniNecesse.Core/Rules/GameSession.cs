@@ -757,9 +757,14 @@ public sealed class GameSession : IDisposable
         ArgumentNullException.ThrowIfNull(recipe);
         bool nearWorkbench = IsPlayerNearWorkbench(workbenchRadius);
 
-        if (!_craftingSystem.TryCraft(_player.Inventory, recipe, nearWorkbench, out _))
+        if (!_craftingSystem.TryCraft(_player.Inventory, recipe, nearWorkbench, out ItemStack? crafted))
         {
             return false;
+        }
+
+        if (crafted is not null)
+        {
+            _player.AutoPinNewItemToHotbar(crafted.Item);
         }
 
         _ruleEngine.RecordCraftCompleted();
@@ -778,9 +783,39 @@ public sealed class GameSession : IDisposable
             return false;
         }
 
-        _player.Inventory.TryRemoveItem(selected.Item.Id, 1);
+        if (_player.Inventory.TryRemoveItem(selected.Item.Id, 1))
+        {
+            _player.SyncEquippedFromSelectedSlot();
+            RequestSound("potion");
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>Equips an armor piece directly from the player's backpack and updates HUD/hotbar state.</summary>
+    public bool TryEquipArmorFromInventory(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            return false;
+        }
+
+        ItemStack? stack = _player.Inventory.FindFirstStack(itemId);
+        if (stack?.Item.AsArmorItem() is not ArmorItem armor)
+        {
+            return false;
+        }
+
+        if (!_player.TryEquipArmor(armor))
+        {
+            return false;
+        }
+
+        _player.Inventory.TryRemoveItem(armor.Id, 1);
         _player.SyncEquippedFromSelectedSlot();
-        RequestSound("potion");
+        RequestSound("armor_equip");
+        HandleInventoryChanged();
         return true;
     }
 
@@ -1021,6 +1056,7 @@ public sealed class GameSession : IDisposable
 
         _player.OnHealthChanged -= HandlePlayerHealthChanged;
         _player.Inventory.OnInventoryChanged -= HandleInventoryChanged;
+        _player.OnHotbarChanged -= HandleInventoryChanged;
         _craftingSystem.OnItemCrafted -= HandleItemCrafted;
         _ruleEngine.OnScoreChanged -= HandleScoreChanged;
         _dayNightCycle.OnDayPhaseChanged -= HandleDayPhaseChanged;
@@ -1045,6 +1081,7 @@ public sealed class GameSession : IDisposable
     {
         _player.OnHealthChanged += HandlePlayerHealthChanged;
         _player.Inventory.OnInventoryChanged += HandleInventoryChanged;
+        _player.OnHotbarChanged += HandleInventoryChanged;
         _craftingSystem.OnItemCrafted += HandleItemCrafted;
         _ruleEngine.OnScoreChanged += HandleScoreChanged;
         _dayNightCycle.OnDayPhaseChanged += HandleDayPhaseChanged;
@@ -1568,6 +1605,7 @@ public sealed class GameSession : IDisposable
                 Vector2D.DistanceSquared(_player.Center, drop.Center) <= pickupRadiusSq &&
                 _ruleEngine.ResolvePickup(drop, _player.Inventory, _itemResolver))
             {
+                _player.AutoPinNewItemToHotbar(_itemResolver(drop.ItemId));
                 RequestSound("pickup");
             }
         }
@@ -2072,7 +2110,8 @@ public sealed class GameSession : IDisposable
             SelectedHotbarIndex = _player.SelectedHotbarIndex,
             HeadArmorItemId = _player.Equipment.Head?.Id,
             BodyArmorItemId = _player.Equipment.Body?.Id,
-            LegsArmorItemId = _player.Equipment.Legs?.Id
+            LegsArmorItemId = _player.Equipment.Legs?.Id,
+            HotbarItemIds = _player.UsesExplicitHotbar ? _player.ExportHotbarBindings() : null
         };
 
         for (int i = 0; i < _player.Inventory.Stacks.Count; i++)
@@ -2269,6 +2308,19 @@ public sealed class GameSession : IDisposable
         ArmorItem? body = !string.IsNullOrWhiteSpace(playerDto.BodyArmorItemId) ? _itemResolver(playerDto.BodyArmorItemId).AsArmorItem() : null;
         ArmorItem? legs = !string.IsNullOrWhiteSpace(playerDto.LegsArmorItemId) ? _itemResolver(playerDto.LegsArmorItemId).AsArmorItem() : null;
         _player.RestoreEquippedArmor(head, body, legs);
+        if (playerDto.HotbarItemIds is not null)
+        {
+            _player.RestoreHotbarBindings(playerDto.HotbarItemIds);
+        }
+        else if (_player.Inventory.IsUnlimited || _player.UsesExplicitHotbar)
+        {
+            _player.EnableExplicitHotbar();
+            IReadOnlyList<ItemStack> restoredStacks = _player.Inventory.Stacks;
+            for (int i = 0; i < restoredStacks.Count; i++)
+            {
+                _player.AutoPinNewItemToHotbar(restoredStacks[i].Item);
+            }
+        }
 
         int clampedHotbar = global::System.Math.Clamp(playerDto.SelectedHotbarIndex, 0, _player.HotbarCapacity - 1);
         _player.SelectHotbarSlot(clampedHotbar);

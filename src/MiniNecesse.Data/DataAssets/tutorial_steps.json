@@ -2,7 +2,7 @@
   {
     "stepId": "chop_tree",
     "title": "Chop a Tree",
-    "instruction": "Select your Axe [1] and Left-Click a tree to gather Wood.",
+    "instruction": "Select your Axe [4] and Left-Click a tree to gather Wood.",
     "triggerType": "HarvestResource",
     "targetPattern": "Tree"
   },

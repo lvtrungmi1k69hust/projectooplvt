@@ -4,24 +4,29 @@ using System.Collections.Generic;
 namespace MiniNecesse.Core.Crafting;
 
 /// <summary>
-/// Manages player-carried item stacks with bounded slot capacity.
+/// Manages player-carried or storage item stacks with either bounded slot capacity
+/// or unlimited bag capacity via <see cref="CreateUnlimited"/>.
 /// Demonstrates UML Aggregation by referencing external <see cref="Item"/> / <see cref="ItemStack"/> instances
 /// and exposes <see cref="IReadOnlyList{T}"/> to protect internal invariants.
 /// </summary>
 public sealed class Inventory
 {
     private readonly int _capacity;
+    private readonly bool _isUnlimited;
     private readonly List<ItemStack> _stacks;
     private readonly IReadOnlyList<ItemStack> _stacksView;
 
-    /// <summary>Gets the maximum number of distinct item stacks allowed in this inventory.</summary>
+    /// <summary>Gets whether this inventory accepts an unlimited number of item stacks.</summary>
+    public bool IsUnlimited => _isUnlimited;
+
+    /// <summary>Gets the maximum number of distinct item stacks allowed (<see cref="int.MaxValue"/> when unlimited).</summary>
     public int Capacity => _capacity;
 
     /// <summary>Gets the number of currently occupied inventory slots.</summary>
     public int UsedSlots => _stacks.Count;
 
     /// <summary>Gets the number of empty inventory slots remaining.</summary>
-    public int FreeSlots => _capacity - _stacks.Count;
+    public int FreeSlots => _isUnlimited ? int.MaxValue : _capacity - _stacks.Count;
 
     /// <summary>Gets a cached read-only view of all active stacks to protect internal collection invariants.</summary>
     public IReadOnlyList<ItemStack> Stacks => _stacksView;
@@ -30,19 +35,27 @@ public sealed class Inventory
     public event Action? OnInventoryChanged;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Inventory"/> class.
+    /// Initializes a new bounded instance of the <see cref="Inventory"/> class.
     /// </summary>
     public Inventory(int capacity = 20)
+        : this(capacity, isUnlimited: false)
     {
         if (capacity <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(capacity), "Inventory capacity must be positive.");
         }
+    }
 
+    private Inventory(int capacity, bool isUnlimited)
+    {
         _capacity = capacity;
-        _stacks = new List<ItemStack>(capacity);
+        _isUnlimited = isUnlimited;
+        _stacks = new List<ItemStack>(isUnlimited ? 32 : capacity);
         _stacksView = _stacks.AsReadOnly();
     }
+
+    /// <summary>Creates an unlimited-capacity player backpack that never rejects looted or crafted items.</summary>
+    public static Inventory CreateUnlimited() => new(int.MaxValue, isUnlimited: true);
 
     /// <summary>Returns the total quantity of <paramref name="itemId"/> across all stacks.</summary>
     public int GetItemCount(string itemId)
@@ -55,13 +68,62 @@ public sealed class Inventory
         int total = 0;
         for (int i = 0; i < _stacks.Count; i++)
         {
-            if (string.Equals(_stacks[i].Item.Id, itemId, StringComparison.Ordinal))
+            if (string.Equals(_stacks[i].Item.Id, itemId, StringComparison.OrdinalIgnoreCase))
             {
                 total += _stacks[i].Quantity;
             }
         }
 
         return total;
+    }
+
+    /// <summary>Returns the first matching stack for <paramref name="itemId"/>, or <see langword="null"/> if absent.</summary>
+    public ItemStack? FindFirstStack(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            return null;
+        }
+
+        for (int i = 0; i < _stacks.Count; i++)
+        {
+            if (string.Equals(_stacks[i].Item.Id, itemId, StringComparison.OrdinalIgnoreCase))
+            {
+                return _stacks[i];
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Populates deduplicated item definitions and combined quantities into <paramref name="output"/> without LINQ.</summary>
+    public void GetUniqueItems(List<(Item Item, int TotalQuantity)> output)
+    {
+        ArgumentNullException.ThrowIfNull(output);
+        output.Clear();
+
+        for (int i = 0; i < _stacks.Count; i++)
+        {
+            ItemStack stack = _stacks[i];
+            int existingIdx = -1;
+            for (int j = 0; j < output.Count; j++)
+            {
+                if (string.Equals(output[j].Item.Id, stack.Item.Id, StringComparison.OrdinalIgnoreCase))
+                {
+                    existingIdx = j;
+                    break;
+                }
+            }
+
+            if (existingIdx >= 0)
+            {
+                output[existingIdx] = (output[existingIdx].Item, output[existingIdx].TotalQuantity + stack.Quantity);
+            }
+            else
+            {
+                output.Add((stack.Item, stack.Quantity));
+            }
+        }
     }
 
     /// <summary>Checks whether the inventory holds at least <paramref name="requiredQuantity"/> of <paramref name="itemId"/>.</summary>
@@ -83,6 +145,11 @@ public sealed class Inventory
         if (quantity <= 0)
         {
             return false;
+        }
+
+        if (_isUnlimited)
+        {
+            return true;
         }
 
         int availableCapacity = CalculateAvailableCapacity(item);
@@ -128,7 +195,7 @@ public sealed class Inventory
         int remaining = quantity;
         for (int i = _stacks.Count - 1; i >= 0 && remaining > 0; i--)
         {
-            if (!string.Equals(_stacks[i].Item.Id, itemId, StringComparison.Ordinal))
+            if (!string.Equals(_stacks[i].Item.Id, itemId, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -164,7 +231,7 @@ public sealed class Inventory
         int capacity = FreeSlots * item.MaxStackSize;
         for (int i = 0; i < _stacks.Count; i++)
         {
-            if (string.Equals(_stacks[i].Item.Id, item.Id, StringComparison.Ordinal))
+            if (string.Equals(_stacks[i].Item.Id, item.Id, StringComparison.OrdinalIgnoreCase))
             {
                 capacity += _stacks[i].RemainingCapacity;
             }
@@ -178,7 +245,7 @@ public sealed class Inventory
         int remaining = quantity;
         for (int i = 0; i < _stacks.Count && remaining > 0; i++)
         {
-            if (string.Equals(_stacks[i].Item.Id, itemId, StringComparison.Ordinal) && _stacks[i].RemainingCapacity > 0)
+            if (string.Equals(_stacks[i].Item.Id, itemId, StringComparison.OrdinalIgnoreCase) && _stacks[i].RemainingCapacity > 0)
             {
                 remaining = _stacks[i].Add(remaining);
             }

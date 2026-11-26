@@ -29,6 +29,7 @@ public sealed class RenderResourceCache : IDisposable
     public SolidBrush AnimalHpFillBrush { get; } = new(Color.FromArgb(124, 224, 134));
     public SolidBrush ResourceHpFillBrush { get; } = new(Color.FromArgb(230, 186, 68));
     public SolidBrush HotbarSlotBrush { get; } = new(Color.FromArgb(205, 24, 32, 48));
+    public SolidBrush HotbarWeaponSlotBrush { get; } = new(Color.FromArgb(208, 42, 26, 36));
     public SolidBrush HotbarSelectedBrush { get; } = new(Color.FromArgb(230, 56, 76, 108));
     public SolidBrush TreeTrunkBrush { get; } = new(Color.FromArgb(116, 74, 42));
     public SolidBrush TreeLeafDarkBrush { get; } = new(Color.FromArgb(36, 118, 52));
@@ -73,6 +74,7 @@ public sealed class RenderResourceCache : IDisposable
     public Pen RainStreakPen { get; } = new(Color.FromArgb(135, 160, 208, 255), 1.35f);
     public Pen DarkOutlinePen { get; } = new(Color.FromArgb(22, 26, 36), 1.5f);
     public Pen HudBorderPen { get; } = new(Color.FromArgb(95, 118, 152), 1.5f);
+    public Pen HotbarWeaponBorderPen { get; } = new(Color.FromArgb(186, 118, 86), 1.5f);
     public Pen HotbarSelectedPen { get; } = new(Color.FromArgb(248, 204, 84), 2.5f);
     public Pen SwingArcPen { get; } = new(Color.FromArgb(220, 255, 242, 166), 3.5f);
     public Pen BossAuraPen { get; } = new(Color.FromArgb(190, 255, 76, 98), 2.5f);
@@ -142,6 +144,7 @@ public sealed class RenderResourceCache : IDisposable
         AnimalHpFillBrush.Dispose();
         ResourceHpFillBrush.Dispose();
         HotbarSlotBrush.Dispose();
+        HotbarWeaponSlotBrush.Dispose();
         HotbarSelectedBrush.Dispose();
         TreeTrunkBrush.Dispose();
         TreeLeafDarkBrush.Dispose();
@@ -186,6 +189,7 @@ public sealed class RenderResourceCache : IDisposable
         RainStreakPen.Dispose();
         DarkOutlinePen.Dispose();
         HudBorderPen.Dispose();
+        HotbarWeaponBorderPen.Dispose();
         HotbarSelectedPen.Dispose();
         SwingArcPen.Dispose();
         BossAuraPen.Dispose();

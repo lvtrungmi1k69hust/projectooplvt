@@ -15,6 +15,8 @@ namespace MiniNecesse.Core.Entities;
 public sealed class Player : Character
 {
     private const int DEFAULT_HOTBAR_CAPACITY = 9;
+    /// <summary>Slots 1–3 (0-based indices 0..2) are dedicated strictly to combat weapons.</summary>
+    public const int WEAPON_ONLY_SLOT_COUNT = 3;
     private const int DEFAULT_INVENTORY_CAPACITY = 20;
     private const float DEFAULT_BARE_HAND_COOLDOWN = 0.45f;
     private const int DEFAULT_BARE_HAND_HARVEST_POWER = 5;
@@ -28,6 +30,8 @@ public sealed class Player : Character
     private readonly PlayerBuffManager _buffs = new();
     private IDamageMitigationStrategy _damageMitigationStrategy = FlatDefenseMitigationStrategy.Instance;
     private readonly int _hotbarCapacity;
+    private readonly string?[] _hotbarBindings;
+    private bool _useExplicitHotbar;
     private readonly float _hungerDrainPerSecond;
     private readonly float _starvationInterval;
     private readonly int _starvationDamage;
@@ -111,6 +115,9 @@ public sealed class Player : Character
     /// <summary>Raised when the player switches the active hotbar slot.</summary>
     public event Action<int>? OnHotbarSelectionChanged;
 
+    /// <summary>Raised when hotbar item slot assignments change via Replace/AutoPin.</summary>
+    public event Action? OnHotbarChanged;
+
     /// <summary>Raised when the equipped weapon changes.</summary>
     public event Action<IWeapon?>? OnWeaponEquipped;
 
@@ -151,6 +158,7 @@ public sealed class Player : Character
 
         _inventory = inventory ?? new Inventory(DEFAULT_INVENTORY_CAPACITY);
         _hotbarCapacity = hotbarCapacity;
+        _hotbarBindings = new string?[hotbarCapacity];
         _selectedHotbarIndex = 0;
         _equippedToolType = ToolType.None;
         _harvestPower = DEFAULT_BARE_HAND_HARVEST_POWER;
@@ -193,8 +201,261 @@ public sealed class Player : Character
         _harvestPower = DEFAULT_BARE_HAND_HARVEST_POWER;
     }
 
+    /// <summary>Gets whether explicit 9-slot hotbar pinning (slots 1–3 weapons only, 4–9 any) is enabled.</summary>
+    public bool UsesExplicitHotbar => _useExplicitHotbar;
+
+    /// <summary>Enables explicit hotbar slot bindings decoupled from unlimited backpack storage indices.</summary>
+    public void EnableExplicitHotbar()
+    {
+        if (_useExplicitHotbar)
+        {
+            return;
+        }
+
+        _useExplicitHotbar = true;
+        SyncEquippedFromSelectedSlot();
+        OnHotbarChanged?.Invoke();
+    }
+
     /// <summary>Gets the item stack currently selected on the hotbar, or <see langword="null"/> if empty.</summary>
-    public ItemStack? SelectedItemStack => _inventory.GetStackAt(_selectedHotbarIndex);
+    public ItemStack? SelectedItemStack
+    {
+        get
+        {
+            if (!_useExplicitHotbar)
+            {
+                return _inventory.GetStackAt(_selectedHotbarIndex);
+            }
+
+            string? boundId = _hotbarBindings[_selectedHotbarIndex];
+            return string.IsNullOrWhiteSpace(boundId) ? null : _inventory.FindFirstStack(boundId);
+        }
+    }
+
+    /// <summary>
+    /// Validates whether <paramref name="item"/> may occupy <paramref name="slotIndex"/>:
+    /// slots 0..2 (keys 1..3) strictly accept <see cref="ItemCategory.Weapon"/>; slots 3..8 (keys 4..9) accept any item.
+    /// </summary>
+    public bool CanAssignToHotbarSlot(Item item, int slotIndex, out string? reason)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        if (slotIndex < 0 || slotIndex >= _hotbarCapacity)
+        {
+            reason = "Hotbar slot index is out of range.";
+            return false;
+        }
+
+        if (slotIndex < WEAPON_ONLY_SLOT_COUNT && item.Category != ItemCategory.Weapon)
+        {
+            reason = "Slots 1-3 are reserved for Weapons only.";
+            return false;
+        }
+
+        reason = null;
+        return true;
+    }
+
+    /// <summary>
+    /// Replaces or binds <paramref name="itemId"/> into hotbar <paramref name="slotIndex"/>,
+    /// enforcing slots 1–3 Weapons-only and slots 4–9 open to any owned item.
+    /// </summary>
+    public bool TryReplaceHotbarSlot(string itemId, int slotIndex, out string? reason)
+    {
+        reason = null;
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            reason = "Invalid item identifier.";
+            return false;
+        }
+
+        ItemStack? owned = _inventory.FindFirstStack(itemId);
+        if (owned is null)
+        {
+            reason = "You do not own that item in your backpack.";
+            return false;
+        }
+
+        if (!CanAssignToHotbarSlot(owned.Item, slotIndex, out reason))
+        {
+            return false;
+        }
+
+        _useExplicitHotbar = true;
+
+        int existingSlot = -1;
+        for (int i = 0; i < _hotbarBindings.Length; i++)
+        {
+            if (string.Equals(_hotbarBindings[i], owned.Item.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                existingSlot = i;
+                break;
+            }
+        }
+
+        if (existingSlot == slotIndex)
+        {
+            return true;
+        }
+
+        string? displacedId = _hotbarBindings[slotIndex];
+        _hotbarBindings[slotIndex] = owned.Item.Id;
+
+        if (existingSlot >= 0)
+        {
+            bool canSwapBack = false;
+            if (!string.IsNullOrWhiteSpace(displacedId))
+            {
+                ItemStack? displacedStack = _inventory.FindFirstStack(displacedId);
+                if (displacedStack is not null && CanAssignToHotbarSlot(displacedStack.Item, existingSlot, out _))
+                {
+                    canSwapBack = true;
+                }
+            }
+
+            _hotbarBindings[existingSlot] = canSwapBack ? displacedId : null;
+        }
+
+        SyncEquippedFromSelectedSlot();
+        OnHotbarChanged?.Invoke();
+        return true;
+    }
+
+    /// <summary>Zero-allocation lookup for rendering any of the 9 hotbar slots cleanly.</summary>
+    public bool TryGetHotbarEntry(int slotIndex, out Item? item, out int totalQuantity)
+    {
+        item = null;
+        totalQuantity = 0;
+        if (slotIndex < 0 || slotIndex >= _hotbarCapacity)
+        {
+            return false;
+        }
+
+        if (!_useExplicitHotbar)
+        {
+            ItemStack? s = _inventory.GetStackAt(slotIndex);
+            if (s is null)
+            {
+                return false;
+            }
+
+            item = s.Item;
+            totalQuantity = s.Quantity;
+            return true;
+        }
+
+        string? boundId = _hotbarBindings[slotIndex];
+        if (string.IsNullOrWhiteSpace(boundId))
+        {
+            return false;
+        }
+
+        ItemStack? match = _inventory.FindFirstStack(boundId);
+        if (match is null)
+        {
+            return false;
+        }
+
+        item = match.Item;
+        totalQuantity = _inventory.GetItemCount(boundId);
+        return totalQuantity > 0;
+    }
+
+    /// <summary>
+    /// Automatically pins newly crafted or looted items into an empty compatible hotbar slot
+    /// without ever overwriting occupied slots.
+    /// </summary>
+    public bool AutoPinNewItemToHotbar(Item item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        if (!_useExplicitHotbar)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < _hotbarBindings.Length; i++)
+        {
+            if (string.Equals(_hotbarBindings[i], item.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        if (item.Category == ItemCategory.Weapon)
+        {
+            int weaponCap = global::System.Math.Min(WEAPON_ONLY_SLOT_COUNT, _hotbarBindings.Length);
+            for (int i = 0; i < weaponCap; i++)
+            {
+                if (IsHotbarSlotFree(i))
+                {
+                    _hotbarBindings[i] = item.Id;
+                    SyncEquippedFromSelectedSlot();
+                    OnHotbarChanged?.Invoke();
+                    return true;
+                }
+            }
+        }
+
+        for (int i = WEAPON_ONLY_SLOT_COUNT; i < _hotbarBindings.Length; i++)
+        {
+            if (IsHotbarSlotFree(i))
+            {
+                _hotbarBindings[i] = item.Id;
+                SyncEquippedFromSelectedSlot();
+                OnHotbarChanged?.Invoke();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Exports current 9-slot bindings for save snapshot persistence.</summary>
+    public List<string?> ExportHotbarBindings()
+    {
+        var list = new List<string?>(_hotbarBindings.Length);
+        for (int i = 0; i < _hotbarBindings.Length; i++)
+        {
+            list.Add(_hotbarBindings[i]);
+        }
+
+        return list;
+    }
+
+    /// <summary>Restores persisted 9-slot bindings cleanly.</summary>
+    public void RestoreHotbarBindings(IReadOnlyList<string?>? bindings)
+    {
+        Array.Clear(_hotbarBindings, 0, _hotbarBindings.Length);
+        if (bindings is null)
+        {
+            return;
+        }
+
+        _useExplicitHotbar = true;
+        int limit = global::System.Math.Min(_hotbarBindings.Length, bindings.Count);
+        for (int i = 0; i < limit; i++)
+        {
+            string? id = bindings[i];
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                continue;
+            }
+
+            ItemStack? owned = _inventory.FindFirstStack(id);
+            if (owned is not null && CanAssignToHotbarSlot(owned.Item, i, out _))
+            {
+                _hotbarBindings[i] = owned.Item.Id;
+            }
+        }
+
+        SyncEquippedFromSelectedSlot();
+        OnHotbarChanged?.Invoke();
+    }
+
+    private bool IsHotbarSlotFree(int slotIndex)
+    {
+        string? bound = _hotbarBindings[slotIndex];
+        return string.IsNullOrWhiteSpace(bound) || _inventory.GetItemCount(bound) == 0;
+    }
 
     /// <summary>Selects a valid 0-based hotbar slot index and equips its item polymorphically.</summary>
     public void SelectHotbarSlot(int slotIndex)

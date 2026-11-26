@@ -192,6 +192,9 @@ public sealed class PlayerSnapshot
     /// <summary>Gets or sets equipped Legs armor item id.</summary>
     public string? LegsArmorItemId { get; set; }
 
+    /// <summary>Gets or sets the 9 pinned hotbar item identifiers (slots 0..2 weapons only).</summary>
+    public List<string?>? HotbarItemIds { get; set; }
+
     /// <summary>Gets or sets the serialized inventory stacks.</summary>
     public List<InventoryItemSnapshot> Inventory { get; set; } = new();
 }
