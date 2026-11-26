@@ -10,6 +10,7 @@ using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Exceptions;
 using MiniNecesse.Core.Farming;
 using MiniNecesse.Core.Interfaces;
+using MiniNecesse.Core.Loot;
 using MiniNecesse.Core.Rules;
 using MiniNecesse.Core.World;
 using MiniNecesse.Data.Schemas;
@@ -27,6 +28,8 @@ public sealed class JsonLevelLoader : ILevelLoader
     private const string RECIPES_FILE_NAME = "recipes.json";
     private const string FOODS_FILE_NAME = "foods.json";
     private const string CROPS_FILE_NAME = "crops.json";
+    private const string ARMOR_FILE_NAME = "armor.json";
+    private const string LOOT_TABLES_FILE_NAME = "loot_tables.json";
 
     private static readonly JsonSerializerOptions JSON_OPTIONS = new()
     {
@@ -179,6 +182,89 @@ public sealed class JsonLevelLoader : ILevelLoader
         }
 
         return crops.AsReadOnly();
+    }
+
+    /// <summary>Loads data-driven protective armor definitions from <c>armor.json</c>.</summary>
+    public IReadOnlyList<ArmorDefinition> LoadArmorItems()
+    {
+        string path = Path.Combine(_assetsDirectory, ARMOR_FILE_NAME);
+        if (!File.Exists(path))
+        {
+            return Array.Empty<ArmorDefinition>();
+        }
+
+        List<ArmorJson> rawList = ReadJsonOrThrow<List<ArmorJson>>(path, "ARMOR");
+        var list = new List<ArmorDefinition>(rawList.Count);
+        for (int i = 0; i < rawList.Count; i++)
+        {
+            ArmorJson raw = rawList[i];
+            if (string.IsNullOrWhiteSpace(raw.Id) || string.IsNullOrWhiteSpace(raw.Name))
+            {
+                throw new InvalidLevelDataException($"Armor entry at index {i} is missing 'id' or 'name'.", "ARMOR");
+            }
+
+            if (!Enum.TryParse(raw.Slot, ignoreCase: true, out ArmorSlot slot))
+            {
+                throw new InvalidLevelDataException($"Armor '{raw.Id}' has invalid slot '{raw.Slot}'.", "ARMOR");
+            }
+
+            if (raw.Defense < 0 || raw.MaxHpBonus < 0)
+            {
+                throw new InvalidLevelDataException($"Armor '{raw.Id}' cannot have negative stats.", "ARMOR");
+            }
+
+            list.Add(new ArmorDefinition(
+                raw.Id,
+                raw.Name,
+                slot,
+                raw.Defense,
+                raw.MaxHpBonus,
+                raw.Description ?? string.Empty));
+        }
+
+        return list.AsReadOnly();
+    }
+
+    /// <summary>Loads data-driven enemy and boss loot tables from <c>loot_tables.json</c>.</summary>
+    public IReadOnlyList<LootTable> LoadLootTables()
+    {
+        string path = Path.Combine(_assetsDirectory, LOOT_TABLES_FILE_NAME);
+        if (!File.Exists(path))
+        {
+            return Array.Empty<LootTable>();
+        }
+
+        List<LootTableJson> rawList = ReadJsonOrThrow<List<LootTableJson>>(path, "LOOT_TABLES");
+        var tables = new List<LootTable>(rawList.Count);
+        for (int i = 0; i < rawList.Count; i++)
+        {
+            LootTableJson raw = rawList[i];
+            if (string.IsNullOrWhiteSpace(raw.ArchetypeId) || raw.Entries is null)
+            {
+                throw new InvalidLevelDataException($"Loot table at index {i} is missing archetypeId or entries.", "LOOT_TABLES");
+            }
+
+            var entries = new List<LootEntry>(raw.Entries.Count);
+            for (int j = 0; j < raw.Entries.Count; j++)
+            {
+                LootEntryJson e = raw.Entries[j];
+                if (string.IsNullOrWhiteSpace(e.ItemId) || e.MinQuantity <= 0 || e.MaxQuantity < e.MinQuantity)
+                {
+                    throw new InvalidLevelDataException($"Invalid loot entry {j} in table '{raw.ArchetypeId}'.", "LOOT_TABLES");
+                }
+
+                entries.Add(new LootEntry(
+                    e.ItemId,
+                    global::System.Math.Clamp(e.DropChance, 0f, 1f),
+                    e.MinQuantity,
+                    e.MaxQuantity,
+                    e.Guaranteed));
+            }
+
+            tables.Add(new LootTable(raw.ArchetypeId, entries.AsReadOnly()));
+        }
+
+        return tables.AsReadOnly();
     }
 
     /// <inheritdoc />

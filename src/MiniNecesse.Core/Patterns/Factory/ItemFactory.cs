@@ -33,7 +33,8 @@ public sealed class ItemFactory
             [ItemCategory.Weapon] = CreateWeaponItem,
             [ItemCategory.Consumable] = CreateConsumableItem,
             [ItemCategory.Structure] = CreateStructureItem,
-            [ItemCategory.Seed] = CreateSeedItem
+            [ItemCategory.Seed] = CreateSeedItem,
+            [ItemCategory.Armor] = CreateArmorItem
         };
     }
 
@@ -142,7 +143,17 @@ public sealed class ItemFactory
             new ItemBlueprint("wooden_wall", "Wooden Wall", ItemCategory.Structure, 50, "Solid wooden defensive barrier.", StructureType: StructureType.WoodenWall),
             new ItemBlueprint("stone_wall", "Stone Wall", ItemCategory.Structure, 50, "Reinforced stone defensive barrier.", StructureType: StructureType.StoneWall),
             new ItemBlueprint("torch", "Torch", ItemCategory.Structure, 50, "Illuminates nearby ground at night.", StructureType: StructureType.Torch),
-            new ItemBlueprint("wooden_fence", "Wooden Fence", ItemCategory.Structure, 50, "Solid wooden fence for pens and perimeters.", StructureType: StructureType.WoodenFence)
+            new ItemBlueprint("wooden_fence", "Wooden Fence", ItemCategory.Structure, 50, "Solid wooden fence for pens and perimeters.", StructureType: StructureType.WoodenFence),
+            new ItemBlueprint("wooden_chest", "Wooden Chest", ItemCategory.Structure, 10, "Placeable 16-slot storage chest.", StructureType: StructureType.Chest),
+            new ItemBlueprint("leather_helmet", "Leather Helmet", ItemCategory.Armor, 1, "Light stitched leather cap (+2 Defense).", ArmorSlot: ArmorSlot.Head, Defense: 2),
+            new ItemBlueprint("leather_chestplate", "Leather Tunic", ItemCategory.Armor, 1, "Supple hide armor (+3 Defense).", ArmorSlot: ArmorSlot.Body, Defense: 3),
+            new ItemBlueprint("leather_greaves", "Leather Greaves", ItemCategory.Armor, 1, "Reinforced leather leg guards (+2 Defense).", ArmorSlot: ArmorSlot.Legs, Defense: 2),
+            new ItemBlueprint("copper_helmet", "Copper Helmet", ItemCategory.Armor, 1, "Hammered copper helm (+4 Defense).", ArmorSlot: ArmorSlot.Head, Defense: 4),
+            new ItemBlueprint("copper_chestplate", "Copper Chestplate", ItemCategory.Armor, 1, "Sturdy bronze-plated cuirass (+6 Defense).", ArmorSlot: ArmorSlot.Body, Defense: 6),
+            new ItemBlueprint("copper_greaves", "Copper Greaves", ItemCategory.Armor, 1, "Forged copper leg armor (+4 Defense).", ArmorSlot: ArmorSlot.Legs, Defense: 4),
+            new ItemBlueprint("iron_helmet", "Iron Helmet", ItemCategory.Armor, 1, "Heavy iron visor helmet (+6 Defense).", ArmorSlot: ArmorSlot.Head, Defense: 6),
+            new ItemBlueprint("iron_chestplate", "Iron Chestplate", ItemCategory.Armor, 1, "Tempered iron breastplate (+9 Defense).", ArmorSlot: ArmorSlot.Body, Defense: 9),
+            new ItemBlueprint("iron_greaves", "Iron Greaves", ItemCategory.Armor, 1, "Articulated iron greaves (+6 Defense).", ArmorSlot: ArmorSlot.Legs, Defense: 6)
         });
 
         return factory;
@@ -182,6 +193,24 @@ public sealed class ItemFactory
         }
     }
 
+    /// <summary>Registers armor definitions loaded from <c>armor.json</c>.</summary>
+    public void RegisterArmorDefinitions(IEnumerable<ArmorDefinition> armorItems)
+    {
+        ArgumentNullException.ThrowIfNull(armorItems);
+        foreach (ArmorDefinition armor in armorItems)
+        {
+            RegisterBlueprint(new ItemBlueprint(
+                armor.Id,
+                armor.Name,
+                ItemCategory.Armor,
+                1,
+                armor.Description,
+                ArmorSlot: armor.Slot,
+                Defense: armor.Defense,
+                MaxHpBonus: armor.MaxHpBonus));
+        }
+    }
+
     private static Item CreateMaterialItem(ItemBlueprint bp) =>
         new MaterialItem(bp.Id, bp.Name, bp.MaxStackSize, bp.Description);
 
@@ -199,4 +228,7 @@ public sealed class ItemFactory
 
     private static Item CreateSeedItem(ItemBlueprint bp) =>
         new SeedItem(bp.Id, bp.Name, bp.CropId ?? bp.Id, bp.MaxStackSize, bp.Description);
+
+    private static Item CreateArmorItem(ItemBlueprint bp) =>
+        new ArmorItem(bp.Id, bp.Name, bp.ArmorSlot, bp.Defense, bp.MaxHpBonus, bp.Description);
 }

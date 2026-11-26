@@ -516,6 +516,34 @@ public sealed class SpriteAtlasCache : IDisposable
             ".KKKKK....KKKKK.",
             "................"
         }, woodWallPal));
+
+        Register("str_chest", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            ".KKKKKKKKKKKKKK.",
+            ".KLLLLLLLLLLLLK.",
+            ".KMMMMMMMMMMMMK.",
+            ".KDDDDDDDDDDDDK.",
+            ".KKKKKKKKKKKKKK.",
+            ".KMMMMMGGMMMMMK.",
+            ".KLLLLGGGGLLLLK.",
+            ".KMMMMMGGMMMMMK.",
+            ".KDDDDDDDDDDDDK.",
+            ".KMMMMMMMMMMMMK.",
+            ".KDDDDDDDDDDDDK.",
+            ".KKKKKKKKKKKKKK.",
+            "................",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(36, 22, 12),
+            ['L'] = Color.FromArgb(196, 134, 68),
+            ['M'] = Color.FromArgb(156, 98, 46),
+            ['D'] = Color.FromArgb(112, 68, 30),
+            ['G'] = Color.FromArgb(248, 212, 74)
+        }));
+        _sprites["wooden_chest"] = _sprites["str_chest"];
     }
 
     private static Bitmap BuildTorch(bool flickerRight)
@@ -1306,6 +1334,7 @@ public sealed class SpriteAtlasCache : IDisposable
         Register("wood_pickaxe", () => BuildToolIcon(isAxe: false, Color.FromArgb(182, 128, 72), Color.FromArgb(132, 84, 42)));
 
         RegisterFoodAndSeedSprites();
+        RegisterArmorSprites();
         Register("stone_pickaxe", () => BuildToolIcon(isAxe: false, Color.FromArgb(168, 176, 188), Color.FromArgb(114, 122, 134)));
         Register("copper_pickaxe", () => BuildToolIcon(isAxe: false, Color.FromArgb(242, 148, 72), Color.FromArgb(186, 94, 38)));
 
@@ -1787,5 +1816,110 @@ public sealed class SpriteAtlasCache : IDisposable
             "................",
             "................"
         }, cropFoodPal));
+    }
+
+    private void RegisterArmorSprites()
+    {
+        Register("leather_helmet", () => BuildHelmetIcon(Color.FromArgb(204, 136, 76), Color.FromArgb(158, 94, 46), Color.FromArgb(112, 62, 28)));
+        Register("leather_chestplate", () => BuildChestplateIcon(Color.FromArgb(204, 136, 76), Color.FromArgb(158, 94, 46), Color.FromArgb(112, 62, 28)));
+        Register("leather_greaves", () => BuildGreavesIcon(Color.FromArgb(204, 136, 76), Color.FromArgb(158, 94, 46), Color.FromArgb(112, 62, 28)));
+
+        Register("copper_helmet", () => BuildHelmetIcon(Color.FromArgb(246, 158, 82), Color.FromArgb(208, 114, 46), Color.FromArgb(154, 72, 26)));
+        Register("copper_chestplate", () => BuildChestplateIcon(Color.FromArgb(246, 158, 82), Color.FromArgb(208, 114, 46), Color.FromArgb(154, 72, 26)));
+        Register("copper_greaves", () => BuildGreavesIcon(Color.FromArgb(246, 158, 82), Color.FromArgb(208, 114, 46), Color.FromArgb(154, 72, 26)));
+
+        Register("iron_helmet", () => BuildHelmetIcon(Color.FromArgb(228, 238, 248), Color.FromArgb(174, 188, 206), Color.FromArgb(116, 128, 148)));
+        Register("iron_chestplate", () => BuildChestplateIcon(Color.FromArgb(228, 238, 248), Color.FromArgb(174, 188, 206), Color.FromArgb(116, 128, 148)));
+        Register("iron_greaves", () => BuildGreavesIcon(Color.FromArgb(228, 238, 248), Color.FromArgb(174, 188, 206), Color.FromArgb(116, 128, 148)));
+    }
+
+    private static Bitmap BuildHelmetIcon(Color light, Color mid, Color dark)
+    {
+        var pal = new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(28, 24, 30),
+            ['L'] = light,
+            ['M'] = mid,
+            ['D'] = dark
+        };
+        return PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "....KKKKKKKK....",
+            "...KLLLLLLLLK...",
+            "..KLLMMMMMMMLK..",
+            "..KMMLMMMMMLMMK.",
+            "..KMMMMMMMMMMDK.",
+            "..KMMKKKKKKMMDK.",
+            "..KMMK....KMMDK.",
+            "..KDDK....KDDDK.",
+            "..KKKK....KKKK..",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................"
+        }, pal);
+    }
+
+    private static Bitmap BuildChestplateIcon(Color light, Color mid, Color dark)
+    {
+        var pal = new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(28, 24, 30),
+            ['L'] = light,
+            ['M'] = mid,
+            ['D'] = dark
+        };
+        return PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "..KKK......KKK..",
+            ".KLLLK....KLLLK.",
+            "KLLMMKKKKKKMMLLK",
+            "KMMLLLLLLLLLLMMK",
+            "KDDDDMMMMMMDDDDK",
+            ".KKKMMMMMMMMKKK.",
+            "...KMMLLLLMMK...",
+            "...KMMMMMMMMK...",
+            "...KMDDDDDDMK...",
+            "...KDDDDDDDDK...",
+            "...KMMMMMMMMK...",
+            "...KKKKKKKKKK...",
+            "................",
+            "................",
+            "................"
+        }, pal);
+    }
+
+    private static Bitmap BuildGreavesIcon(Color light, Color mid, Color dark)
+    {
+        var pal = new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(28, 24, 30),
+            ['L'] = light,
+            ['M'] = mid,
+            ['D'] = dark
+        };
+        return PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "...KKKKKKKKKK...",
+            "...KLLLLLLLLK...",
+            "...KMMMMMMMMK...",
+            "...KMMKKKKMMK...",
+            "...KMMK..KMMK...",
+            "...KMMK..KMMK...",
+            "...KDDK..KDDK...",
+            "...KMMK..KMMK...",
+            "...KDDK..KDDK...",
+            "...KDDK..KDDK...",
+            "...KKKK..KKKK...",
+            "................",
+            "................",
+            "................",
+            "................"
+        }, pal);
     }
 }

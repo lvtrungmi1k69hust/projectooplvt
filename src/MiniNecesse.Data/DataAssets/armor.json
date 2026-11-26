@@ -1,0 +1,74 @@
+[
+  {
+    "id": "leather_helmet",
+    "name": "Leather Helmet",
+    "slot": "Head",
+    "defense": 2,
+    "maxHpBonus": 0,
+    "description": "Light stitched leather cap (+2 Defense)."
+  },
+  {
+    "id": "leather_chestplate",
+    "name": "Leather Tunic",
+    "slot": "Body",
+    "defense": 3,
+    "maxHpBonus": 0,
+    "description": "Supple hide armor protecting the torso (+3 Defense)."
+  },
+  {
+    "id": "leather_greaves",
+    "name": "Leather Greaves",
+    "slot": "Legs",
+    "defense": 2,
+    "maxHpBonus": 0,
+    "description": "Reinforced leather leg guards (+2 Defense)."
+  },
+  {
+    "id": "copper_helmet",
+    "name": "Copper Helmet",
+    "slot": "Head",
+    "defense": 4,
+    "maxHpBonus": 0,
+    "description": "Hammered copper helm (+4 Defense)."
+  },
+  {
+    "id": "copper_chestplate",
+    "name": "Copper Chestplate",
+    "slot": "Body",
+    "defense": 6,
+    "maxHpBonus": 0,
+    "description": "Sturdy bronze-plated cuirass (+6 Defense)."
+  },
+  {
+    "id": "copper_greaves",
+    "name": "Copper Greaves",
+    "slot": "Legs",
+    "defense": 4,
+    "maxHpBonus": 0,
+    "description": "Forged copper leg armor (+4 Defense)."
+  },
+  {
+    "id": "iron_helmet",
+    "name": "Iron Helmet",
+    "slot": "Head",
+    "defense": 6,
+    "maxHpBonus": 0,
+    "description": "Heavy iron visor helmet (+6 Defense)."
+  },
+  {
+    "id": "iron_chestplate",
+    "name": "Iron Chestplate",
+    "slot": "Body",
+    "defense": 9,
+    "maxHpBonus": 0,
+    "description": "Tempered iron breastplate (+9 Defense)."
+  },
+  {
+    "id": "iron_greaves",
+    "name": "Iron Greaves",
+    "slot": "Legs",
+    "defense": 6,
+    "maxHpBonus": 0,
+    "description": "Articulated iron greaves (+6 Defense)."
+  }
+]

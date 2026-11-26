@@ -1,0 +1,105 @@
+[
+  {
+    "archetypeId": "Slime",
+    "entries": [
+      { "itemId": "slime_gel", "dropChance": 1.0, "minQuantity": 1, "maxQuantity": 2, "guaranteed": true },
+      { "itemId": "berry", "dropChance": 0.30, "minQuantity": 1, "maxQuantity": 2, "guaranteed": false },
+      { "itemId": "wheat_seed", "dropChance": 0.25, "minQuantity": 1, "maxQuantity": 2, "guaranteed": false }
+    ]
+  },
+  {
+    "archetypeId": "ZombieRaider",
+    "entries": [
+      { "itemId": "slime_gel", "dropChance": 0.75, "minQuantity": 1, "maxQuantity": 2, "guaranteed": false },
+      { "itemId": "bread", "dropChance": 0.25, "minQuantity": 1, "maxQuantity": 1, "guaranteed": false },
+      { "itemId": "leather", "dropChance": 0.35, "minQuantity": 1, "maxQuantity": 2, "guaranteed": false }
+    ]
+  },
+  {
+    "archetypeId": "SkeletonArcher",
+    "entries": [
+      { "itemId": "wood", "dropChance": 0.85, "minQuantity": 1, "maxQuantity": 3, "guaranteed": false },
+      { "itemId": "feather", "dropChance": 0.55, "minQuantity": 1, "maxQuantity": 2, "guaranteed": false },
+      { "itemId": "carrot_seed", "dropChance": 0.20, "minQuantity": 1, "maxQuantity": 1, "guaranteed": false }
+    ]
+  },
+  {
+    "archetypeId": "SwampZombie",
+    "entries": [
+      { "itemId": "slime_gel", "dropChance": 0.85, "minQuantity": 1, "maxQuantity": 3, "guaranteed": false },
+      { "itemId": "coal", "dropChance": 0.35, "minQuantity": 1, "maxQuantity": 2, "guaranteed": false },
+      { "itemId": "health_potion", "dropChance": 0.20, "minQuantity": 1, "maxQuantity": 1, "guaranteed": false }
+    ]
+  },
+  {
+    "archetypeId": "FrostRaider",
+    "entries": [
+      { "itemId": "iron_ore", "dropChance": 0.70, "minQuantity": 1, "maxQuantity": 2, "guaranteed": false },
+      { "itemId": "cooked_meat", "dropChance": 0.25, "minQuantity": 1, "maxQuantity": 1, "guaranteed": false }
+    ]
+  },
+  {
+    "archetypeId": "StoneGolem",
+    "entries": [
+      { "itemId": "copper_ore", "dropChance": 1.0, "minQuantity": 1, "maxQuantity": 3, "guaranteed": true },
+      { "itemId": "stone", "dropChance": 0.80, "minQuantity": 2, "maxQuantity": 4, "guaranteed": false },
+      { "itemId": "pumpkin_seed", "dropChance": 0.25, "minQuantity": 1, "maxQuantity": 1, "guaranteed": false }
+    ]
+  },
+  {
+    "archetypeId": "OrcBrute",
+    "entries": [
+      { "itemId": "iron_ore", "dropChance": 1.0, "minQuantity": 1, "maxQuantity": 3, "guaranteed": true },
+      { "itemId": "raw_meat", "dropChance": 0.50, "minQuantity": 1, "maxQuantity": 2, "guaranteed": false },
+      { "itemId": "leather", "dropChance": 0.45, "minQuantity": 1, "maxQuantity": 2, "guaranteed": false }
+    ]
+  },
+  {
+    "archetypeId": "DarkMage",
+    "entries": [
+      { "itemId": "gold_ore", "dropChance": 1.0, "minQuantity": 1, "maxQuantity": 2, "guaranteed": true },
+      { "itemId": "crystal", "dropChance": 0.60, "minQuantity": 1, "maxQuantity": 2, "guaranteed": false },
+      { "itemId": "health_potion", "dropChance": 0.40, "minQuantity": 1, "maxQuantity": 1, "guaranteed": false }
+    ]
+  },
+  {
+    "archetypeId": "KingSlime",
+    "entries": [
+      { "itemId": "slime_gel", "dropChance": 1.0, "minQuantity": 4, "maxQuantity": 6, "guaranteed": true },
+      { "itemId": "copper_ore", "dropChance": 1.0, "minQuantity": 3, "maxQuantity": 5, "guaranteed": true },
+      { "itemId": "health_potion", "dropChance": 1.0, "minQuantity": 2, "maxQuantity": 2, "guaranteed": true }
+    ]
+  },
+  {
+    "archetypeId": "ForestGuardian",
+    "entries": [
+      { "itemId": "wood", "dropChance": 1.0, "minQuantity": 8, "maxQuantity": 12, "guaranteed": true },
+      { "itemId": "copper_ore", "dropChance": 1.0, "minQuantity": 4, "maxQuantity": 6, "guaranteed": true },
+      { "itemId": "golden_bread", "dropChance": 0.75, "minQuantity": 1, "maxQuantity": 1, "guaranteed": false }
+    ]
+  },
+  {
+    "archetypeId": "SwampWitch",
+    "entries": [
+      { "itemId": "coal", "dropChance": 1.0, "minQuantity": 5, "maxQuantity": 8, "guaranteed": true },
+      { "itemId": "iron_ore", "dropChance": 1.0, "minQuantity": 4, "maxQuantity": 6, "guaranteed": true },
+      { "itemId": "health_potion", "dropChance": 1.0, "minQuantity": 2, "maxQuantity": 3, "guaranteed": true }
+    ]
+  },
+  {
+    "archetypeId": "CryoGolem",
+    "entries": [
+      { "itemId": "iron_ore", "dropChance": 1.0, "minQuantity": 6, "maxQuantity": 9, "guaranteed": true },
+      { "itemId": "gold_ore", "dropChance": 1.0, "minQuantity": 3, "maxQuantity": 5, "guaranteed": true },
+      { "itemId": "carrot_stew", "dropChance": 1.0, "minQuantity": 1, "maxQuantity": 2, "guaranteed": true }
+    ]
+  },
+  {
+    "archetypeId": "ShadowLord",
+    "entries": [
+      { "itemId": "crystal", "dropChance": 1.0, "minQuantity": 6, "maxQuantity": 10, "guaranteed": true },
+      { "itemId": "gold_ore", "dropChance": 1.0, "minQuantity": 6, "maxQuantity": 9, "guaranteed": true },
+      { "itemId": "pumpkin_pie", "dropChance": 1.0, "minQuantity": 2, "maxQuantity": 2, "guaranteed": true }
+    ]
+  }
+]

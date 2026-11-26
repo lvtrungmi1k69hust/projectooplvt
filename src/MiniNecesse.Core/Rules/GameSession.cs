@@ -6,6 +6,7 @@ using MiniNecesse.Core.Entities;
 using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Farming;
 using MiniNecesse.Core.Interfaces;
+using MiniNecesse.Core.Loot;
 using MiniNecesse.Core.Math;
 using MiniNecesse.Core.Patterns.Pool;
 using MiniNecesse.Core.Patterns.State;
@@ -69,6 +70,8 @@ public sealed class GameSession : IDisposable
 
     private readonly ChunkManager _chunkManager;
     private readonly FarmingSystem _farmingSystem;
+    private readonly LootTableRegistry _lootTableRegistry;
+    private readonly List<LootDropResult> _lootRollBuffer = new(8);
     private readonly Random _gameplayRng;
     private IReadOnlyList<VillageSite> _villages = Array.Empty<VillageSite>();
     private RaidWaveSpawner? _waveSpawner;
@@ -97,6 +100,12 @@ public sealed class GameSession : IDisposable
 
     /// <summary>Gets the farmland tilling, crop growth, and harvest coordinator.</summary>
     public FarmingSystem Farming => _farmingSystem;
+
+    /// <summary>Gets the active data-driven loot table registry.</summary>
+    public LootTableRegistry LootTables => _lootTableRegistry;
+
+    /// <summary>Gets the player's equipped Head/Body/Legs armor loadout.</summary>
+    public EquipmentLoadout Equipment => _player.Equipment;
 
     /// <summary>Gets the current chunk view distance radius around the player.</summary>
     public int ViewDistanceChunks => _chunkManager.ViewDistanceChunks;
@@ -202,7 +211,8 @@ public sealed class GameSession : IDisposable
         int minViewDistanceChunks = ChunkManager.DEFAULT_MIN_VIEW_DISTANCE,
         int maxViewDistanceChunks = ChunkManager.DEFAULT_MAX_VIEW_DISTANCE,
         CropRegistry? cropRegistry = null,
-        int? gameplaySeed = null)
+        int? gameplaySeed = null,
+        LootTableRegistry? lootTableRegistry = null)
     {
         ArgumentNullException.ThrowIfNull(level);
         ArgumentNullException.ThrowIfNull(player);
@@ -217,6 +227,7 @@ public sealed class GameSession : IDisposable
         _difficulty = difficulty;
         _chunkManager = new ChunkManager(level, viewDistanceChunks, minViewDistanceChunks, maxViewDistanceChunks);
         _farmingSystem = new FarmingSystem(cropRegistry);
+        _lootTableRegistry = lootTableRegistry ?? LootTableRegistry.CreateDefault();
         _gameplayRng = gameplaySeed.HasValue ? new Random(gameplaySeed.Value) : new Random();
 
         _enemiesView = _enemies.AsReadOnly();
@@ -419,6 +430,92 @@ public sealed class GameSession : IDisposable
 
         ActivateChunkStructure(structure);
         RequestSound("build");
+    }
+
+    /// <summary>Finds the nearest living chest structure with an inventory within <paramref name="maxDistance"/>.</summary>
+    public Structure? FindNearestChest(Vector2D worldPosition, float maxDistance = 88f)
+    {
+        Structure? best = null;
+        float bestDistSq = maxDistance * maxDistance;
+        for (int i = 0; i < _structures.Count; i++)
+        {
+            Structure s = _structures[i];
+            if (!s.IsAlive || !s.HasInventory)
+            {
+                continue;
+            }
+
+            float distSq = Vector2D.DistanceSquared(worldPosition, s.Center);
+            if (distSq <= bestDistSq)
+            {
+                bestDistSq = distSq;
+                best = s;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>Atomically deposits <paramref name="quantity"/> units from player inventory into <paramref name="chest"/>.</summary>
+    public bool TryDepositToChest(Structure chest, string itemId, int quantity)
+    {
+        ArgumentNullException.ThrowIfNull(chest);
+        if (!chest.IsAlive || chest.StorageInventory is null || quantity <= 0 || string.IsNullOrWhiteSpace(itemId))
+        {
+            return false;
+        }
+
+        if (!_player.Inventory.HasItem(itemId, quantity))
+        {
+            return false;
+        }
+
+        Item resolved = _itemResolver(itemId);
+        if (!chest.StorageInventory.CanAddItem(resolved, quantity))
+        {
+            return false;
+        }
+
+        if (!_player.Inventory.TryRemoveItem(itemId, quantity))
+        {
+            return false;
+        }
+
+        chest.StorageInventory.TryAddItem(resolved, quantity);
+        _player.SyncEquippedFromSelectedSlot();
+        RequestSound("pickup");
+        return true;
+    }
+
+    /// <summary>Atomically withdraws <paramref name="quantity"/> units from <paramref name="chest"/> into player inventory.</summary>
+    public bool TryWithdrawFromChest(Structure chest, string itemId, int quantity)
+    {
+        ArgumentNullException.ThrowIfNull(chest);
+        if (!chest.IsAlive || chest.StorageInventory is null || quantity <= 0 || string.IsNullOrWhiteSpace(itemId))
+        {
+            return false;
+        }
+
+        if (!chest.StorageInventory.HasItem(itemId, quantity))
+        {
+            return false;
+        }
+
+        Item resolved = _itemResolver(itemId);
+        if (!_player.Inventory.CanAddItem(resolved, quantity))
+        {
+            return false;
+        }
+
+        if (!chest.StorageInventory.TryRemoveItem(itemId, quantity))
+        {
+            return false;
+        }
+
+        _player.Inventory.TryAddItem(resolved, quantity);
+        _player.SyncEquippedFromSelectedSlot();
+        RequestSound("pickup");
+        return true;
     }
 
     /// <summary>Looks up a living structure occupying <paramref name="tile"/> in O(1) time (used by wall-breaching AI).</summary>
@@ -1482,7 +1579,19 @@ public sealed class GameSession : IDisposable
         _ruleEngine.ResolveEnemyDefeated(matched);
         RequestSound("enemy_defeated");
 
-        if (!string.IsNullOrWhiteSpace(matched.LootDropItemId) && matched.LootDropQuantity > 0)
+        if (_lootTableRegistry.TryGetTable(matched.Archetype, out _))
+        {
+            if (_lootTableRegistry.RollDrops(matched.Archetype, _gameplayRng, _lootRollBuffer))
+            {
+                for (int i = 0; i < _lootRollBuffer.Count; i++)
+                {
+                    LootDropResult drop = _lootRollBuffer[i];
+                    var offset = new Vector2D((i % 3) * 6f - 6f, (i / 3) * 6f);
+                    SpawnPooledDroppedItem(drop.ItemId, drop.Quantity, matched.Center + offset);
+                }
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(matched.LootDropItemId) && matched.LootDropQuantity > 0)
         {
             SpawnPooledDroppedItem(matched.LootDropItemId, matched.LootDropQuantity, matched.Center);
         }
@@ -1521,6 +1630,18 @@ public sealed class GameSession : IDisposable
                 if (structure.IsSolid && _level.IsInBounds(structure.TileCol, structure.TileRow))
                 {
                     _level.SetStructureOccupancy(structure.TileCol, structure.TileRow, false);
+                }
+
+                if (structure.StorageInventory is { UsedSlots: > 0 } chestInv)
+                {
+                    for (int s = 0; s < chestInv.Stacks.Count; s++)
+                    {
+                        ItemStack stack = chestInv.Stacks[s];
+                        var offset = new Vector2D((s % 4) * 5f - 7f, (s / 4) * 5f);
+                        SpawnPooledDroppedItem(stack.Item.Id, stack.Quantity, structure.Center + offset);
+                    }
+
+                    chestInv.Clear();
                 }
 
                 RequestSound("structure_break");
@@ -1727,7 +1848,10 @@ public sealed class GameSession : IDisposable
             MaxHp = _player.MaxHp,
             Hunger = _player.CurrentHunger,
             MaxHunger = _player.MaxHunger,
-            SelectedHotbarIndex = _player.SelectedHotbarIndex
+            SelectedHotbarIndex = _player.SelectedHotbarIndex,
+            HeadArmorItemId = _player.Equipment.Head?.Id,
+            BodyArmorItemId = _player.Equipment.Body?.Id,
+            LegsArmorItemId = _player.Equipment.Legs?.Id
         };
 
         for (int i = 0; i < _player.Inventory.Stacks.Count; i++)
@@ -1758,13 +1882,12 @@ public sealed class GameSession : IDisposable
 
         for (int i = 0; i < _structures.Count; i++)
         {
-            Structure s = _structures[i];
-            snapshot.Structures.Add(new StructureStateSnapshot { Id = s.Id, Type = s.StructureType.ToString(), X = s.Position.X, Y = s.Position.Y, TileCol = s.TileCol, TileRow = s.TileRow, Hp = s.CurrentHp });
+            snapshot.Structures.Add(BuildStructureSnapshot(_structures[i]));
         }
 
         foreach (Structure s in _chunkManager.GetHibernatedStructures())
         {
-            snapshot.Structures.Add(new StructureStateSnapshot { Id = s.Id, Type = s.StructureType.ToString(), X = s.Position.X, Y = s.Position.Y, TileCol = s.TileCol, TileRow = s.TileRow, Hp = s.CurrentHp });
+            snapshot.Structures.Add(BuildStructureSnapshot(s));
         }
 
         for (int i = 0; i < _enemies.Count; i++)
@@ -1860,6 +1983,7 @@ public sealed class GameSession : IDisposable
         _projectiles.Clear();
         _droppedItems.Clear();
         _farmingSystem.Clear();
+        _player.Equipment.Clear();
         _chunkManager.ClearHibernatedState();
         _pathfindingCoordinator.ClearCache();
         _chunksInitialized = false;
@@ -1887,8 +2011,43 @@ public sealed class GameSession : IDisposable
             _player.Inventory.TryAddItem(resolved, entry.Quantity);
         }
 
+        ArmorItem? head = !string.IsNullOrWhiteSpace(playerDto.HeadArmorItemId) ? _itemResolver(playerDto.HeadArmorItemId).AsArmorItem() : null;
+        ArmorItem? body = !string.IsNullOrWhiteSpace(playerDto.BodyArmorItemId) ? _itemResolver(playerDto.BodyArmorItemId).AsArmorItem() : null;
+        ArmorItem? legs = !string.IsNullOrWhiteSpace(playerDto.LegsArmorItemId) ? _itemResolver(playerDto.LegsArmorItemId).AsArmorItem() : null;
+        _player.RestoreEquippedArmor(head, body, legs);
+
         int clampedHotbar = global::System.Math.Clamp(playerDto.SelectedHotbarIndex, 0, _player.HotbarCapacity - 1);
         _player.SelectHotbarSlot(clampedHotbar);
+    }
+
+    private static StructureStateSnapshot BuildStructureSnapshot(Structure s)
+    {
+        var dto = new StructureStateSnapshot
+        {
+            Id = s.Id,
+            Type = s.StructureType.ToString(),
+            X = s.Position.X,
+            Y = s.Position.Y,
+            TileCol = s.TileCol,
+            TileRow = s.TileRow,
+            Hp = s.CurrentHp
+        };
+
+        if (s.StorageInventory is { UsedSlots: > 0 } chestInv)
+        {
+            dto.StoredItems = new List<InventoryItemSnapshot>(chestInv.Stacks.Count);
+            for (int i = 0; i < chestInv.Stacks.Count; i++)
+            {
+                ItemStack stack = chestInv.Stacks[i];
+                dto.StoredItems.Add(new InventoryItemSnapshot
+                {
+                    ItemId = stack.Item.Id,
+                    Quantity = stack.Quantity
+                });
+            }
+        }
+
+        return dto;
     }
 
     private void RestoreEntitiesFromSnapshot(GameStateDTO snapshot, IEntityFactory entityFactory)
@@ -1911,6 +2070,15 @@ public sealed class GameSession : IDisposable
             {
                 Structure structure = entityFactory.CreateStructure(structureType, s.TileCol, s.TileRow, _level.TileSize);
                 structure.RestoreHealth(global::System.Math.Min(s.Hp, structure.MaxHp));
+                if (s.StoredItems is not null && structure.StorageInventory is not null)
+                {
+                    for (int j = 0; j < s.StoredItems.Count; j++)
+                    {
+                        InventoryItemSnapshot itemDto = s.StoredItems[j];
+                        structure.StorageInventory.TryAddItem(_itemResolver(itemDto.ItemId), itemDto.Quantity);
+                    }
+                }
+
                 AddStructure(structure);
             }
         }

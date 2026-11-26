@@ -18,5 +18,8 @@ public enum StructureType
     Torch = 3,
 
     /// <summary>Solid wooden fence used for village animal pens and perimeter enclosures.</summary>
-    WoodenFence = 4
+    WoodenFence = 4,
+
+    /// <summary>Interactive wooden storage chest holding an internal item inventory.</summary>
+    Chest = 5
 }

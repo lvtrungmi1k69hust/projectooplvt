@@ -181,9 +181,22 @@ public sealed class JsonSaveStorage : ISaveStorage
 
         for (int i = 0; i < snapshot.Structures.Count; i++)
         {
-            if (string.IsNullOrWhiteSpace(snapshot.Structures[i].Type) || snapshot.Structures[i].Hp < 0)
+            StructureStateSnapshot s = snapshot.Structures[i];
+            if (string.IsNullOrWhiteSpace(s.Type) || s.Hp < 0)
             {
                 throw new SaveCorruptedException($"Invalid structure snapshot at index {i}.", slotIndex);
+            }
+
+            if (s.StoredItems is not null)
+            {
+                for (int j = 0; j < s.StoredItems.Count; j++)
+                {
+                    InventoryItemSnapshot stored = s.StoredItems[j];
+                    if (string.IsNullOrWhiteSpace(stored.ItemId) || stored.Quantity <= 0)
+                    {
+                        throw new SaveCorruptedException($"Invalid chest item at structure {i} slot {j}.", slotIndex);
+                    }
+                }
             }
         }
 

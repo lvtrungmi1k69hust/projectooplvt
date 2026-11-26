@@ -121,6 +121,17 @@ public sealed record FoodDefinition(
     MiniNecesse.Core.Interfaces.IFoodBuffStrategy? BuffStrategy);
 
 /// <summary>
+/// Data-driven protective armor piece definition loaded from <c>armor.json</c>.
+/// </summary>
+public sealed record ArmorDefinition(
+    string Id,
+    string Name,
+    ArmorSlot Slot,
+    int Defense,
+    int MaxHpBonus,
+    string Description);
+
+/// <summary>
 /// Immutable high-score leaderboard entry persisted in highscore.json.
 /// </summary>
 public sealed record HighScoreEntry(

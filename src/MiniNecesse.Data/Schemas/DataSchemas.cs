@@ -56,6 +56,31 @@ internal sealed class CropJson
     public int GrowthStages { get; set; }
 }
 
+internal sealed class ArmorJson
+{
+    public string? Id { get; set; }
+    public string? Name { get; set; }
+    public string? Slot { get; set; }
+    public int Defense { get; set; }
+    public int MaxHpBonus { get; set; }
+    public string? Description { get; set; }
+}
+
+internal sealed class LootEntryJson
+{
+    public string? ItemId { get; set; }
+    public float DropChance { get; set; }
+    public int MinQuantity { get; set; }
+    public int MaxQuantity { get; set; }
+    public bool Guaranteed { get; set; }
+}
+
+internal sealed class LootTableJson
+{
+    public string? ArchetypeId { get; set; }
+    public List<LootEntryJson>? Entries { get; set; }
+}
+
 internal sealed class RecipeJson
 {
     public string? RecipeId { get; set; }

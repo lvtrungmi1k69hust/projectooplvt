@@ -66,6 +66,7 @@ public sealed class TopDownRenderer : IDisposable
 
     private int _lastWave = -1;
     private int _lastEnemyCount = -1;
+    private int _lastDefense = -1;
     private string _cachedWaveEnemiesText = string.Empty;
 
     private int _lastChunkX = int.MinValue;
@@ -416,6 +417,7 @@ public sealed class TopDownRenderer : IDisposable
                 StructureType.Workbench => "str_workbench",
                 StructureType.Torch => torchFrame == 0 ? "str_torch_0" : "str_torch_1",
                 StructureType.WoodenFence => "str_wood_fence",
+                StructureType.Chest => "str_chest",
                 _ => "str_wood_wall"
             };
 
@@ -823,7 +825,7 @@ public sealed class TopDownRenderer : IDisposable
 
         SolidBrush phaseBrush = hud.DayPhase == DayPhase.Day ? _cache.TextGreenBrush : _cache.TextGoldBrush;
         g.DrawString(GetScoreDayText(hud.Score, hud.DayNumber, hud.DayPhase), _cache.HudBodyFont, phaseBrush, 22, 82);
-        g.DrawString(GetWaveEnemiesText(session.CurrentWaveIndex, session.Enemies.Count), _cache.HudBodyFont, _cache.TextWhiteBrush, 22, 101);
+        g.DrawString(GetWaveEnemiesText(session.CurrentWaveIndex, session.Enemies.Count, session.Player.TotalDefense), _cache.HudBodyFont, _cache.TextWhiteBrush, 22, 101);
 
         ChunkCoord centerChunk = session.ChunkManager.CurrentCenterChunk;
         VillageSite? nearbyVillage = session.FindVillageAt(session.Player.Center);
@@ -999,13 +1001,14 @@ public sealed class TopDownRenderer : IDisposable
         return _cachedScoreDayText;
     }
 
-    private string GetWaveEnemiesText(int wave, int enemyCount)
+    private string GetWaveEnemiesText(int wave, int enemyCount, int defense)
     {
-        if (_lastWave != wave || _lastEnemyCount != enemyCount)
+        if (_lastWave != wave || _lastEnemyCount != enemyCount || _lastDefense != defense)
         {
             _lastWave = wave;
             _lastEnemyCount = enemyCount;
-            _cachedWaveEnemiesText = $"Wave: {wave}   |   Enemies: {enemyCount}";
+            _lastDefense = defense;
+            _cachedWaveEnemiesText = $"Wave: {wave}  |  Enemies: {enemyCount}  |  DEF: {defense}";
         }
 
         return _cachedWaveEnemiesText;

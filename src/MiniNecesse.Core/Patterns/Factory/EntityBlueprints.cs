@@ -39,7 +39,8 @@ public sealed record StructureBlueprint(
     int MaxHp,
     bool IsSolid,
     bool IsCraftingStation = false,
-    float LightRadius = 0f);
+    float LightRadius = 0f,
+    int StorageCapacity = 0);
 
 /// <summary>
 /// Data-driven blueprint describing a passive wildlife or livestock animal species.
@@ -78,4 +79,7 @@ public sealed record ItemBlueprint(
     StructureType StructureType = StructureType.WoodenWall,
     float HungerRestore = 0f,
     MiniNecesse.Core.Interfaces.IFoodBuffStrategy? BuffStrategy = null,
-    string? CropId = null);
+    string? CropId = null,
+    ArmorSlot ArmorSlot = ArmorSlot.Head,
+    int Defense = 0,
+    int MaxHpBonus = 0);

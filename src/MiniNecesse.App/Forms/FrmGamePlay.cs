@@ -15,6 +15,7 @@ using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Exceptions;
 using MiniNecesse.Core.Farming;
 using MiniNecesse.Core.Interfaces;
+using MiniNecesse.Core.Loot;
 using MiniNecesse.Core.Math;
 using MiniNecesse.Core.Patterns.Factory;
 using MiniNecesse.Core.Rules;
@@ -44,6 +45,7 @@ public sealed class FrmGamePlay : Form
     private readonly System.Windows.Forms.Timer _renderTimer;
     private readonly DoubleBufferedCanvas _canvas;
     private readonly CraftingOverlayPanel _craftingPanel;
+    private readonly ChestOverlayPanel _chestPanel;
     private readonly Panel _pausePanel;
     private readonly Panel _outcomePanel;
     private readonly Label _lblOutcomeTitle;
@@ -64,6 +66,7 @@ public sealed class FrmGamePlay : Form
     private readonly IReadOnlyList<CraftingRecipe> _recipes;
     private readonly IReadOnlyList<string> _availableIslands;
     private readonly CropRegistry _cropRegistry;
+    private readonly LootTableRegistry _lootTableRegistry;
     private readonly ItemFactory _itemFactory;
 
     private EnemyFactory? _enemyFactory;
@@ -104,6 +107,7 @@ public sealed class FrmGamePlay : Form
         _availableIslands = _levelLoader.GetAvailableIslandIds();
         _itemFactory = ItemFactory.CreateDefault();
         _cropRegistry = CropRegistry.CreateDefault();
+        _lootTableRegistry = LootTableRegistry.CreateDefault();
         if (_levelLoader is JsonLevelLoader jsonLoader)
         {
             IReadOnlyList<FoodDefinition> foods = jsonLoader.LoadFoods();
@@ -117,6 +121,18 @@ public sealed class FrmGamePlay : Form
             {
                 _cropRegistry.RegisterRange(crops);
                 _itemFactory.RegisterCropDefinitions(crops);
+            }
+
+            IReadOnlyList<ArmorDefinition> armorItems = jsonLoader.LoadArmorItems();
+            if (armorItems.Count > 0)
+            {
+                _itemFactory.RegisterArmorDefinitions(armorItems);
+            }
+
+            IReadOnlyList<LootTable> lootTables = jsonLoader.LoadLootTables();
+            if (lootTables.Count > 0)
+            {
+                _lootTableRegistry.RegisterRange(lootTables);
             }
         }
 
@@ -133,6 +149,10 @@ public sealed class FrmGamePlay : Form
         _craftingPanel = new CraftingOverlayPanel();
         Controls.Add(_craftingPanel);
         _craftingPanel.BringToFront();
+
+        _chestPanel = new ChestOverlayPanel();
+        Controls.Add(_chestPanel);
+        _chestPanel.BringToFront();
 
         (_pausePanel, _btnPauseResume, _btnPauseSave, _btnPauseLoad, _btnPauseSettings, _btnPauseMenu) = BuildPauseOverlay();
         Controls.Add(_pausePanel);
@@ -198,6 +218,7 @@ public sealed class FrmGamePlay : Form
         _hud.OnViewGameStateChanged += HandleHudGameStateChanged;
 
         _craftingPanel.OnCloseRequested += HandleCloseCraftingRequested;
+        _chestPanel.OnCloseRequested += HandleCloseChestRequested;
         _btnPauseResume.Click += HandlePauseResumeClick;
         _btnPauseSave.Click += HandlePauseSaveClick;
         _btnPauseLoad.Click += HandlePauseLoadClick;
@@ -227,6 +248,7 @@ public sealed class FrmGamePlay : Form
         _hud.OnViewGameStateChanged -= HandleHudGameStateChanged;
 
         _craftingPanel.OnCloseRequested -= HandleCloseCraftingRequested;
+        _chestPanel.OnCloseRequested -= HandleCloseChestRequested;
         _btnPauseResume.Click -= HandlePauseResumeClick;
         _btnPauseSave.Click -= HandlePauseSaveClick;
         _btnPauseLoad.Click -= HandlePauseLoadClick;
@@ -310,7 +332,8 @@ public sealed class FrmGamePlay : Form
             viewDistanceChunks: viewDistance,
             minViewDistanceChunks: _config.MinViewDistanceChunks,
             maxViewDistanceChunks: _config.MaxViewDistanceChunks,
-            cropRegistry: _cropRegistry);
+            cropRegistry: _cropRegistry,
+            lootTableRegistry: _lootTableRegistry);
 
         EnemyFactory enemyFactory = EnemyFactory.CreateDefault(
             projectileSpawner: (origin, velocity, dmg, ownerId) =>
@@ -411,6 +434,10 @@ public sealed class FrmGamePlay : Form
             {
                 CloseCraftingPanel();
             }
+            else if (_chestPanel.Visible)
+            {
+                CloseChestPanel();
+            }
             else if (_session.CurrentState == GameState.Playing)
             {
                 _session.Pause();
@@ -426,6 +453,11 @@ public sealed class FrmGamePlay : Form
 
         if (_inputAdapter.IsInventoryTogglePressed() && _session.CurrentState == GameState.Playing)
         {
+            if (_chestPanel.Visible)
+            {
+                CloseChestPanel();
+            }
+
             ToggleCraftingPanel();
         }
     }
@@ -439,7 +471,7 @@ public sealed class FrmGamePlay : Form
             _session.CapturePreviousPositions();
         }
 
-        if (_session.CurrentState == GameState.Playing && !_craftingPanel.Visible)
+        if (_session.CurrentState == GameState.Playing && !_craftingPanel.Visible && !_chestPanel.Visible)
         {
             int? hotbar = _inputAdapter.GetSelectedHotbarSlot();
             if (hotbar.HasValue)
@@ -462,7 +494,15 @@ public sealed class FrmGamePlay : Form
 
             if (_inputAdapter.IsInteractPressed())
             {
-                _session.TrySummonIslandBoss(_activePackage.Boss, _enemyFactory);
+                Structure? chest = _session.FindNearestChest(_session.Player.Center);
+                if (chest is not null)
+                {
+                    OpenChestPanel(chest);
+                }
+                else
+                {
+                    _session.TrySummonIslandBoss(_activePackage.Boss, _enemyFactory);
+                }
             }
         }
 
@@ -488,6 +528,11 @@ public sealed class FrmGamePlay : Form
         {
             _craftingPanel.RefreshView();
         }
+
+        if (_chestPanel.Visible)
+        {
+            _chestPanel.RefreshView();
+        }
     }
 
     private void HandleHudGameStateChanged(GameState newState)
@@ -499,6 +544,7 @@ public sealed class FrmGamePlay : Form
 
         _inputAdapter.ClearAllInputs();
         _craftingPanel.Visible = false;
+        _chestPanel.Visible = false;
         _pausePanel.Visible = false;
 
         bool victory = newState == GameState.Victory;
@@ -546,9 +592,25 @@ public sealed class FrmGamePlay : Form
         _canvas.Focus();
     }
 
+    private void OpenChestPanel(Structure chest)
+    {
+        if (_session is null) return;
+        _inputAdapter.ClearAllInputs();
+        _craftingPanel.Visible = false;
+        _chestPanel.BindChest(_session, chest, _renderer.Sprites);
+        _chestPanel.Visible = true;
+    }
+
+    private void CloseChestPanel()
+    {
+        _chestPanel.Visible = false;
+        _canvas.Focus();
+    }
+
     private void HideAllOverlays()
     {
         _craftingPanel.Visible = false;
+        _chestPanel.Visible = false;
         _pausePanel.Visible = false;
         _outcomePanel.Visible = false;
     }
@@ -556,6 +618,7 @@ public sealed class FrmGamePlay : Form
     private void CenterOverlays()
     {
         CenterControl(_craftingPanel);
+        CenterControl(_chestPanel);
         CenterControl(_pausePanel);
         CenterControl(_outcomePanel);
     }
@@ -607,6 +670,7 @@ public sealed class FrmGamePlay : Form
         _inputAdapter.QueueHotbarSlot(nextSlot);
     }
     private void HandleCloseCraftingRequested() => CloseCraftingPanel();
+    private void HandleCloseChestRequested() => CloseChestPanel();
 
     private void HandlePauseResumeClick(object? sender, EventArgs e)
     {

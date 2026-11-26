@@ -268,5 +268,104 @@
       { "itemId": "berry", "quantity": 1 },
       { "itemId": "gold_ore", "quantity": 1 }
     ]
+  },
+  {
+    "recipeId": "craft_wooden_chest",
+    "outputItemId": "wooden_chest",
+    "outputQuantity": 1,
+    "requiresWorkbench": false,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 8 }
+    ]
+  },
+  {
+    "recipeId": "craft_leather_helmet",
+    "outputItemId": "leather_helmet",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "leather", "quantity": 4 },
+      { "itemId": "wool", "quantity": 2 }
+    ]
+  },
+  {
+    "recipeId": "craft_leather_chestplate",
+    "outputItemId": "leather_chestplate",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "leather", "quantity": 6 },
+      { "itemId": "wool", "quantity": 3 }
+    ]
+  },
+  {
+    "recipeId": "craft_leather_greaves",
+    "outputItemId": "leather_greaves",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "leather", "quantity": 5 },
+      { "itemId": "wool", "quantity": 2 }
+    ]
+  },
+  {
+    "recipeId": "craft_copper_helmet",
+    "outputItemId": "copper_helmet",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "copper_ore", "quantity": 5 },
+      { "itemId": "leather", "quantity": 2 }
+    ]
+  },
+  {
+    "recipeId": "craft_copper_chestplate",
+    "outputItemId": "copper_chestplate",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "copper_ore", "quantity": 8 },
+      { "itemId": "leather", "quantity": 3 }
+    ]
+  },
+  {
+    "recipeId": "craft_copper_greaves",
+    "outputItemId": "copper_greaves",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "copper_ore", "quantity": 6 },
+      { "itemId": "leather", "quantity": 2 }
+    ]
+  },
+  {
+    "recipeId": "craft_iron_helmet",
+    "outputItemId": "iron_helmet",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "iron_ore", "quantity": 5 },
+      { "itemId": "leather", "quantity": 2 }
+    ]
+  },
+  {
+    "recipeId": "craft_iron_chestplate",
+    "outputItemId": "iron_chestplate",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "iron_ore", "quantity": 8 },
+      { "itemId": "leather", "quantity": 3 }
+    ]
+  },
+  {
+    "recipeId": "craft_iron_greaves",
+    "outputItemId": "iron_greaves",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "iron_ore", "quantity": 6 },
+      { "itemId": "leather", "quantity": 2 }
+    ]
   }
 ]

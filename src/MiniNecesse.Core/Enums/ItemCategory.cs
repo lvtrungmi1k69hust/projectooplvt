@@ -21,5 +21,8 @@ public enum ItemCategory
     Structure = 4,
 
     /// <summary>Plantable crop seed item used on tilled farm plots.</summary>
-    Seed = 5
+    Seed = 5,
+
+    /// <summary>Protective armor piece equipped in Head, Body, or Legs slots.</summary>
+    Armor = 6
 }

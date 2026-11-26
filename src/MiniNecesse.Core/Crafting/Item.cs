@@ -96,4 +96,9 @@ public abstract class Item
         cropId = string.Empty;
         return false;
     }
+
+    /// <summary>
+    /// Polymorphic hook returning this instance as an <see cref="ArmorItem"/> when equippable as armor.
+    /// </summary>
+    public virtual ArmorItem? AsArmorItem() => null;
 }

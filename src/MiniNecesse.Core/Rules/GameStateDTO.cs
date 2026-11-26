@@ -131,6 +131,15 @@ public sealed class PlayerSnapshot
     /// <summary>Gets or sets the equipped weapon upgrade tier.</summary>
     public int WeaponUpgradeLevel { get; set; }
 
+    /// <summary>Gets or sets equipped Head armor item id.</summary>
+    public string? HeadArmorItemId { get; set; }
+
+    /// <summary>Gets or sets equipped Body armor item id.</summary>
+    public string? BodyArmorItemId { get; set; }
+
+    /// <summary>Gets or sets equipped Legs armor item id.</summary>
+    public string? LegsArmorItemId { get; set; }
+
     /// <summary>Gets or sets the serialized inventory stacks.</summary>
     public List<InventoryItemSnapshot> Inventory { get; set; } = new();
 }
@@ -193,6 +202,9 @@ public sealed class StructureStateSnapshot
 
     /// <summary>Gets or sets the structure's remaining health.</summary>
     public int Hp { get; set; }
+
+    /// <summary>Gets or sets stored item stacks if this structure is a container chest.</summary>
+    public List<InventoryItemSnapshot>? StoredItems { get; set; }
 }
 
 /// <summary>

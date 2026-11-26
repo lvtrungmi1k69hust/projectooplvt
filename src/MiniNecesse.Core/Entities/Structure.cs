@@ -1,4 +1,5 @@
 using System;
+using MiniNecesse.Core.Crafting;
 using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Interfaces;
 using MiniNecesse.Core.Math;
@@ -17,6 +18,7 @@ public sealed class Structure : Entity, IDamageable
     private readonly int _tileCol;
     private readonly int _tileRow;
     private readonly int _maxHp;
+    private readonly Inventory? _storageInventory;
     private int _currentHp;
 
     /// <summary>Gets the structure archetype.</summary>
@@ -36,6 +38,12 @@ public sealed class Structure : Entity, IDamageable
 
     /// <summary>Gets the grid row occupied by this structure.</summary>
     public int TileRow => _tileRow;
+
+    /// <summary>Gets the internal storage inventory if this structure is a chest, else <see langword="null"/>.</summary>
+    public Inventory? StorageInventory => _storageInventory;
+
+    /// <summary>Gets a value indicating whether this structure has an internal storage inventory.</summary>
+    public bool HasInventory => _storageInventory is not null;
 
     /// <inheritdoc />
     public int CurrentHp => _currentHp;
@@ -65,7 +73,8 @@ public sealed class Structure : Entity, IDamageable
         bool isSolid,
         bool isCraftingStation = false,
         float lightRadius = 0f,
-        Vector2D? size = null)
+        Vector2D? size = null,
+        int storageCapacity = 0)
         : base(id, position, size ?? new Vector2D(32f, 32f))
     {
         if (maxHp <= 0)
@@ -78,6 +87,11 @@ public sealed class Structure : Entity, IDamageable
             throw new ArgumentOutOfRangeException(nameof(lightRadius), "Light radius cannot be negative.");
         }
 
+        if (storageCapacity < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(storageCapacity), "Storage capacity cannot be negative.");
+        }
+
         _structureType = structureType;
         _tileCol = tileCol;
         _tileRow = tileRow;
@@ -86,6 +100,7 @@ public sealed class Structure : Entity, IDamageable
         _isSolid = isSolid;
         _isCraftingStation = isCraftingStation;
         _lightRadius = lightRadius;
+        _storageInventory = storageCapacity > 0 ? new Inventory(storageCapacity) : null;
     }
 
     /// <inheritdoc />

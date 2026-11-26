@@ -4,6 +4,7 @@ using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Interfaces;
 using MiniNecesse.Core.Math;
 using MiniNecesse.Core.Patterns.Decorator;
+using MiniNecesse.Core.Rules;
 
 namespace MiniNecesse.Core.Entities;
 
@@ -23,7 +24,9 @@ public sealed class Player : Character
     private const int DEFAULT_STARVATION_DAMAGE = 3;
 
     private readonly Inventory _inventory;
+    private readonly EquipmentLoadout _equipment = new();
     private readonly PlayerBuffManager _buffs = new();
+    private IDamageMitigationStrategy _damageMitigationStrategy = FlatDefenseMitigationStrategy.Instance;
     private readonly int _hotbarCapacity;
     private readonly float _hungerDrainPerSecond;
     private readonly float _starvationInterval;
@@ -43,6 +46,9 @@ public sealed class Player : Character
 
     /// <summary>Gets the player's inventory (UML Aggregation).</summary>
     public Inventory Inventory => _inventory;
+
+    /// <summary>Gets the equipped Head/Body/Legs armor loadout.</summary>
+    public EquipmentLoadout Equipment => _equipment;
 
     /// <summary>Gets the active food buff manager for this player.</summary>
     public PlayerBuffManager Buffs => _buffs;
@@ -82,6 +88,9 @@ public sealed class Player : Character
 
     /// <summary>Gets bonus defense from active food buffs.</summary>
     public int BonusDefense => _buffs.BonusDefense;
+
+    /// <summary>Gets total defense combining equipped armor and active food buffs.</summary>
+    public int TotalDefense => _equipment.TotalDefense + _buffs.BonusDefense;
 
     /// <summary>Gets maximum hunger points.</summary>
     public float MaxHunger => _maxHunger;
@@ -250,6 +259,81 @@ public sealed class Player : Character
         NotifyHungerIfChanged(force: true);
     }
 
+    /// <summary>Assigns the damage mitigation strategy applied by <see cref="TakeDamage"/>.</summary>
+    public void SetDamageMitigationStrategy(IDamageMitigationStrategy strategy)
+    {
+        ArgumentNullException.ThrowIfNull(strategy);
+        _damageMitigationStrategy = strategy;
+    }
+
+    /// <summary>Equips an armor piece into its slot, returning any displaced piece to inventory safely.</summary>
+    public bool TryEquipArmor(ArmorItem armor)
+    {
+        ArgumentNullException.ThrowIfNull(armor);
+        if (!IsAlive)
+        {
+            return false;
+        }
+
+        _equipment.Equip(armor, out ArmorItem? previous);
+        if (previous is not null && !_inventory.TryAddItem(previous, 1))
+        {
+            _equipment.Equip(previous, out _);
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>Unequips armor from <paramref name="slot"/> back into inventory if space permits.</summary>
+    public bool TryUnequipArmor(ArmorSlot slot)
+    {
+        ArmorItem? current = _equipment.GetSlot(slot);
+        if (current is null)
+        {
+            return false;
+        }
+
+        if (!_inventory.CanAddItem(current, 1))
+        {
+            return false;
+        }
+
+        _equipment.Unequip(slot);
+        _inventory.TryAddItem(current, 1);
+        return true;
+    }
+
+    /// <summary>Directly restores equipped armor slots during save-state loading.</summary>
+    public void RestoreEquippedArmor(ArmorItem? head, ArmorItem? body, ArmorItem? legs) =>
+        _equipment.Restore(head, body, legs);
+
+    /// <inheritdoc />
+    public override void TakeDamage(int amount)
+    {
+        if (amount < 0)
+        {
+            base.TakeDamage(amount);
+            return;
+        }
+
+        if (amount == 0 || !IsAlive)
+        {
+            return;
+        }
+
+        int finalDamage = _damageMitigationStrategy.ComputeFinalDamage(amount, TotalDefense);
+        if (finalDamage <= 0)
+        {
+            return;
+        }
+
+        base.TakeDamage(finalDamage);
+    }
+
+    /// <summary>Applies direct damage bypassing armor mitigation (e.g. starvation).</summary>
+    public void TakeDirectDamage(int amount) => base.TakeDamage(amount);
+
     /// <summary>Applies a temporary <see cref="IFoodBuffStrategy"/> to this player.</summary>
     public void ApplyBuff(IFoodBuffStrategy buffStrategy)
     {
@@ -291,7 +375,7 @@ public sealed class Player : Character
                 if (_starvationTimer >= _starvationInterval)
                 {
                     _starvationTimer -= _starvationInterval;
-                    TakeDamage(_starvationDamage);
+                    TakeDirectDamage(_starvationDamage);
                 }
             }
             else
