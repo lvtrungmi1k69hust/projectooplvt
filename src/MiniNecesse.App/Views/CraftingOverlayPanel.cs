@@ -83,11 +83,11 @@ public sealed class CraftingOverlayPanel : Panel
         BorderStyle = BorderStyle.FixedSingle;
         Visible = false;
 
-        _headerFont = new Font(UiTheme.FontFamily, 11.5f, FontStyle.Bold);
-        _statusFont = new Font(UiTheme.FontFamily, 9.2f, FontStyle.Bold);
-        _rowTitleFont = new Font(UiTheme.FontFamily, 9.3f, FontStyle.Bold);
-        _rowBodyFont = new Font(UiTheme.FontFamily, 8.5f);
-        _slotBadgeFont = new Font(UiTheme.FontFamily, 7.8f, FontStyle.Bold);
+        _headerFont = new Font(UiTheme.FontFamily, 11.0f, FontStyle.Bold);
+        _statusFont = new Font(UiTheme.FontFamily, 9.0f, FontStyle.Bold);
+        _rowTitleFont = new Font(UiTheme.FontFamily, 9.0f, FontStyle.Bold);
+        _rowBodyFont = new Font(UiTheme.FontFamily, 8.2f);
+        _slotBadgeFont = new Font(UiTheme.FontFamily, 7.6f, FontStyle.Bold);
 
         _slotTextGoldBrush = new SolidBrush(UiTheme.AccentGold);
         _slotTextGreenBrush = new SolidBrush(Color.FromArgb(124, 234, 152));
@@ -95,9 +95,9 @@ public sealed class CraftingOverlayPanel : Panel
 
         var lblHeader = new Label
         {
-            Text = "INVENTORY, BACKPACK & CRAFTING  (Press C or Tab to close)",
+            Text = "BACKPACK & CRAFTING  (C or Tab to close)",
             UseMnemonic = false,
-            Location = new Point(16, 12),
+            Location = new Point(16, 10),
             Size = new Size(668, 26),
             Font = _headerFont,
             ForeColor = UiTheme.AccentGold
@@ -107,8 +107,8 @@ public sealed class CraftingOverlayPanel : Panel
         _lblWorkbenchStatus = new Label
         {
             UseMnemonic = false,
-            Location = new Point(16, 40),
-            Size = new Size(668, 20),
+            Location = new Point(16, 38),
+            Size = new Size(668, 22),
             Font = _statusFont,
             ForeColor = Color.FromArgb(146, 226, 152)
         };
@@ -117,7 +117,7 @@ public sealed class CraftingOverlayPanel : Panel
         _lblInventorySummary = new Label
         {
             UseMnemonic = false,
-            Location = new Point(16, 63),
+            Location = new Point(16, 62),
             Size = new Size(668, 36),
             Font = _rowBodyFont,
             ForeColor = UiTheme.TextSecondary
@@ -127,10 +127,11 @@ public sealed class CraftingOverlayPanel : Panel
         _btnTabRecipes = new Button
         {
             Text = "Recipes",
-            Location = new Point(16, 104),
-            Size = new Size(128, 28),
+            Location = new Point(16, 102),
+            Size = new Size(124, 30),
             FlatStyle = FlatStyle.Flat,
             Font = _statusFont,
+            TextAlign = ContentAlignment.MiddleCenter,
             Cursor = Cursors.Hand
         };
         _btnTabRecipes.FlatAppearance.BorderSize = 1;
@@ -140,10 +141,11 @@ public sealed class CraftingOverlayPanel : Panel
         _btnTabBackpack = new Button
         {
             Text = "Backpack (All)",
-            Location = new Point(150, 104),
-            Size = new Size(150, 28),
+            Location = new Point(146, 102),
+            Size = new Size(154, 30),
             FlatStyle = FlatStyle.Flat,
             Font = _statusFont,
+            TextAlign = ContentAlignment.MiddleCenter,
             Cursor = Cursors.Hand
         };
         _btnTabBackpack.FlatAppearance.BorderSize = 1;
@@ -153,8 +155,8 @@ public sealed class CraftingOverlayPanel : Panel
         _lblFeedback = new Label
         {
             UseMnemonic = false,
-            Location = new Point(310, 106),
-            Size = new Size(374, 24),
+            Location = new Point(308, 104),
+            Size = new Size(376, 26),
             Font = _rowBodyFont,
             ForeColor = UiTheme.AccentGold,
             TextAlign = ContentAlignment.MiddleRight
@@ -172,8 +174,8 @@ public sealed class CraftingOverlayPanel : Panel
         _lblReplaceBanner = new Label
         {
             UseMnemonic = false,
-            Location = new Point(10, 5),
-            Size = new Size(554, 22),
+            Location = new Point(10, 4),
+            Size = new Size(554, 24),
             Font = _rowBodyFont,
             ForeColor = UiTheme.TextMuted,
             TextAlign = ContentAlignment.MiddleLeft
@@ -205,8 +207,6 @@ public sealed class CraftingOverlayPanel : Panel
             WrapContents = false,
             BackColor = UiTheme.SurfaceCard
         };
-        _listPanel.HorizontalScroll.Maximum = 0;
-        _listPanel.HorizontalScroll.Visible = false;
         Controls.Add(_listPanel);
 
         _hotbarPickerPanel = new Panel
@@ -244,10 +244,10 @@ public sealed class CraftingOverlayPanel : Panel
 
         var lblTip = new Label
         {
-            Text = "Hotbar Picker: [1W–3W] Weapons Only  |  [4–9] Any Food, Tool, Weapon or Structure",
+            Text = "Hotbar Picker: [1W–3W] Weapons Only  |  [4–9] Any Item",
             UseMnemonic = false,
-            Location = new Point(16, 526),
-            Size = new Size(548, 24),
+            Location = new Point(16, 524),
+            Size = new Size(548, 26),
             Font = _rowBodyFont,
             ForeColor = UiTheme.TextMuted,
             TextAlign = ContentAlignment.MiddleLeft
@@ -315,7 +315,7 @@ public sealed class CraftingOverlayPanel : Panel
         bool nearWorkbench = _session.IsPlayerNearWorkbench(_workbenchRadius);
         _lblWorkbenchStatus.Text = nearWorkbench
             ? "Workbench Nearby: YES — All [WB] recipes unlocked!"
-            : "Workbench Nearby: NO — Craft a Workbench (6 Wood) and place it [RMB] nearby.";
+            : "Workbench Nearby: NO — Place a Workbench [RMB] nearby to unlock [WB] recipes.";
         _lblWorkbenchStatus.ForeColor = nearWorkbench
             ? Color.FromArgb(118, 232, 146)
             : Color.FromArgb(244, 162, 102);
@@ -405,7 +405,7 @@ public sealed class CraftingOverlayPanel : Panel
 
         _pnlReplaceBanner.BackColor = UiTheme.SurfaceHeader;
         _lblReplaceBanner.ForeColor = UiTheme.TextMuted;
-        _lblReplaceBanner.Text = "Click [Replace] on any owned item or recipe, then choose a hotbar slot [1W–9] below.";
+        _lblReplaceBanner.Text = "Click [Replace] on any item or recipe, then choose a hotbar slot [1W–9] below.";
         _btnCancelReplace.Visible = false;
     }
 
@@ -489,7 +489,7 @@ public sealed class CraftingOverlayPanel : Panel
         bool isPendingTarget = string.Equals(_pendingReplaceItemId, recipe.OutputItemId, StringComparison.OrdinalIgnoreCase);
         var row = new Panel
         {
-            Size = new Size(638, 60),
+            Size = new Size(620, 62),
             Margin = new Padding(4, 3, 4, 3),
             BackColor = isPendingTarget
                 ? UiTheme.RowHighlight
@@ -506,7 +506,7 @@ public sealed class CraftingOverlayPanel : Panel
             {
                 Image = icon,
                 SizeMode = PictureBoxSizeMode.Zoom,
-                Location = new Point(10, 12),
+                Location = new Point(10, 13),
                 Size = new Size(36, 36),
                 BackColor = Color.Transparent
             });
@@ -521,7 +521,7 @@ public sealed class CraftingOverlayPanel : Panel
             Text = $"{FormatDisplayName(recipe.OutputItemId)} x{recipe.OutputQuantity}{wbTag}{ownedSuffix}",
             UseMnemonic = false,
             Location = new Point(textLeft, 6),
-            Size = new Size(396, 22),
+            Size = new Size(382, 24),
             Font = _rowTitleFont,
             ForeColor = canCraft ? Color.FromArgb(174, 248, 188) : Color.FromArgb(246, 174, 174)
         });
@@ -530,8 +530,8 @@ public sealed class CraftingOverlayPanel : Panel
         {
             Text = $"Materials: {ingText}",
             UseMnemonic = false,
-            Location = new Point(textLeft, 30),
-            Size = new Size(396, 22),
+            Location = new Point(textLeft, 31),
+            Size = new Size(382, 24),
             Font = _rowBodyFont,
             ForeColor = UiTheme.TextPrimary
         });
@@ -539,8 +539,8 @@ public sealed class CraftingOverlayPanel : Panel
         var btnCraft = new Button
         {
             Text = "Craft",
-            Location = new Point(460, 14),
-            Size = new Size(80, 32),
+            Location = new Point(444, 15),
+            Size = new Size(78, 32),
             Enabled = canCraft,
             Tag = recipe,
             FlatStyle = FlatStyle.Flat,
@@ -557,7 +557,7 @@ public sealed class CraftingOverlayPanel : Panel
         var btnReplace = new Button
         {
             Text = isPendingTarget ? "Picking..." : "Replace",
-            Location = new Point(546, 14),
+            Location = new Point(528, 15),
             Size = new Size(82, 32),
             Enabled = ownsOutput,
             Tag = recipe.OutputItemId,
@@ -586,7 +586,7 @@ public sealed class CraftingOverlayPanel : Panel
 
         var row = new Panel
         {
-            Size = new Size(638, 56),
+            Size = new Size(620, 60),
             Margin = new Padding(4, 3, 4, 3),
             BackColor = isPendingTarget ? UiTheme.RowHighlight : UiTheme.RowEven
         };
@@ -598,7 +598,7 @@ public sealed class CraftingOverlayPanel : Panel
             {
                 Image = icon,
                 SizeMode = PictureBoxSizeMode.Zoom,
-                Location = new Point(10, 10),
+                Location = new Point(10, 12),
                 Size = new Size(36, 36),
                 BackColor = Color.Transparent
             });
@@ -610,20 +610,20 @@ public sealed class CraftingOverlayPanel : Panel
             Text = $"{item.Name} x{totalQuantity}  [{item.Category}]{boundLabel}",
             UseMnemonic = false,
             Location = new Point(textLeft, 6),
-            Size = new Size(396, 22),
+            Size = new Size(382, 24),
             Font = _rowTitleFont,
             ForeColor = item.Category == ItemCategory.Weapon ? UiTheme.AccentGold : UiTheme.TextPrimary
         });
 
         string slotRuleText = item.Category == ItemCategory.Weapon
-            ? "Allowed in Hotbar [1W–3W] or [4–9]"
-            : (isArmor ? "Equip to Armor Slot or bind [4–9]" : "Allowed in Hotbar [4–9]");
+            ? "Slots [1W–3W] or [4–9]"
+            : (isArmor ? "Equip or bind [4–9]" : "Hotbar [4–9]");
         row.Controls.Add(new Label
         {
             Text = string.IsNullOrWhiteSpace(item.Description) ? slotRuleText : $"{slotRuleText} • {item.Description}",
             UseMnemonic = false,
-            Location = new Point(textLeft, 29),
-            Size = new Size(396, 20),
+            Location = new Point(textLeft, 30),
+            Size = new Size(382, 24),
             Font = _rowBodyFont,
             ForeColor = UiTheme.TextSecondary
         });
@@ -633,8 +633,8 @@ public sealed class CraftingOverlayPanel : Panel
             var btnEquip = new Button
             {
                 Text = "Equip",
-                Location = new Point(460, 12),
-                Size = new Size(80, 32),
+                Location = new Point(444, 14),
+                Size = new Size(78, 32),
                 Tag = item.Id,
                 FlatStyle = FlatStyle.Flat,
                 Font = _rowBodyFont,
@@ -651,7 +651,7 @@ public sealed class CraftingOverlayPanel : Panel
         var btnReplace = new Button
         {
             Text = isPendingTarget ? "Picking..." : "Replace",
-            Location = new Point(546, 12),
+            Location = new Point(528, 14),
             Size = new Size(82, 32),
             Tag = item.Id,
             FlatStyle = FlatStyle.Flat,
@@ -920,7 +920,7 @@ public sealed class CraftingOverlayPanel : Panel
             _textBuilder.Append("): ");
         }
 
-        int previewLimit = Math.Min(_uniqueItemsBuffer.Count, 8);
+        int previewLimit = Math.Min(_uniqueItemsBuffer.Count, 5);
         for (int i = 0; i < previewLimit; i++)
         {
             if (i > 0)

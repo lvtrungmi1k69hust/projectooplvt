@@ -2,7 +2,7 @@
 
 > **Bài tập lớn Lập trình hướng đối tượng (MI4090 – v2026)**  
 > **Solution:** `MiniNecesse_LVT_v2026.sln` (.NET 8.0 `net8.0` & `net8.0-windows` WinForms 2D Custom Canvas)  
-> **Kiến trúc:** 3-Tier Clean Architecture (`Core` – `Data` – `App`) áp dụng SOLID, GoF Design Patterns, Fixed Timestep Game Loop, Chunk Streaming và kiểm thử tự động **61/61 xUnit tests PASS**.
+> **Kiến trúc:** 3-Tier Clean Architecture (`Core` – `Data` – `App`) áp dụng SOLID, GoF Design Patterns, Fixed Timestep Game Loop, Chunk Streaming và kiểm thử tự động **65/65 xUnit tests PASS**.
 
 ---
 
@@ -12,14 +12,16 @@
 
 ### Hai trục Chế độ chơi × Độ khó độc lập
 - **Chế độ Thế giới (`GameMode`):**
-  - **Campaign (`5` đảo JSON, mỗi đảo `320×320` tiles = `400` chunks `16×16`):** sinh địa hình, làng mạc ngẫu nhiên (`VillageSite`), chuồng trại gia súc (`Chicken`, `Sheep`, `Cow`, `Pig`), tài nguyên phân tầng và Boss riêng (`ISLAND_01..05`).
-  - **Endless (`ILevelGenerator` / `SeededEndlessLevelGenerator`):** sinh thế giới tất định **384×384 tiles (`576` chunks `16×16`)** từ `WorldSeed`, kết hợp **5 quần xã (`endless_biomes.json`: Forest, Desert, Swamp, Tundra, Volcano)**, tiền đồn và sóng quái tăng dần; cùng seed luôn tái tạo bản đồ giống hệt nhau.
+  - **Campaign (`5` đảo JSON, mỗi đảo `320×320` tiles = `400` chunks `16×16`, có giới hạn ngày & Auto-Boss):** sinh địa hình, làng mạc ngẫu nhiên (`VillageSite`), chuồng trại gia súc (`Chicken`, `Sheep`, `Cow`, `Pig`), tài nguyên phân tầng và Boss riêng (`ISLAND_01..02`: `3` ngày, `ISLAND_03..04`: `4` ngày, `ISLAND_05`: `5` ngày; bước sang **đêm ngày cuối** hệ thống tự động triệu hồi Boss để kết thúc màn chơi).
+  - **Endless (`ILevelGenerator` / `SeededEndlessLevelGenerator`):** sinh thế giới tất định **384×384 tiles (`576` chunks `16×16`)** từ `WorldSeed`, **không giới hạn số ngày (`maxDays = 0`)**, kết hợp **5 quần xã (`endless_biomes.json`: Forest, Desert, Swamp, Tundra, Volcano)**, tiền đồn và sóng quái tăng dần; cùng seed luôn tái tạo bản đồ giống hệt nhau.
 - **Độ khó (`Difficulty` trong `difficulties.json`, áp dụng qua `DifficultyDamageMitigationDecorator`):**
   - **Tutorial:** Quái vẫn sinh và tấn công nhưng sát thương nhận vào (`DamageTakenMultiplier`) bằng `0` (người chơi không thể thua), kèm **chuỗi hướng dẫn 5 bước (`tutorial_steps.json`)** hiển thị trên HUD.
   - **Normal & Hard:** Khác biệt hệ số HP/sát thương quái, cường độ đợt tập kích (`RaidWaveSpawner`) và hệ số sát thương người chơi nhận vào.
 
-### Vòng lặp Sinh tồn, Kinh tế & Khu định cư
-- **Đói, Thức ăn & Buff (`foods.json`, `crops.json`):** Thanh đói giảm dần theo thời gian; cạn đói mất máu định kỳ (qua `Player.TakeDirectDamage`). Thức ăn hồi đói/HP và kích hoạt buff tốc độ/công/thủ/hồi phục thông qua `IFoodBuffStrategy` và `FoodDamageBuffDecorator`. Cuốc đất trồng lúa mì/cà rốt/bí ngô lớn theo thời gian và thu hoạch.
+### Vòng lặp Sinh tồn, Kinh tế, Âm thanh & Túi đồ vô hạn
+- **Đói, Tốc chạy theo Đói & Thức ăn Buff (`config.json`, `foods.json`, `crops.json`):** Thanh đói giảm dần theo thời gian; cạn đói mất máu định kỳ (qua `Player.TakeDirectDamage`). Tốc độ chạy cơ bản của người chơi là `165.0` (nhanh hơn Boss `120–128`), **giảm dần tỷ lệ thuận theo điểm đói** (`minHungerSpeedMultiplier: 0.52`, tại ~`50/100` đói tốc chạy `~125.4` ngang Boss và dưới `50/100` sẽ chậm hơn Boss). Thức ăn hồi đói/HP và kích hoạt buff tốc độ/công/thủ/hồi phục thông qua `IFoodBuffStrategy` và `FoodDamageBuffDecorator`.
+- **Túi đồ vô hạn & Hotbar `Replace` (`[C]` Recipes / Backpack):** Túi đồ (`Inventory.CreateUnlimited()`) lưu không giới hạn số lượng vật phẩm nhặt/săn/chế tạo. Bảng `[C]` có tab **Recipes** và **Backpack (All)** cùng nút **`Replace`** (cạnh `Craft` và trên mọi dòng Backpack) để gán nhanh vào 9 ô Hotbar: **3 ô đầu (`1W–3W`) chỉ nhận Vũ khí (`Weapon`)**, **6 ô sau (`4–9`) nhận mọi vật phẩm** (kể cả vũ khí mạnh hơn, thức ăn, công cụ, công trình).
+- **Âm thanh thời gian thực (`WaveOutAudioEngine`, `ProceduralSoundBank`, `AudioManager`):** Hòa âm PCM 22.05 kHz qua Win32 `winmm.dll` (không cần thư viện ngoài), tự phát **nhạc nền tuần hoàn theo pha Ngày / Đêm / Boss (`bgm_day`, `bgm_night`, `bgm_boss`)** ngay khi vào bản đồ và phân biệt âm thanh riêng cho từng công cụ/hành động (`tool_axe`, `tool_pickaxe`, `tool_hoe`, `tool_sword`, `tool_bow`, `eat`, `potion`, `armor_equip`...); hỗ trợ ghi đè bằng file `.wav` đặt trong `Assets/Audio/` và chỉnh **Volume / Mute** ngay trong Cài đặt.
 - **Giáp, Loot Table & Rương chứa đồ (`armor.json`, `loot_tables.json`):** 3 ô giáp `Head` / `Body` / `Legs` tổng hợp chỉ số `DEF` giảm sát thương qua `IDamageMitigationStrategy`; bảng rơi đồ theo xác suất cho mọi quái/Boss; cấu trúc `Chest` có `Inventory` lưu/nạp cùng thế giới.
 - **Khu định cư Lite (`settlers.json`):** `HousingValidator` kiểm tra phòng kín bằng BFS giới hạn (tường + cửa `WoodenDoor`, khử trùng phòng nhiều cửa), quản lý NPC `Miner` / `Hunter` qua `SettlerFSM` + `ISettlerStrategy`, độ hài lòng ảnh hưởng năng suất & giá trao đổi hàng (`TryTrade`).
 - **Thời tiết & Nhiệm vụ (`WeatherSystem`, `quests.json`):** Thời tiết (`Clear` / `Rain` / `Fog`) đồng bộ với `DayNightCycle` và 4 nhiệm vụ sinh tồn dữ liệu JSON thưởng điểm/vật phẩm.
@@ -57,13 +59,13 @@ MiniNecesse_LVT_v2026.sln
 │   └── MiniNecesse.App/           # [LAYER 1] WinForms 2D Presentation (DoubleBuffered 60 FPS)
 │       ├── UI/                    # UiTheme, UiThemeResources (tập trung bảng màu/font/radius)
 │       ├── Input/                 # WinFormsInputAdapter (IInputProvider), KeyBindingConfig
-│       ├── Audio/                 # AudioManager (Observer OnSoundEffectRequested)
+│       ├── Audio/                 # AudioManager, WaveOutAudioEngine, ProceduralSoundBank (Nhạc nền Day/Night/Boss & SFX từng công cụ qua Win32 winmm + hỗ trợ Assets/Audio/*.wav)
 │       ├── Rendering/             # RenderResourceCache, SpriteAtlasCache, ChunkTerrainCache, NightLightmapRenderer, VisualEffectsPool, TopDownRenderer (0 GC Paint)
 │       ├── Views/                 # HudViewModel, CraftingOverlayPanel, ChestOverlayPanel, SettlerOverlayPanel, SegmentedTabControl, LeaderboardCanvasControl
 │       ├── Forms/                 # FrmMainMenu, FrmGamePlay, FrmSettingsDialog, FrmHighScoresDialog
 │       └── Program.cs             # Composition Root (Constructor DI)
 ├── tests/
-│   └── MiniNecesse.Core.Tests/    # 61 xUnit Tests (100% PASS)
+│   └── MiniNecesse.Core.Tests/    # 65 xUnit Tests (100% PASS)
 └── docs/
     ├── AUDIT_REPORT.md            # Báo cáo kiểm toán Giai đoạn 1 & số liệu tối ưu Giai đoạn 2
     ├── class_diagram.puml         # Sơ đồ lớp UML 2.5 khớp mã nguồn
@@ -82,7 +84,7 @@ MiniNecesse_LVT_v2026.sln
 | `Chuột trái (LMB)` | Tấn công quái / bắn cung / chặt cây / đào mỏ / cuốc đất / thu hoạch cây trồng |
 | `Chuột phải (RMB)` | Dùng thuốc / ăn thức ăn / gieo hạt / đặt công trình (`Workbench`, `Wall`, `Door`, `Chest`, `Torch`, `Fence`) |
 | `1` – `9` hoặc `Cuộn chuột` | Chọn nhanh ô trên thanh Hotbar |
-| `C` hoặc `Tab` | Bật / tắt bảng Túi đồ, Chế tạo & Trang bị Giáp |
+| `C` hoặc `Tab` | Bật / tắt bảng Túi đồ vô hạn (`Backpack`), Chế tạo (`Recipes`), Trang bị Giáp & nút `Replace` gán Hotbar (`1W–3W` Vũ khí, `4–9` Tự do) |
 | `V` | Bật / tắt bảng Khu định cư (kiểm tra nhà ở, tuyển & giao dịch Settler) |
 | `E` | Tương tác theo ngữ cảnh: Mở Rương gần nhất / Giao dịch Settler / Triệu hồi Boss |
 | `Esc` | Tạm dừng game (Tiếp tục / Lưu JSON / Tải JSON / Cài đặt / Về Menu) hoặc đóng bảng |
@@ -99,7 +101,7 @@ Yêu cầu: **.NET 8.0 SDK**.
 dotnet build MiniNecesse_LVT_v2026.sln
 ```
 
-### Chạy toàn bộ 61 Unit & Integration Tests (không cần GUI)
+### Chạy toàn bộ 65 Unit & Integration Tests (không cần GUI)
 ```bash
 dotnet test MiniNecesse_LVT_v2026.sln --verbosity normal
 ```
