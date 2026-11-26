@@ -23,6 +23,7 @@ public sealed class RenderResourceCache : IDisposable
     public SolidBrush HpFillBrush { get; } = new(Color.FromArgb(224, 68, 76));
     public SolidBrush BossHpFillBrush { get; } = new(Color.FromArgb(198, 42, 92));
     public SolidBrush EnemyHpFillBrush { get; } = new(Color.FromArgb(236, 98, 62));
+    public SolidBrush AnimalHpFillBrush { get; } = new(Color.FromArgb(124, 224, 134));
     public SolidBrush ResourceHpFillBrush { get; } = new(Color.FromArgb(230, 186, 68));
     public SolidBrush HotbarSlotBrush { get; } = new(Color.FromArgb(205, 24, 32, 48));
     public SolidBrush HotbarSelectedBrush { get; } = new(Color.FromArgb(230, 56, 76, 108));
@@ -59,6 +60,10 @@ public sealed class RenderResourceCache : IDisposable
     public SolidBrush MinimapPlayerBrush { get; } = new(Color.FromArgb(64, 224, 255));
     public SolidBrush MinimapEnemyBrush { get; } = new(Color.FromArgb(246, 72, 82));
     public SolidBrush MinimapBossBrush { get; } = new(Color.FromArgb(255, 210, 62));
+    public SolidBrush MinimapVillageBrush { get; } = new(Color.FromArgb(255, 206, 72));
+    public SolidBrush MinimapAnimalBrush { get; } = new(Color.FromArgb(182, 240, 168));
+    public SolidBrush UnloadedFogBrush { get; } = new(Color.FromArgb(14, 22, 34));
+    public SolidBrush UnloadedFogAccentBrush { get; } = new(Color.FromArgb(20, 30, 46));
 
     public Pen TileGridPen { get; } = new(Color.FromArgb(20, 0, 0, 0), 1f);
     public Pen DarkOutlinePen { get; } = new(Color.FromArgb(22, 26, 36), 1.5f);
@@ -69,6 +74,7 @@ public sealed class RenderResourceCache : IDisposable
     public Pen BuildValidPen { get; } = new(Color.FromArgb(210, 110, 248, 148), 2f);
     public Pen BuildInvalidPen { get; } = new(Color.FromArgb(210, 248, 96, 108), 2f);
     public Pen MinimapViewportPen { get; } = new(Color.FromArgb(190, 255, 255, 255), 1f);
+    public Pen MinimapLoadedChunksPen { get; } = new(Color.FromArgb(175, 92, 232, 168), 1.25f);
 
     public Font HudTitleFont { get; } = new("Segoe UI", 10.5f, FontStyle.Bold);
     public Font HudBodyFont { get; } = new("Segoe UI", 9.0f, FontStyle.Regular);
@@ -125,6 +131,7 @@ public sealed class RenderResourceCache : IDisposable
         HpFillBrush.Dispose();
         BossHpFillBrush.Dispose();
         EnemyHpFillBrush.Dispose();
+        AnimalHpFillBrush.Dispose();
         ResourceHpFillBrush.Dispose();
         HotbarSlotBrush.Dispose();
         HotbarSelectedBrush.Dispose();
@@ -161,6 +168,10 @@ public sealed class RenderResourceCache : IDisposable
         MinimapPlayerBrush.Dispose();
         MinimapEnemyBrush.Dispose();
         MinimapBossBrush.Dispose();
+        MinimapVillageBrush.Dispose();
+        MinimapAnimalBrush.Dispose();
+        UnloadedFogBrush.Dispose();
+        UnloadedFogAccentBrush.Dispose();
 
         TileGridPen.Dispose();
         DarkOutlinePen.Dispose();
@@ -171,6 +182,7 @@ public sealed class RenderResourceCache : IDisposable
         BuildValidPen.Dispose();
         BuildInvalidPen.Dispose();
         MinimapViewportPen.Dispose();
+        MinimapLoadedChunksPen.Dispose();
 
         HudTitleFont.Dispose();
         HudBodyFont.Dispose();

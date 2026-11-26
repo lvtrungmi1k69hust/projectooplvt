@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
+using System.Text;
 using System.Windows.Forms;
 using MiniNecesse.App.Rendering;
 using MiniNecesse.Core.Crafting;
@@ -21,6 +21,11 @@ public sealed class CraftingOverlayPanel : Panel
     private readonly FlowLayoutPanel _recipeListPanel;
     private readonly Button _btnClose;
     private readonly List<Button> _dynamicCraftButtons = new();
+    private readonly Font _headerFont;
+    private readonly Font _statusFont;
+    private readonly Font _rowTitleFont;
+    private readonly Font _rowBodyFont;
+    private readonly StringBuilder _textBuilder = new(256);
 
     private GameSession? _session;
     private IReadOnlyList<CraftingRecipe> _recipes = Array.Empty<CraftingRecipe>();
@@ -38,13 +43,18 @@ public sealed class CraftingOverlayPanel : Panel
         BorderStyle = BorderStyle.FixedSingle;
         Visible = false;
 
+        _headerFont = new Font("Segoe UI", 12f, FontStyle.Bold);
+        _statusFont = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+        _rowTitleFont = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+        _rowBodyFont = new Font("Segoe UI", 8.8f);
+
         var lblHeader = new Label
         {
             Text = "INVENTORY & CRAFTING  (Press C or Tab to close)",
             UseMnemonic = false,
             Location = new Point(16, 12),
             Size = new Size(624, 28),
-            Font = new Font("Segoe UI", 12f, FontStyle.Bold),
+            Font = _headerFont,
             ForeColor = Color.FromArgb(246, 196, 82)
         };
         Controls.Add(lblHeader);
@@ -54,7 +64,7 @@ public sealed class CraftingOverlayPanel : Panel
             UseMnemonic = false,
             Location = new Point(16, 44),
             Size = new Size(624, 24),
-            Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+            Font = _statusFont,
             ForeColor = Color.FromArgb(146, 226, 152)
         };
         Controls.Add(_lblWorkbenchStatus);
@@ -64,7 +74,7 @@ public sealed class CraftingOverlayPanel : Panel
             UseMnemonic = false,
             Location = new Point(16, 70),
             Size = new Size(624, 46),
-            Font = new Font("Segoe UI", 8.8f),
+            Font = _rowBodyFont,
             ForeColor = Color.FromArgb(212, 222, 236)
         };
         Controls.Add(_lblInventorySummary);
@@ -140,6 +150,10 @@ public sealed class CraftingOverlayPanel : Panel
         {
             _btnClose.Click -= HandleCloseClick;
             ClearRecipeRows();
+            _headerFont.Dispose();
+            _statusFont.Dispose();
+            _rowTitleFont.Dispose();
+            _rowBodyFont.Dispose();
         }
 
         base.Dispose(disposing);
@@ -154,11 +168,7 @@ public sealed class CraftingOverlayPanel : Panel
             BackColor = canCraft ? Color.FromArgb(32, 72, 48) : Color.FromArgb(68, 34, 38)
         };
 
-        string ingText = string.Join("  |  ", recipe.Ingredients.Select(ing =>
-        {
-            int owned = _session?.Inventory.GetItemCount(ing.ItemId) ?? 0;
-            return $"{FormatDisplayName(ing.ItemId)} {owned}/{ing.Quantity}";
-        }));
+        string ingText = BuildIngredientsText(recipe.Ingredients);
         string wbTag = recipe.RequiresWorkbench ? " [Requires Workbench]" : " [Hand Craft]";
 
         Bitmap? icon = _sprites?.Get(recipe.OutputItemId);
@@ -181,7 +191,7 @@ public sealed class CraftingOverlayPanel : Panel
             UseMnemonic = false,
             Location = new Point(textLeft, 6),
             Size = new Size(424, 24),
-            Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+            Font = _rowTitleFont,
             ForeColor = canCraft ? Color.FromArgb(174, 248, 188) : Color.FromArgb(246, 174, 174)
         });
 
@@ -191,7 +201,7 @@ public sealed class CraftingOverlayPanel : Panel
             UseMnemonic = false,
             Location = new Point(textLeft, 32),
             Size = new Size(424, 22),
-            Font = new Font("Segoe UI", 8.5f),
+            Font = _rowBodyFont,
             ForeColor = Color.FromArgb(224, 230, 240)
         });
 
@@ -222,7 +232,34 @@ public sealed class CraftingOverlayPanel : Panel
         }
 
         _dynamicCraftButtons.Clear();
+
+        if (_recipeListPanel.Controls.Count == 0)
+        {
+            return;
+        }
+
+        var removed = new Control[_recipeListPanel.Controls.Count];
+        _recipeListPanel.Controls.CopyTo(removed, 0);
         _recipeListPanel.Controls.Clear();
+
+        for (int i = 0; i < removed.Length; i++)
+        {
+            Control row = removed[i];
+            DetachSharedImages(row);
+            row.Dispose();
+        }
+    }
+
+    private static void DetachSharedImages(Control container)
+    {
+        for (int i = 0; i < container.Controls.Count; i++)
+        {
+            if (container.Controls[i] is PictureBox pb)
+            {
+                // Shared Bitmap belongs to SpriteAtlasCache; do not let PictureBox.Dispose() dispose it.
+                pb.Image = null;
+            }
+        }
     }
 
     private void HandleCraftButtonClick(object? sender, EventArgs e)
@@ -240,15 +277,57 @@ public sealed class CraftingOverlayPanel : Panel
 
     private void HandleCloseClick(object? sender, EventArgs e) => OnCloseRequested?.Invoke();
 
-    private static string BuildInventorySummaryText(GameSession session)
+    private string BuildIngredientsText(IReadOnlyList<RecipeIngredient> ingredients)
     {
-        if (session.Inventory.Stacks.Count == 0)
+        _textBuilder.Clear();
+        for (int i = 0; i < ingredients.Count; i++)
+        {
+            if (i > 0)
+            {
+                _textBuilder.Append("  |  ");
+            }
+
+            RecipeIngredient ing = ingredients[i];
+            int owned = _session?.Inventory.GetItemCount(ing.ItemId) ?? 0;
+            _textBuilder.Append(FormatDisplayName(ing.ItemId));
+            _textBuilder.Append(' ');
+            _textBuilder.Append(owned);
+            _textBuilder.Append('/');
+            _textBuilder.Append(ing.Quantity);
+        }
+
+        return _textBuilder.ToString();
+    }
+
+    private string BuildInventorySummaryText(GameSession session)
+    {
+        IReadOnlyList<ItemStack> stacks = session.Inventory.Stacks;
+        if (stacks.Count == 0)
         {
             return "Bag: (empty)";
         }
 
-        string items = string.Join(" • ", session.Inventory.Stacks.Select(s => $"{s.Item.Name} x{s.Quantity}"));
-        return $"Bag ({session.Inventory.UsedSlots}/{session.Inventory.Capacity}): {items}";
+        _textBuilder.Clear();
+        _textBuilder.Append("Bag (");
+        _textBuilder.Append(session.Inventory.UsedSlots);
+        _textBuilder.Append('/');
+        _textBuilder.Append(session.Inventory.Capacity);
+        _textBuilder.Append("): ");
+
+        for (int i = 0; i < stacks.Count; i++)
+        {
+            if (i > 0)
+            {
+                _textBuilder.Append(" • ");
+            }
+
+            ItemStack stack = stacks[i];
+            _textBuilder.Append(stack.Item.Name);
+            _textBuilder.Append(" x");
+            _textBuilder.Append(stack.Quantity);
+        }
+
+        return _textBuilder.ToString();
     }
 
     private static string FormatDisplayName(string itemId)

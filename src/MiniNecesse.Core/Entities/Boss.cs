@@ -51,10 +51,11 @@ public sealed class Boss : Enemy
         int scoreReward = 500,
         IAIStrategy? initialStrategy = null,
         IAIStrategy? enrageStrategy = null,
-        float enrageThresholdRatio = DEFAULT_ENRAGE_THRESHOLD)
+        float enrageThresholdRatio = DEFAULT_ENRAGE_THRESHOLD,
+        string? archetype = null)
         : base(
             id,
-            bossName,
+            string.IsNullOrWhiteSpace(archetype) ? bossName : archetype,
             spawnPosition,
             maxHp,
             moveSpeed,

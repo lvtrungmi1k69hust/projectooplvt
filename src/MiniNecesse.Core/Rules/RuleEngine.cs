@@ -123,26 +123,53 @@ public sealed class RuleEngine
     }
 
     /// <summary>
-    /// Harvests a <see cref="ResourceNode"/> and returns a newly spawned <see cref="DroppedItem"/>
-    /// if the node is depleted on this hit.
+    /// Harvests a <see cref="ResourceNode"/> and reports dropped item details without allocating
+    /// a <see cref="DroppedItem"/> instance (designed for pooled spawning).
     /// </summary>
-    public DroppedItem? ResolveHarvest(ResourceNode node, ToolType toolType, int toolPower)
+    public bool TryResolveHarvest(
+        ResourceNode node,
+        ToolType toolType,
+        int toolPower,
+        out string dropItemId,
+        out int dropQuantity,
+        out Vector2D dropPosition)
     {
         ArgumentNullException.ThrowIfNull(node);
+        dropItemId = string.Empty;
+        dropQuantity = 0;
+        dropPosition = Vector2D.Zero;
+
         if (!node.IsAlive)
         {
-            return null;
+            return false;
         }
 
         node.Harvest(toolType, toolPower);
         if (node.IsAlive)
         {
-            return null;
+            return false;
         }
 
         AddScore(HARVEST_SCORE);
+        dropItemId = node.DropItemId;
+        dropQuantity = node.DropQuantity;
+        dropPosition = node.Center;
+        return true;
+    }
+
+    /// <summary>
+    /// Harvests a <see cref="ResourceNode"/> and returns a newly spawned <see cref="DroppedItem"/>
+    /// if the node is depleted on this hit.
+    /// </summary>
+    public DroppedItem? ResolveHarvest(ResourceNode node, ToolType toolType, int toolPower)
+    {
+        if (!TryResolveHarvest(node, toolType, toolPower, out string dropItemId, out int dropQuantity, out Vector2D dropPosition))
+        {
+            return null;
+        }
+
         _dropSequence++;
-        return new DroppedItem($"drop_{_dropSequence}", node.DropItemId, node.DropQuantity, node.Center);
+        return new DroppedItem($"drop_{_dropSequence}", dropItemId, dropQuantity, dropPosition);
     }
 
     /// <summary>
@@ -159,6 +186,15 @@ public sealed class RuleEngine
             Item resolvedItem = itemResolver(itemId);
             return inventory.TryAddItem(resolvedItem, quantity);
         });
+    }
+
+    /// <summary>
+    /// Attempts to collect a pooled <see cref="DroppedItem"/> into <paramref name="inventory"/> with zero closure allocations.
+    /// </summary>
+    public bool ResolvePickup(DroppedItem collectible, Inventory inventory, Func<string, Item> itemResolver)
+    {
+        ArgumentNullException.ThrowIfNull(collectible);
+        return collectible.TryCollect(inventory, itemResolver);
     }
 
     /// <summary>

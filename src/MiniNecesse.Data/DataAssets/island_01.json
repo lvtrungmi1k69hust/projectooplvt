@@ -1,314 +1,60 @@
 ﻿{
-    "islandId":  "ISLAND_01",
-    "name":  "Greenwood Isle (Forest)",
-    "biome":  "Forest",
-    "width":  48,
-    "height":  36,
-    "seed":  1001,
-    "playerSpawn":  {
-                        "x":  24,
-                        "y":  18
-                    },
-    "tileLayout":  [
-                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWWWWWSSSSSWWWWWWWWWWWWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWWWWSSSSSSSWWWWWWWSSSWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWWWSSSRRRSSSSWWSSSSSSSWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWSSSGGRRRRRSSSSSSSGGSSSWWWWWWWWWWW",
-                       "WWWWWWWSSSSSSSSSGGGGGRRRRRGGGGGGGGGGGSSWWWWWWWWW",
-                       "WWWWWSSSSSSSSSGGGGGGGGGGGGGGGGGGGGGGGGSSWWWWWWWW",
-                       "WWWWSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSSSWWWWWW",
-                       "WWWSSGGGGGGGWWWGGGGGGGGGGGGGGGGGGGGGGGGGSSSSSSWW",
-                       "WWWSSGGGGRRWWWWWGGGGGGGGGGGGGGGGGGRRRRGGGSSSSSWW",
-                       "WWWSSGGRRRWWWWWWWGGGGGGGGGGGGGGGGRRRRRRRGSSSSSWW",
-                       "WWWSSGGRRRRWWWWWGGGGGGGGGGGGGGGGRRRRRRRRGSSSSSWW",
-                       "WWWSSGGRRRRRWWWGGGGGGGGGGGGGGGGGRRRRRRRRRSSSSSWW",
-                       "WWWWSGGRRRRRRRRGGGGGGGGGGGGGGGGGRRRRRRRRSSSSSSWW",
-                       "WWWSSGGRRRRRRRRGGGGGGGGGGGGGGGGGRRRRRRRRGSSSSSWW",
-                       "WWWSSGGRRRRRRRRGGGGGGGGGGGGGGGGGRRRRRRRRGSSSSSWW",
-                       "WWWSGGGGRRRRRRGGGGGGGGGGGGGGGGGGGRRRRRRGGGSSSSWW",
-                       "WWSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSSSWW",
-                       "WWSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGWW",
-                       "WWSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGWW",
-                       "WWSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGWW",
-                       "WWSSGGGGGGGGGGGGGGGGRRRRRRRGGGGGGWWWWWGGGGGGSSWW",
-                       "WWWSGGGGGGGGGGGGGGGGRRRRRRRRGGGGWWWWWWWGGGSSSSWW",
-                       "WWWSSGGGGGGGGGGGGGGRRRRRRRRRGGGGWWWWWWWGSSSSSSWW",
-                       "WWWWSSGGGGGGGGGGGGGRRRRRRRRRGGGGWWWWWWWSSSWWWWWW",
-                       "WWWWWSSSGGGGGGGGGGGRRRRRRRRRGGGGGWWWWWGSSWWWWWWW",
-                       "WWWWWSSSSSSSSGGGGGGGRRRRRRRRGGGGGGGGGGSSWWWWWWWW",
-                       "WWWWWWSSSSSSSSGGGGGGGRRRRRRGGGGGGGGGGGSSWWWWWWWW",
-                       "WWWWWWSSSSSSSSSGGGGGGGGGGGGGGGGGGGGGGGSSWWWWWWWW",
-                       "WWWWWWSSSSSSSSSGGGGGGGGGGGGGGGGGGGGGGSSWWWWWWWWW",
-                       "WWWWWWSSSSSSSSSSGGGGGGGGGGGGGGGGGGGGGSSWWWWWWWWW",
-                       "WWWWWWWSSSSWWSSSGGGGGGGGGGGGGGGGGGGGSSSWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWSSSGGGGGGGSSSSSSSGRRSSSWWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
-                   ],
-    "resourceSpawns":  [
-                           {
-                               "type":  "Tree",
-                               "x":  31,
-                               "y":  18
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  22,
-                               "y":  9
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  9,
-                               "y":  12
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  20,
-                               "y":  21
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  37,
-                               "y":  14
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  34,
-                               "y":  31
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  35,
-                               "y":  10
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  30,
-                               "y":  8
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  29,
-                               "y":  21
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  35,
-                               "y":  30
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  37,
-                               "y":  15
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  9,
-                               "y":  24
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  36,
-                               "y":  13
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  26,
-                               "y":  30
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  4,
-                               "y":  10
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  33,
-                               "y":  6
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  10,
-                               "y":  7
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  11,
-                               "y":  19
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  35,
-                               "y":  12
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  38,
-                               "y":  19
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  31,
-                               "y":  12
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  42,
-                               "y":  18
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  32,
-                               "y":  29
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  7,
-                               "y":  15
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  29,
-                               "y":  10
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  18,
-                               "y":  24
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  20,
-                               "y":  26
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  35,
-                               "y":  17
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  27,
-                               "y":  20
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  30,
-                               "y":  22
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  8,
-                               "y":  23
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  6,
-                               "y":  18
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  38,
-                               "y":  16
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  27,
-                               "y":  21
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  5,
-                               "y":  17
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  22,
-                               "y":  15
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  44,
-                               "y":  18
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  25,
-                               "y":  28
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  3,
-                               "y":  15
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  22,
-                               "y":  30
-                           }
-                       ],
-    "waves":  [
-                  {
-                      "waveNumber":  1,
-                      "enemies":  [
-                                      {
-                                          "type":  "Slime",
-                                          "count":  5
-                                      },
-                                      {
-                                          "type":  "ZombieRaider",
-                                          "count":  2
-                                      }
-                                  ]
-                  },
-                  {
-                      "waveNumber":  2,
-                      "enemies":  [
-                                      {
-                                          "type":  "Slime",
-                                          "count":  4
-                                      },
-                                      {
-                                          "type":  "ZombieRaider",
-                                          "count":  3
-                                      },
-                                      {
-                                          "type":  "StoneGolem",
-                                          "count":  1
-                                      }
-                                  ]
-                  },
-                  {
-                      "waveNumber":  3,
-                      "enemies":  [
-                                      {
-                                          "type":  "ZombieRaider",
-                                          "count":  4
-                                      },
-                                      {
-                                          "type":  "SkeletonArcher",
-                                          "count":  2
-                                      },
-                                      {
-                                          "type":  "StoneGolem",
-                                          "count":  2
-                                      }
-                                  ]
-                  }
-              ],
-    "boss":  {
-                 "displayName":  "King Slime",
-                 "enrageStrategy":  "boss_enrage",
-                 "initialStrategy":  "melee",
-                 "attackRange":  44,
-                 "scoreReward":  500,
-                 "enrageThresholdRatio":  0.3,
-                 "type":  "KingSlime",
-                 "attackCooldown":  1.15,
-                 "attackDamage":  16,
-                 "maxHp":  280,
-                 "moveSpeed":  72
-             }
+  "islandId": "ISLAND_01",
+  "name": "Greenwood Isle (Forest)",
+  "biome": "Forest",
+  "generationMode": "procedural",
+  "width": 320,
+  "height": 320,
+  "seed": 1001,
+  "resourceDensity": 0.030,
+  "resourceWeights": {
+    "Tree": 0.34,
+    "StoneRock": 0.16,
+    "CopperDeposit": 0.16,
+    "CoalDeposit": 0.10,
+    "BerryBush": 0.14,
+    "WheatCrop": 0.10
+  },
+  "playerSpawn": {
+    "x": 160,
+    "y": 160
+  },
+  "waves": [
+    {
+      "waveNumber": 1,
+      "enemies": [
+        { "type": "Slime", "count": 5 },
+        { "type": "ZombieRaider", "count": 2 }
+      ]
+    },
+    {
+      "waveNumber": 2,
+      "enemies": [
+        { "type": "Slime", "count": 4 },
+        { "type": "ZombieRaider", "count": 3 },
+        { "type": "StoneGolem", "count": 1 }
+      ]
+    },
+    {
+      "waveNumber": 3,
+      "enemies": [
+        { "type": "ZombieRaider", "count": 4 },
+        { "type": "SkeletonArcher", "count": 2 },
+        { "type": "StoneGolem", "count": 2 }
+      ]
+    }
+  ],
+  "boss": {
+    "displayName": "King Slime",
+    "enrageStrategy": "boss_enrage",
+    "initialStrategy": "melee",
+    "attackRange": 44,
+    "scoreReward": 500,
+    "enrageThresholdRatio": 0.3,
+    "type": "KingSlime",
+    "attackCooldown": 1.15,
+    "attackDamage": 16,
+    "maxHp": 280,
+    "moveSpeed": 72
+  }
 }

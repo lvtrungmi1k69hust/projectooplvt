@@ -26,9 +26,12 @@ namespace MiniNecesse.Core.Physics;
 /// <typeparam name="T">Entity subtype indexed in the grid.</typeparam>
 public sealed class SpatialHashGrid<T> where T : Entity
 {
+    private const int MAX_RETAINED_BUCKETS = 512;
+
     private readonly float _cellSize;
     private readonly Dictionary<(int CellX, int CellY), List<T>> _buckets = new();
     private readonly List<List<T>> _usedBucketList = new();
+    private readonly List<(int CellX, int CellY)> _pruneKeysBuffer = new();
     private readonly HashSet<T> _dedupBuffer = new();
 
     /// <summary>Gets the uniform world-space width and height of each spatial cell.</summary>
@@ -36,6 +39,9 @@ public sealed class SpatialHashGrid<T> where T : Entity
 
     /// <summary>Gets the number of active non-empty buckets currently tracked.</summary>
     public int ActiveBucketCount => _usedBucketList.Count;
+
+    /// <summary>Gets total retained bucket entries in internal hash storage.</summary>
+    public int TotalBucketCount => _buckets.Count;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SpatialHashGrid{T}"/> class.
@@ -52,17 +58,41 @@ public sealed class SpatialHashGrid<T> where T : Entity
     }
 
     /// <summary>
-    /// Clears all entities from buckets while retaining list capacities to avoid per-frame GC allocations.
+    /// Clears all entities from buckets while retaining list capacities to avoid per-frame GC allocations,
+    /// and prunes excess dormant buckets after large map traversals.
     /// Complexity: O(B) where B is the number of touched buckets.
     /// </summary>
     public void Clear()
     {
-        for (int i = 0; i < _usedBucketList.Count; i++)
+        int activeBeforeClear = _usedBucketList.Count;
+        for (int i = 0; i < activeBeforeClear; i++)
         {
             _usedBucketList[i].Clear();
         }
 
         _usedBucketList.Clear();
+
+        if (_buckets.Count > MAX_RETAINED_BUCKETS && (activeBeforeClear * 4) < _buckets.Count)
+        {
+            TrimEmptyBuckets();
+        }
+    }
+
+    private void TrimEmptyBuckets()
+    {
+        _pruneKeysBuffer.Clear();
+        foreach (var entry in _buckets)
+        {
+            if (entry.Value.Count == 0)
+            {
+                _pruneKeysBuffer.Add(entry.Key);
+            }
+        }
+
+        for (int i = 0; i < _pruneKeysBuffer.Count; i++)
+        {
+            _buckets.Remove(_pruneKeysBuffer[i]);
+        }
     }
 
     /// <summary>

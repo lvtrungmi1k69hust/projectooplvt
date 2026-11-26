@@ -1,318 +1,62 @@
 ﻿{
-    "islandId":  "ISLAND_04",
-    "name":  "Frostpeak Expanse (Snowlands)",
-    "biome":  "Snowlands",
-    "width":  48,
-    "height":  36,
-    "seed":  4004,
-    "playerSpawn":  {
-                        "x":  24,
-                        "y":  18
-                    },
-    "tileLayout":  [
-                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWWWWWWNNNNWWWWWWWWWWWWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWWWWNNNNNNNWWWWWWWWWWWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWWWNNNNNNNNNNNWWNNNNNNNWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWNNNNNNNNNNNNNNNNNNNNNNNWWWWWWWWWW",
-                       "WWWWWWNNNNNNNNNNNNNNNNRRRRNNNNNNNNNNNNNNWWWWWWWW",
-                       "WWWWWNNNNNNNNNNNNNNNRRRRRRRRNNNNNNNNNNNNNWWWWWWW",
-                       "WWWWNNNNNNNNNNNNNNNNRRRRRRRRNNNNNNNNNNNNNNWWWWWW",
-                       "WWWWNNNNNNNNWWWNNNNNRRRRRRRRNNNNNNNNNNNNNNNWWWWW",
-                       "WWWWNNNNNNNWWWWWNNNNRRRRRRRRNNNNNNNNNNNNNNNNWWWW",
-                       "WWWWNNNNNNWWWWWWWNNNRRRRRRRRNNNNNNNNNNNNNNNNWWWW",
-                       "WWWWNNNNNNNWWWWWNNNNRRRRRRRRNNNNNNNNNNNNNNNNWWWW",
-                       "WWWWNNNNNNNNWWWNNNNNNRRRRRRNNNNNNNNNNNNNNNNWWWWW",
-                       "WWWWNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNWWWWW",
-                       "WWWWNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNWWWW",
-                       "WWWNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNWW",
-                       "WWWNNNNNNNNRNNNNNNNNNNNNNNNNNNNNNNNNRNNNNNNNNNWW",
-                       "WWNNNNNNRRRRRRRNNNNNNNNNNNNNNNNNNRRRRRRRNNNNNNWW",
-                       "WWNNNNNRRRRRRRRRNNNNNNNNNNNNNNNNNRRRRRRRRNNNNNWW",
-                       "WWNNNNNRRRRRRRRRNNNNNNNNNNNNNNNNRRRRRRRRRNNNNNWW",
-                       "WWNNNNNRRRRRRRRRNNNNNNNNNNNNNNNNRRRRRRRRRNNNNNWW",
-                       "WWWNNNNRRRRRRRRRNNNNNNNNNNNNNNNNRWWWWWRRRNNNNNWW",
-                       "WWWNNNNRRRRRRRRNNNNNNNNNNNNNNNNNWWWWWWWRRNNNNNWW",
-                       "WWWWNNNNRRRRRRRNNNNNNNNNNNNNNNNNWWWWWWWRNNNWWWWW",
-                       "WWWWWNNNNNNNNNNNNNNNNNNNNNNNNNNNWWWWWWWNNNWWWWWW",
-                       "WWWWWNNNNNNNNNNNNNNNNNNNNNNNNNNNNWWWWWNNNWWWWWWW",
-                       "WWWWWWNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNWWWWWWW",
-                       "WWWWWWNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNWWWWWWWW",
-                       "WWWWWWNNNNNNNNNNNNNNNRRRRRRNNNNNNNNNNNNNWWWWWWWW",
-                       "WWWWWWNNNNNNNNNNNNNNRRRRRRRRNNNNNNNNNNNNWWWWWWWW",
-                       "WWWWWWNNNNNNNNNNNNNNRRRRRRRRNNNNNNNNNNNNWWWWWWWW",
-                       "WWWWWWWNNNNNNNNNNNNNRRRRRRRRNNNNNNNNNNNWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWWNNNNRRRRRNNNNNNNNNNNNNWWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
-                   ],
-    "resourceSpawns":  [
-                           {
-                               "type":  "IronDeposit",
-                               "x":  24,
-                               "y":  22
-                           },
-                           {
-                               "type":  "IronDeposit",
-                               "x":  24,
-                               "y":  8
-                           },
-                           {
-                               "type":  "IronDeposit",
-                               "x":  43,
-                               "y":  22
-                           },
-                           {
-                               "type":  "IronDeposit",
-                               "x":  41,
-                               "y":  8
-                           },
-                           {
-                               "type":  "IronDeposit",
-                               "x":  17,
-                               "y":  25
-                           },
-                           {
-                               "type":  "IronDeposit",
-                               "x":  9,
-                               "y":  16
-                           },
-                           {
-                               "type":  "IronDeposit",
-                               "x":  10,
-                               "y":  20
-                           },
-                           {
-                               "type":  "IronDeposit",
-                               "x":  31,
-                               "y":  21
-                           },
-                           {
-                               "type":  "IronDeposit",
-                               "x":  44,
-                               "y":  17
-                           },
-                           {
-                               "type":  "IronDeposit",
-                               "x":  5,
-                               "y":  23
-                           },
-                           {
-                               "type":  "IronDeposit",
-                               "x":  37,
-                               "y":  8
-                           },
-                           {
-                               "type":  "IronDeposit",
-                               "x":  31,
-                               "y":  27
-                           },
-                           {
-                               "type":  "GoldDeposit",
-                               "x":  7,
-                               "y":  27
-                           },
-                           {
-                               "type":  "GoldDeposit",
-                               "x":  21,
-                               "y":  20
-                           },
-                           {
-                               "type":  "GoldDeposit",
-                               "x":  24,
-                               "y":  25
-                           },
-                           {
-                               "type":  "GoldDeposit",
-                               "x":  18,
-                               "y":  7
-                           },
-                           {
-                               "type":  "GoldDeposit",
-                               "x":  19,
-                               "y":  14
-                           },
-                           {
-                               "type":  "GoldDeposit",
-                               "x":  34,
-                               "y":  11
-                           },
-                           {
-                               "type":  "GoldDeposit",
-                               "x":  34,
-                               "y":  6
-                           },
-                           {
-                               "type":  "GoldDeposit",
-                               "x":  4,
-                               "y":  16
-                           },
-                           {
-                               "type":  "GoldDeposit",
-                               "x":  18,
-                               "y":  6
-                           },
-                           {
-                               "type":  "GoldDeposit",
-                               "x":  27,
-                               "y":  8
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  16,
-                               "y":  15
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  27,
-                               "y":  12
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  26,
-                               "y":  9
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  41,
-                               "y":  13
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  31,
-                               "y":  20
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  18,
-                               "y":  3
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  37,
-                               "y":  14
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  39,
-                               "y":  29
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  21,
-                               "y":  21
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  16,
-                               "y":  24
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  10,
-                               "y":  12
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  38,
-                               "y":  10
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  22,
-                               "y":  15
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  21,
-                               "y":  14
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  18,
-                               "y":  30
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  26,
-                               "y":  24
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  40,
-                               "y":  9
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  9,
-                               "y":  23
-                           }
-                       ],
-    "waves":  [
-                  {
-                      "waveNumber":  1,
-                      "enemies":  [
-                                      {
-                                          "type":  "FrostRaider",
-                                          "count":  4
-                                      },
-                                      {
-                                          "type":  "StoneGolem",
-                                          "count":  2
-                                      },
-                                      {
-                                          "type":  "SkeletonArcher",
-                                          "count":  3
-                                      }
-                                  ]
-                  },
-                  {
-                      "waveNumber":  2,
-                      "enemies":  [
-                                      {
-                                          "type":  "FrostRaider",
-                                          "count":  5
-                                      },
-                                      {
-                                          "type":  "OrcBrute",
-                                          "count":  3
-                                      },
-                                      {
-                                          "type":  "DarkMage",
-                                          "count":  2
-                                      }
-                                  ]
-                  },
-                  {
-                      "waveNumber":  3,
-                      "enemies":  [
-                                      {
-                                          "type":  "StoneGolem",
-                                          "count":  3
-                                      },
-                                      {
-                                          "type":  "OrcBrute",
-                                          "count":  3
-                                      },
-                                      {
-                                          "type":  "DarkMage",
-                                          "count":  3
-                                      }
-                                  ]
-                  }
-              ],
-    "boss":  {
-                 "displayName":  "Cryo Golem",
-                 "enrageStrategy":  "boss_enrage_heavy",
-                 "initialStrategy":  "melee",
-                 "attackRange":  50,
-                 "scoreReward":  650,
-                 "enrageThresholdRatio":  0.3,
-                 "type":  "CryoGolem",
-                 "attackCooldown":  1.15,
-                 "attackDamage":  26,
-                 "maxHp":  500,
-                 "moveSpeed":  72
-             }
+  "islandId": "ISLAND_04",
+  "name": "Frostpeak Expanse (Snowlands)",
+  "biome": "Snowlands",
+  "generationMode": "procedural",
+  "width": 320,
+  "height": 320,
+  "seed": 4004,
+  "resourceDensity": 0.032,
+  "resourceWeights": {
+    "Tree": 0.18,
+    "StoneRock": 0.14,
+    "IronDeposit": 0.22,
+    "GoldDeposit": 0.18,
+    "CoalDeposit": 0.12,
+    "CrystalCluster": 0.12,
+    "BerryBush": 0.04
+  },
+  "playerSpawn": {
+    "x": 160,
+    "y": 160
+  },
+  "waves": [
+    {
+      "waveNumber": 1,
+      "enemies": [
+        { "type": "FrostRaider", "count": 4 },
+        { "type": "StoneGolem", "count": 2 },
+        { "type": "SkeletonArcher", "count": 3 }
+      ]
+    },
+    {
+      "waveNumber": 2,
+      "enemies": [
+        { "type": "FrostRaider", "count": 5 },
+        { "type": "OrcBrute", "count": 3 },
+        { "type": "DarkMage", "count": 2 }
+      ]
+    },
+    {
+      "waveNumber": 3,
+      "enemies": [
+        { "type": "StoneGolem", "count": 3 },
+        { "type": "OrcBrute", "count": 3 },
+        { "type": "DarkMage", "count": 3 }
+      ]
+    }
+  ],
+  "boss": {
+    "displayName": "Cryo Golem",
+    "enrageStrategy": "boss_enrage_heavy",
+    "initialStrategy": "melee",
+    "attackRange": 50,
+    "scoreReward": 650,
+    "enrageThresholdRatio": 0.3,
+    "type": "CryoGolem",
+    "attackCooldown": 1.15,
+    "attackDamage": 26,
+    "maxHp": 500,
+    "moveSpeed": 72
+  }
 }

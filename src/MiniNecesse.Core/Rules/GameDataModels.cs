@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using MiniNecesse.Core.AI;
 using MiniNecesse.Core.Entities;
 using MiniNecesse.Core.Enums;
+using MiniNecesse.Core.World;
 
 namespace MiniNecesse.Core.Rules;
 
@@ -41,6 +42,18 @@ public sealed class GameConfig
     /// <summary>Gets the interaction radius around a placed workbench in world units.</summary>
     public float WorkbenchInteractRadius { get; }
 
+    /// <summary>Gets the width and height of one world chunk in tiles.</summary>
+    public int ChunkSize { get; }
+
+    /// <summary>Gets the default view distance radius in chunks.</summary>
+    public int DefaultViewDistanceChunks { get; }
+
+    /// <summary>Gets the minimum selectable chunk view distance.</summary>
+    public int MinViewDistanceChunks { get; }
+
+    /// <summary>Gets the maximum selectable chunk view distance.</summary>
+    public int MaxViewDistanceChunks { get; }
+
     /// <summary>Initializes a new instance of the <see cref="GameConfig"/> class.</summary>
     public GameConfig(
         float fixedDeltaTime = 1f / 60f,
@@ -52,7 +65,11 @@ public sealed class GameConfig
         int playerBaseDamage = 10,
         int inventorySlots = 20,
         int hotbarSlots = 9,
-        float workbenchInteractRadius = 80f)
+        float workbenchInteractRadius = 80f,
+        int chunkSize = IslandLevel.DEFAULT_CHUNK_SIZE,
+        int defaultViewDistanceChunks = ChunkManager.DEFAULT_VIEW_DISTANCE,
+        int minViewDistanceChunks = ChunkManager.DEFAULT_MIN_VIEW_DISTANCE,
+        int maxViewDistanceChunks = ChunkManager.DEFAULT_MAX_VIEW_DISTANCE)
     {
         FixedDeltaTime = fixedDeltaTime;
         TileSize = tileSize;
@@ -64,6 +81,10 @@ public sealed class GameConfig
         InventorySlots = inventorySlots;
         HotbarSlots = hotbarSlots;
         WorkbenchInteractRadius = workbenchInteractRadius;
+        ChunkSize = chunkSize;
+        DefaultViewDistanceChunks = defaultViewDistanceChunks;
+        MinViewDistanceChunks = minViewDistanceChunks;
+        MaxViewDistanceChunks = maxViewDistanceChunks;
     }
 }
 
@@ -103,7 +124,7 @@ public sealed record BossConfiguration(
 
 /// <summary>
 /// Complete loaded island package combining the composed <see cref="IslandLevel"/>
-/// with its JSON-configured resources, raid waves, and island boss metadata.
+/// with its JSON-configured resources, procedural chunk spawner, raid waves, and island boss metadata.
 /// </summary>
 public sealed class LoadedIslandPackage
 {
@@ -122,13 +143,29 @@ public sealed class LoadedIslandPackage
     /// <summary>Gets the deterministic seed recorded in the island file.</summary>
     public int Seed { get; }
 
+    /// <summary>Gets the optional per-chunk procedural resource generator for lazy-streamed islands.</summary>
+    public Action<ChunkCoord, List<ResourceSpawnPoint>>? ChunkResourceGenerator { get; }
+
+    /// <summary>Gets the optional per-chunk procedural structure generator (e.g., village buildings &amp; fences).</summary>
+    public Action<ChunkCoord, List<StructureSpawnPoint>>? ChunkStructureGenerator { get; }
+
+    /// <summary>Gets the optional per-chunk procedural passive animal generator (livestock &amp; wildlife).</summary>
+    public Action<ChunkCoord, List<AnimalSpawnPoint>>? ChunkAnimalGenerator { get; }
+
+    /// <summary>Gets the list of procedural villages generated on this island.</summary>
+    public IReadOnlyList<VillageSite> Villages { get; }
+
     /// <summary>Initializes a new instance of the <see cref="LoadedIslandPackage"/> class.</summary>
     public LoadedIslandPackage(
         IslandLevel level,
         IReadOnlyList<ResourceSpawnPoint> resourceSpawns,
         IReadOnlyList<WaveDefinition> waves,
         BossConfiguration boss,
-        int seed)
+        int seed,
+        Action<ChunkCoord, List<ResourceSpawnPoint>>? chunkResourceGenerator = null,
+        Action<ChunkCoord, List<StructureSpawnPoint>>? chunkStructureGenerator = null,
+        Action<ChunkCoord, List<AnimalSpawnPoint>>? chunkAnimalGenerator = null,
+        IReadOnlyList<VillageSite>? villages = null)
     {
         ArgumentNullException.ThrowIfNull(level);
         ArgumentNullException.ThrowIfNull(resourceSpawns);
@@ -140,5 +177,9 @@ public sealed class LoadedIslandPackage
         Waves = waves;
         Boss = boss;
         Seed = seed;
+        ChunkResourceGenerator = chunkResourceGenerator;
+        ChunkStructureGenerator = chunkStructureGenerator;
+        ChunkAnimalGenerator = chunkAnimalGenerator;
+        Villages = villages ?? Array.Empty<VillageSite>();
     }
 }

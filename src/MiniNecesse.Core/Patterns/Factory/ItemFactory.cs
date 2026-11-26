@@ -102,6 +102,12 @@ public sealed class ItemFactory
             new ItemBlueprint("copper_ore", "Copper Ore", ItemCategory.Material, 99, "Unrefined copper ore."),
             new ItemBlueprint("iron_ore", "Iron Ore", ItemCategory.Material, 99, "Dense iron ore."),
             new ItemBlueprint("gold_ore", "Gold Ore", ItemCategory.Material, 99, "Precious gold ore."),
+            new ItemBlueprint("coal", "Coal", ItemCategory.Material, 99, "Combustible coal mined from dark seams."),
+            new ItemBlueprint("crystal", "Arcane Crystal", ItemCategory.Material, 99, "Luminous crystal shard pulsing with energy."),
+            new ItemBlueprint("wheat", "Wheat", ItemCategory.Material, 99, "Golden grain harvested from crops."),
+            new ItemBlueprint("wool", "Wool", ItemCategory.Material, 99, "Soft fleece sheared from sheep."),
+            new ItemBlueprint("feather", "Feather", ItemCategory.Material, 99, "Light plumage ideal for fletching arrows."),
+            new ItemBlueprint("leather", "Leather", ItemCategory.Material, 99, "Tough hide harvested from cattle."),
             new ItemBlueprint("slime_gel", "Slime Gel", ItemCategory.Material, 99, "Gelatinous essence dropped by slimes."),
             new ItemBlueprint("wood_axe", "Wood Axe", ItemCategory.Tool, 1, "Basic axe for chopping trees.", ToolType: ToolType.Axe, HarvestPower: 10, HarvestRange: 48f, BaseCooldown: 0.35f),
             new ItemBlueprint("wood_pickaxe", "Wood Pickaxe", ItemCategory.Tool, 1, "Basic pickaxe for mining stone.", ToolType: ToolType.Pickaxe, HarvestPower: 10, HarvestRange: 48f, BaseCooldown: 0.38f),
@@ -111,13 +117,20 @@ public sealed class ItemFactory
             new ItemBlueprint("iron_sword", "Iron Sword", ItemCategory.Weapon, 1, "Forged iron blade with superior damage.", BaseDamage: 36, AttackRange: 50f, BaseCooldown: 0.28f),
             new ItemBlueprint("gold_greatsword", "Gold Greatsword", ItemCategory.Weapon, 1, "Massive heavy golden greatsword with huge cleave reach.", BaseDamage: 54, AttackRange: 64f, BaseCooldown: 0.42f),
             new ItemBlueprint("wooden_bow", "Wooden Bow", ItemCategory.Weapon, 1, "Ranged bow firing arrows.", BaseDamage: 16, AttackRange: 260f, BaseCooldown: 0.45f, IsRanged: true, ProjectileSpeed: 340f),
+            new ItemBlueprint("hunter_bow", "Hunter Bow", ItemCategory.Weapon, 1, "Feather-fletched longbow with high velocity.", BaseDamage: 30, AttackRange: 300f, BaseCooldown: 0.36f, IsRanged: true, ProjectileSpeed: 410f),
             new ItemBlueprint("fire_staff", "Fire Staff", ItemCategory.Weapon, 1, "Arcane staff launching rapid blazing bolts.", BaseDamage: 28, AttackRange: 300f, BaseCooldown: 0.34f, IsRanged: true, ProjectileSpeed: 390f),
+            new ItemBlueprint("crystal_staff", "Crystal Staff", ItemCategory.Weapon, 1, "Focuses arcane crystals into devastating bolts.", BaseDamage: 48, AttackRange: 330f, BaseCooldown: 0.30f, IsRanged: true, ProjectileSpeed: 450f),
             new ItemBlueprint("iron_crossbow", "Iron Crossbow", ItemCategory.Weapon, 1, "Heavy armor-piercing crossbow with high bolt velocity.", BaseDamage: 42, AttackRange: 340f, BaseCooldown: 0.55f, IsRanged: true, ProjectileSpeed: 460f),
+            new ItemBlueprint("berry", "Wild Berry", ItemCategory.Consumable, 30, "Sweet forest berries restoring 15 HP.", HealAmount: 15),
+            new ItemBlueprint("bread", "Fresh Bread", ItemCategory.Consumable, 20, "Baked wheat loaf restoring 30 HP.", HealAmount: 30),
+            new ItemBlueprint("raw_meat", "Raw Meat", ItemCategory.Consumable, 20, "Restores 12 HP; better when cooked with coal.", HealAmount: 12),
+            new ItemBlueprint("cooked_meat", "Cooked Roast", ItemCategory.Consumable, 20, "Hearty seared roast restoring 55 HP.", HealAmount: 55),
             new ItemBlueprint("health_potion", "Health Potion", ItemCategory.Consumable, 20, "Restores 40 HP instantly.", HealAmount: 40),
             new ItemBlueprint("workbench", "Workbench", ItemCategory.Structure, 10, "Unlocks advanced crafting recipes nearby.", StructureType: StructureType.Workbench),
             new ItemBlueprint("wooden_wall", "Wooden Wall", ItemCategory.Structure, 50, "Solid wooden defensive barrier.", StructureType: StructureType.WoodenWall),
             new ItemBlueprint("stone_wall", "Stone Wall", ItemCategory.Structure, 50, "Reinforced stone defensive barrier.", StructureType: StructureType.StoneWall),
-            new ItemBlueprint("torch", "Torch", ItemCategory.Structure, 50, "Illuminates nearby ground at night.", StructureType: StructureType.Torch)
+            new ItemBlueprint("torch", "Torch", ItemCategory.Structure, 50, "Illuminates nearby ground at night.", StructureType: StructureType.Torch),
+            new ItemBlueprint("wooden_fence", "Wooden Fence", ItemCategory.Structure, 50, "Solid wooden fence for pens and perimeters.", StructureType: StructureType.WoodenFence)
         });
 
         return factory;

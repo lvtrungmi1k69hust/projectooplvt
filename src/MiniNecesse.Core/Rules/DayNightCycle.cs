@@ -88,7 +88,7 @@ public sealed class DayNightCycle
     }
 
     /// <summary>Restores cycle state from a persisted snapshot.</summary>
-    public void RestoreState(int dayNumber, float elapsedInCycle)
+    public void RestoreState(int dayNumber, float elapsedInCycle, bool suppressEvents = false)
     {
         if (dayNumber <= 0)
         {
@@ -103,7 +103,10 @@ public sealed class DayNightCycle
         _dayNumber = dayNumber;
         _elapsedInCycle = elapsedInCycle;
         _currentPhase = _elapsedInCycle < _dayDurationSeconds ? DayPhase.Day : DayPhase.Night;
-        OnDayPhaseChanged?.Invoke(_dayNumber, _currentPhase);
+        if (!suppressEvents)
+        {
+            OnDayPhaseChanged?.Invoke(_dayNumber, _currentPhase);
+        }
     }
 
     private void TransitionPhaseIfChanged(DayPhase newPhase)

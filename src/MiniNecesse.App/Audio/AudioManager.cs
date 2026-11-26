@@ -16,6 +16,7 @@ public sealed class AudioManager : IDisposable
 {
     private readonly string _audioDirectory;
     private readonly Dictionary<string, SoundPlayer> _loadedPlayers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _missingCues = new(StringComparer.OrdinalIgnoreCase);
     private GameSession? _attachedSession;
     private bool _isMuted;
     private int _volume = 80;
@@ -105,9 +106,15 @@ public sealed class AudioManager : IDisposable
             return TryInvokePlay(cachedPlayer, cueKey);
         }
 
+        if (_missingCues.Contains(cueKey))
+        {
+            return false;
+        }
+
         string wavPath = Path.Combine(_audioDirectory, $"{cueKey}.wav");
         if (!File.Exists(wavPath))
         {
+            _missingCues.Add(cueKey);
             return false;
         }
 

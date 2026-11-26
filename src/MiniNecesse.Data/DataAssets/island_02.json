@@ -1,328 +1,62 @@
 ﻿{
-    "islandId":  "ISLAND_02",
-    "name":  "Copper Hills (Rocky Ridge)",
-    "biome":  "CopperHills",
-    "width":  48,
-    "height":  36,
-    "seed":  2002,
-    "playerSpawn":  {
-                        "x":  24,
-                        "y":  18
-                    },
-    "tileLayout":  [
-                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWSSSSSSSSSSSSSSSGGGSSSWWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWSSRRRRSSSSSSSSGGGGGSSSWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWSSSRRRRRSSSSSSGGGGGGGSSWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWSSRRRRRRGSSSSGGGGGGGGSSWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWSSRRRRRRGGGGGGGGGGGGGSSSWWWWWWWWWWWW",
-                       "WWWWWWWWWWWSSRRRRRRGGGGGGGGGGGGGGGSSSWWWWWWWWWWW",
-                       "WWWWWWWWWWSSRRRRRRRGGGGGGGGGGGGGGGGSSSSSSSWWWWWW",
-                       "WWWWWWWWWSSGWWWGGGGGGGGGGGGGGGGGGGGGGSSSSSSSSWWW",
-                       "WWWSSSSSSSGWWWWWGGGGGGGGGGGGGGGGGGGGGGGGGGGSSSWW",
-                       "WWSSSSSSGGWWWWWWWGGGGGGGGGGGGGGGGGGGGGGGGGGGGSWW",
-                       "WWSGGGGGGGGWWWWWGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGWW",
-                       "WWRRRRGGGGGGWWWGGGGGGGGGGRRRRRRGGGGGGGGGGGGGGGWW",
-                       "WWRRRRRGGGGGGGGGGGGGGGGGRRRRRRRRGGGGGGGGGGGGGGWW",
-                       "WWSRRRRGGGGGGGGGGGGGGGGGGGGGRRRRGGGGGGGGGGGGGGWW",
-                       "WWSSRRRGGGGGGGGGGGGGGGGGGGGGRRRRGGGGGGGGGGGGGSWW",
-                       "WWSSSSRGGGGGGGGGGGGGGGGGGGGGRRRRGGGGGGGGGGGGGSWW",
-                       "WWSSSSSGGGGGGGGGGGGGGGGGGGGGRRRRGGGGGGGGGGGGGSWW",
-                       "WWSSSSSSGGGGGGGGGGGGGGGGGGGGRRRGGGGGGGGGGGGGSSWW",
-                       "WWSSSSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSWW",
-                       "WWSSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSWW",
-                       "WWSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGWWWWWGGGGGGGSWW",
-                       "WWSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGWWWWWWWGGGGGGGWW",
-                       "WWSGGGGGGGGGRRRRRRGGGGGGGGGGGGGGWWWWWWWRRRRGGGWW",
-                       "WWSSSGGGGGGGRRRRRRRGGGGGGGGGGGGGWWWWWWWRRRRRGSWW",
-                       "WWSSSSSSSGGRRRRRRRRRGGGGGGGGGGGGGWWWWWRRRRRRSSWW",
-                       "WWWWSSSSSSSRRRRRRRRRGGGGGGGGGGGGGGGGRRSSSSSSSWWW",
-                       "WWWWWWWWWWSSRRRRRRRRGGGGGGGGGGGGGGGGSSSSSSSSWWWW",
-                       "WWWWWWWWWWWSSRRRRRRRGGGGGGGGGGGGGGSSSWWWWWWWWWWW",
-                       "WWWWWWWWWWWWSSRRRRRGGGSSGGGGGGGGGSSWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWSSRRGGGSSSSSSGGGGGGSSSWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWSSSSGSSSSSSSSSGGGGGSSWWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWSSSSSSSSSSSSSSSGGGSSSWWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
-                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
-                   ],
-    "resourceSpawns":  [
-                           {
-                               "type":  "IronDeposit",
-                               "x":  29,
-                               "y":  10
-                           },
-                           {
-                               "type":  "IronDeposit",
-                               "x":  41,
-                               "y":  27
-                           },
-                           {
-                               "type":  "IronDeposit",
-                               "x":  30,
-                               "y":  18
-                           },
-                           {
-                               "type":  "IronDeposit",
-                               "x":  12,
-                               "y":  16
-                           },
-                           {
-                               "type":  "IronDeposit",
-                               "x":  16,
-                               "y":  12
-                           },
-                           {
-                               "type":  "IronDeposit",
-                               "x":  20,
-                               "y":  10
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  39,
-                               "y":  17
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  17,
-                               "y":  15
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  41,
-                               "y":  8
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  25,
-                               "y":  15
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  14,
-                               "y":  26
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  17,
-                               "y":  8
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  32,
-                               "y":  18
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  19,
-                               "y":  25
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  10,
-                               "y":  23
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  21,
-                               "y":  30
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  26,
-                               "y":  27
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  21,
-                               "y":  28
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  22,
-                               "y":  27
-                           },
-                           {
-                               "type":  "Tree",
-                               "x":  33,
-                               "y":  27
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  27,
-                               "y":  13
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  5,
-                               "y":  21
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  40,
-                               "y":  24
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  41,
-                               "y":  26
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  12,
-                               "y":  15
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  7,
-                               "y":  24
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  16,
-                               "y":  27
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  42,
-                               "y":  23
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  33,
-                               "y":  13
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  20,
-                               "y":  24
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  29,
-                               "y":  23
-                           },
-                           {
-                               "type":  "CopperDeposit",
-                               "x":  35,
-                               "y":  11
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  29,
-                               "y":  12
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  28,
-                               "y":  3
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  23,
-                               "y":  30
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  40,
-                               "y":  12
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  44,
-                               "y":  15
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  14,
-                               "y":  7
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  9,
-                               "y":  14
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  33,
-                               "y":  29
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  10,
-                               "y":  19
-                           },
-                           {
-                               "type":  "StoneRock",
-                               "x":  18,
-                               "y":  20
-                           }
-                       ],
-    "waves":  [
-                  {
-                      "waveNumber":  1,
-                      "enemies":  [
-                                      {
-                                          "type":  "Slime",
-                                          "count":  4
-                                      },
-                                      {
-                                          "type":  "SkeletonArcher",
-                                          "count":  3
-                                      },
-                                      {
-                                          "type":  "StoneGolem",
-                                          "count":  1
-                                      }
-                                  ]
-                  },
-                  {
-                      "waveNumber":  2,
-                      "enemies":  [
-                                      {
-                                          "type":  "ZombieRaider",
-                                          "count":  3
-                                      },
-                                      {
-                                          "type":  "SkeletonArcher",
-                                          "count":  3
-                                      },
-                                      {
-                                          "type":  "OrcBrute",
-                                          "count":  2
-                                      }
-                                  ]
-                  },
-                  {
-                      "waveNumber":  3,
-                      "enemies":  [
-                                      {
-                                          "type":  "StoneGolem",
-                                          "count":  2
-                                      },
-                                      {
-                                          "type":  "OrcBrute",
-                                          "count":  2
-                                      },
-                                      {
-                                          "type":  "SkeletonArcher",
-                                          "count":  4
-                                      }
-                                  ]
-                  }
-              ],
-    "boss":  {
-                 "displayName":  "Forest Guardian",
-                 "enrageStrategy":  "boss_enrage",
-                 "initialStrategy":  "melee",
-                 "attackRange":  48,
-                 "scoreReward":  550,
-                 "enrageThresholdRatio":  0.3,
-                 "type":  "ForestGuardian",
-                 "attackCooldown":  1.1,
-                 "attackDamage":  20,
-                 "maxHp":  360,
-                 "moveSpeed":  78
-             }
+  "islandId": "ISLAND_02",
+  "name": "Copper Hills (Rocky Ridge)",
+  "biome": "CopperHills",
+  "generationMode": "procedural",
+  "width": 320,
+  "height": 320,
+  "seed": 2002,
+  "resourceDensity": 0.031,
+  "resourceWeights": {
+    "Tree": 0.22,
+    "StoneRock": 0.16,
+    "CopperDeposit": 0.24,
+    "IronDeposit": 0.14,
+    "CoalDeposit": 0.12,
+    "BerryBush": 0.06,
+    "WheatCrop": 0.06
+  },
+  "playerSpawn": {
+    "x": 160,
+    "y": 160
+  },
+  "waves": [
+    {
+      "waveNumber": 1,
+      "enemies": [
+        { "type": "Slime", "count": 4 },
+        { "type": "SkeletonArcher", "count": 3 },
+        { "type": "StoneGolem", "count": 1 }
+      ]
+    },
+    {
+      "waveNumber": 2,
+      "enemies": [
+        { "type": "ZombieRaider", "count": 3 },
+        { "type": "SkeletonArcher", "count": 3 },
+        { "type": "OrcBrute", "count": 2 }
+      ]
+    },
+    {
+      "waveNumber": 3,
+      "enemies": [
+        { "type": "StoneGolem", "count": 2 },
+        { "type": "OrcBrute", "count": 2 },
+        { "type": "SkeletonArcher", "count": 4 }
+      ]
+    }
+  ],
+  "boss": {
+    "displayName": "Forest Guardian",
+    "enrageStrategy": "boss_enrage",
+    "initialStrategy": "melee",
+    "attackRange": 48,
+    "scoreReward": 550,
+    "enrageThresholdRatio": 0.3,
+    "type": "ForestGuardian",
+    "attackCooldown": 1.1,
+    "attackDamage": 20,
+    "maxHp": 360,
+    "moveSpeed": 78
+  }
 }

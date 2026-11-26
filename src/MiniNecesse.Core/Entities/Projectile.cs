@@ -110,7 +110,7 @@ public sealed class Projectile : Entity
             throw new ArgumentException("Projectile ownerId cannot be empty.", nameof(ownerId));
         }
 
-        UpdatePosition(origin);
+        SnapPosition(origin);
         _velocity = velocity;
         _damage = damage;
         _maxLifetime = maxLifetime;

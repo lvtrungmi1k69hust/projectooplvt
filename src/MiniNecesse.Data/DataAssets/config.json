@@ -8,5 +8,9 @@
   "playerBaseDamage": 10,
   "inventorySlots": 20,
   "hotbarSlots": 9,
-  "workbenchInteractRadius": 80.0
+  "workbenchInteractRadius": 80.0,
+  "chunkSize": 16,
+  "defaultViewDistanceChunks": 3,
+  "minViewDistanceChunks": 1,
+  "maxViewDistanceChunks": 8
 }

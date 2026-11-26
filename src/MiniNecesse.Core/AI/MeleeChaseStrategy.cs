@@ -21,14 +21,18 @@ public sealed class MeleeChaseStrategy : IAIStrategy
     private const float PATROL_SPEED_FACTOR = 0.45f;
 
     private readonly AStarPathfinder _pathfinder;
+    private readonly PathfindingCoordinator? _pathCoordinator;
     private readonly EnemyFSM _fsm;
     private readonly CollisionDetector _collisionDetector;
     private readonly Func<GridPoint, Structure?>? _structureAtTileLookup;
+    private readonly float _repathInterval;
     private readonly List<GridPoint> _waypointBuffer = new(64);
 
     private float _pathCooldown;
     private int _currentWaypointIndex;
     private GridPoint? _blockingWallTile;
+    private GridPoint? _lastGoalTile;
+    private int _lastStructureVersion = -1;
 
     /// <inheritdoc />
     public string StrategyName => nameof(MeleeChaseStrategy);
@@ -40,12 +44,18 @@ public sealed class MeleeChaseStrategy : IAIStrategy
         AStarPathfinder? pathfinder = null,
         EnemyFSM? fsm = null,
         CollisionDetector? collisionDetector = null,
-        Func<GridPoint, Structure?>? structureAtTileLookup = null)
+        Func<GridPoint, Structure?>? structureAtTileLookup = null,
+        PathfindingCoordinator? pathCoordinator = null,
+        float initialStaggerSeconds = 0f,
+        float repathInterval = PATH_RECOMPUTE_INTERVAL)
     {
         _pathfinder = pathfinder ?? new AStarPathfinder();
         _fsm = fsm ?? new EnemyFSM();
         _collisionDetector = collisionDetector ?? new CollisionDetector();
         _structureAtTileLookup = structureAtTileLookup;
+        _pathCoordinator = pathCoordinator;
+        _pathCooldown = MathF.Max(0f, initialStaggerSeconds);
+        _repathInterval = repathInterval > 0f ? repathInterval : PATH_RECOMPUTE_INTERVAL;
     }
 
     /// <inheritdoc />
@@ -97,18 +107,51 @@ public sealed class MeleeChaseStrategy : IAIStrategy
             return;
         }
 
-        _pathCooldown = PATH_RECOMPUTE_INTERVAL;
         (int startCol, int startRow) = level.WorldToTile(enemy.Center);
         (int goalCol, int goalRow) = level.WorldToTile(target.Center);
+        var start = new GridPoint(startCol, startRow);
+        var goal = new GridPoint(goalCol, goalRow);
 
-        PathResult result = _pathfinder.FindPath(
-            level,
-            new GridPoint(startCol, startRow),
-            new GridPoint(goalCol, goalRow),
-            _waypointBuffer);
+        // Reuse existing valid path cheaply when player has not switched tiles and walls/chunks are unchanged.
+        if (!_blockingWallTile.HasValue &&
+            _waypointBuffer.Count > 1 &&
+            _currentWaypointIndex < _waypointBuffer.Count - 1 &&
+            _lastGoalTile.HasValue &&
+            _lastGoalTile.Value == goal &&
+            _lastStructureVersion == level.StructureVersion)
+        {
+            GridPoint nextWp = _waypointBuffer[_currentWaypointIndex];
+            float maxFollowDistSq = level.TileSize * level.TileSize * 4f;
+            if (Vector2D.DistanceSquared(enemy.Center, level.TileToWorldCenter(nextWp.Col, nextWp.Row)) <= maxFollowDistSq)
+            {
+                _pathCooldown = _repathInterval * 0.5f;
+                return;
+            }
+        }
 
+        if (_pathCoordinator is not null)
+        {
+            if (!_pathCoordinator.TryRequestPath(level, start, goal, _waypointBuffer, out PathResult coordResult, out _))
+            {
+                // Budget exhausted this tick: keep following existing waypoints and retry shortly.
+                _pathCooldown = 0.05f;
+                return;
+            }
+
+            _pathCooldown = _repathInterval;
+            _currentWaypointIndex = _waypointBuffer.Count > 1 ? 1 : 0;
+            _blockingWallTile = coordResult.BlockingWallTile;
+            _lastGoalTile = goal;
+            _lastStructureVersion = level.StructureVersion;
+            return;
+        }
+
+        _pathCooldown = _repathInterval;
+        PathResult result = _pathfinder.FindPath(level, start, goal, _waypointBuffer);
         _currentWaypointIndex = _waypointBuffer.Count > 1 ? 1 : 0;
         _blockingWallTile = result.BlockingWallTile;
+        _lastGoalTile = goal;
+        _lastStructureVersion = level.StructureVersion;
     }
 
     private bool TryBreachBlockingWall(Enemy enemy, IslandLevel level)

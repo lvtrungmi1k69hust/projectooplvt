@@ -19,7 +19,7 @@ internal static class PixelArtBuilder
     {
         int height = rows.Length;
         int width = rows[0].Length;
-        var bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+        var bitmap = new Bitmap(width, height, PixelFormat.Format32bppPArgb);
 
         for (int y = 0; y < height; y++)
         {
@@ -52,7 +52,7 @@ internal static class PixelArtBuilder
         Color? accentColor = null,
         int accentCount = 0)
     {
-        var bmp = new Bitmap(16, 16, PixelFormat.Format32bppArgb);
+        var bmp = new Bitmap(16, 16, PixelFormat.Format32bppPArgb);
         var rng = new Random(seed);
 
         for (int y = 0; y < 16; y++)
@@ -87,7 +87,7 @@ internal static class PixelArtBuilder
     /// <summary>Creates a 16x16 animated water tile with crisp pixel-art wave crests.</summary>
     public static Bitmap CreateWaterTile(int frameOffset)
     {
-        var bmp = new Bitmap(16, 16, PixelFormat.Format32bppArgb);
+        var bmp = new Bitmap(16, 16, PixelFormat.Format32bppPArgb);
         Color deep = Color.FromArgb(35, 108, 168);
         Color mid = Color.FromArgb(46, 126, 188);
         Color crest = Color.FromArgb(124, 198, 236);
@@ -109,7 +109,7 @@ internal static class PixelArtBuilder
     /// <summary>Creates a 16x16 stone paver or dark fortress brick tile.</summary>
     public static Bitmap CreateStoneBrickTile(Color baseColor, Color mortarColor, Color highlightColor, int seed)
     {
-        var bmp = new Bitmap(16, 16, PixelFormat.Format32bppArgb);
+        var bmp = new Bitmap(16, 16, PixelFormat.Format32bppPArgb);
         var rng = new Random(seed);
 
         for (int y = 0; y < 16; y++)

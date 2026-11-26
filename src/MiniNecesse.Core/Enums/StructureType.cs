@@ -15,5 +15,8 @@ public enum StructureType
     Workbench = 2,
 
     /// <summary>Light source illuminating surrounding tiles at night.</summary>
-    Torch = 3
+    Torch = 3,
+
+    /// <summary>Solid wooden fence used for village animal pens and perimeter enclosures.</summary>
+    WoodenFence = 4
 }

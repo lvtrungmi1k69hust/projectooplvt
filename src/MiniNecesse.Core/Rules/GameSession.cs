@@ -9,6 +9,7 @@ using MiniNecesse.Core.Math;
 using MiniNecesse.Core.Patterns.Pool;
 using MiniNecesse.Core.Patterns.State;
 using MiniNecesse.Core.Physics;
+using MiniNecesse.Core.World;
 
 namespace MiniNecesse.Core.Rules;
 
@@ -31,13 +32,14 @@ public sealed class GameSession : IDisposable
     private readonly DayNightCycle _dayNightCycle;
     private readonly RuleEngine _ruleEngine;
     private readonly Func<string, Item> _itemResolver;
-    private readonly Difficulty _difficulty;
+    private Difficulty _difficulty;
 
     private readonly GameStateMachine _stateMachine = new();
     private readonly CollisionDetector _collisionDetector = new();
-    private readonly SpatialHashGrid<Enemy> _enemySpatialGrid = new(96f);
+    private readonly PathfindingCoordinator _pathfindingCoordinator = new();
+    private readonly SpatialHashGrid<Character> _playerTargetGrid = new(96f);
     private readonly SpatialHashGrid<Player> _playerSpatialGrid = new(96f);
-    private readonly List<Enemy> _enemyQueryBuffer = new(32);
+    private readonly List<Character> _characterQueryBuffer = new(32);
     private readonly List<Player> _playerQueryBuffer = new(4);
     private readonly List<Enemy> _waveSpawnBuffer = new(24);
 
@@ -45,18 +47,37 @@ public sealed class GameSession : IDisposable
     private readonly ObjectPool<DroppedItem> _droppedItemPool;
 
     private readonly List<Enemy> _enemies = new();
+    private readonly IReadOnlyList<Enemy> _enemiesView;
+    private readonly List<Animal> _animals = new();
+    private readonly IReadOnlyList<Animal> _animalsView;
     private readonly List<ResourceNode> _resources = new();
+    private readonly IReadOnlyList<ResourceNode> _resourcesView;
     private readonly List<Structure> _structures = new();
+    private readonly IReadOnlyList<Structure> _structuresView;
+    private readonly Dictionary<GridPoint, Structure> _structureByTile = new();
     private readonly List<Projectile> _projectiles = new();
+    private readonly IReadOnlyList<Projectile> _projectilesView;
     private readonly List<DroppedItem> _droppedItems = new();
+    private readonly IReadOnlyList<DroppedItem> _droppedItemsView;
     private readonly List<IHudObserver> _hudObservers = new();
 
+    private readonly Action<ResourceNode> _onActivateChunkResource;
+    private readonly Action<Structure> _onActivateChunkStructure;
+    private readonly Action<ChunkCoord> _onDeactivateChunkEntities;
+    private readonly Action<Animal> _onActivateChunkAnimal;
+
+    private readonly ChunkManager _chunkManager;
+    private IReadOnlyList<VillageSite> _villages = Array.Empty<VillageSite>();
     private RaidWaveSpawner? _waveSpawner;
     private Boss? _activeBoss;
     private int _currentWaveIndex;
     private int _pooledProjectileSequence;
     private int _pooledDropSequence;
+    private int _lastNotifiedDay = -1;
+    private DayPhase _lastNotifiedPhase;
+    private int _lastNotifiedProgressBucket = -1;
     private bool _bossDefeated;
+    private bool _chunksInitialized;
     private bool _disposed;
     private float _swingEffectRemaining;
     private float _nightReinforcementTimer;
@@ -67,6 +88,12 @@ public sealed class GameSession : IDisposable
 
     /// <summary>Gets the normalized direction vector of the player's most recent aim/action.</summary>
     public Vector2D LastAimDirection => _lastAimDirection;
+
+    /// <summary>Gets the active chunk streaming manager.</summary>
+    public ChunkManager ChunkManager => _chunkManager;
+
+    /// <summary>Gets the current chunk view distance radius around the player.</summary>
+    public int ViewDistanceChunks => _chunkManager.ViewDistanceChunks;
 
     /// <summary>Gets the active island tilemap.</summary>
     public IslandLevel Level => _level;
@@ -92,6 +119,9 @@ public sealed class GameSession : IDisposable
     /// <summary>Gets the collision detector used for sliding and swept checks.</summary>
     public CollisionDetector CollisionDetector => _collisionDetector;
 
+    /// <summary>Gets the shared AI pathfinding coordinator and path cache.</summary>
+    public PathfindingCoordinator PathfindingCoordinator => _pathfindingCoordinator;
+
     /// <summary>Gets the pooled projectile cache for zero-allocation combat.</summary>
     public ObjectPool<Projectile> ProjectilePool => _projectilePool;
 
@@ -113,20 +143,26 @@ public sealed class GameSession : IDisposable
     /// <summary>Gets the current raid wave index.</summary>
     public int CurrentWaveIndex => _currentWaveIndex;
 
-    /// <summary>Gets a read-only view of all active enemies (including boss).</summary>
-    public IReadOnlyList<Enemy> Enemies => _enemies.AsReadOnly();
+    /// <summary>Gets a cached read-only view of all active enemies (including boss).</summary>
+    public IReadOnlyList<Enemy> Enemies => _enemiesView;
 
-    /// <summary>Gets a read-only view of all resource nodes.</summary>
-    public IReadOnlyList<ResourceNode> Resources => _resources.AsReadOnly();
+    /// <summary>Gets a cached read-only view of all active passive animals.</summary>
+    public IReadOnlyList<Animal> Animals => _animalsView;
 
-    /// <summary>Gets a read-only view of all placed structures.</summary>
-    public IReadOnlyList<Structure> Structures => _structures.AsReadOnly();
+    /// <summary>Gets the procedural villages discovered or generated on this island.</summary>
+    public IReadOnlyList<VillageSite> Villages => _villages;
 
-    /// <summary>Gets a read-only view of all active projectiles.</summary>
-    public IReadOnlyList<Projectile> Projectiles => _projectiles.AsReadOnly();
+    /// <summary>Gets a cached read-only view of all resource nodes.</summary>
+    public IReadOnlyList<ResourceNode> Resources => _resourcesView;
 
-    /// <summary>Gets a read-only view of all loose dropped items.</summary>
-    public IReadOnlyList<DroppedItem> DroppedItems => _droppedItems.AsReadOnly();
+    /// <summary>Gets a cached read-only view of all placed structures.</summary>
+    public IReadOnlyList<Structure> Structures => _structuresView;
+
+    /// <summary>Gets a cached read-only view of all active projectiles.</summary>
+    public IReadOnlyList<Projectile> Projectiles => _projectilesView;
+
+    /// <summary>Gets a cached read-only view of all loose dropped items.</summary>
+    public IReadOnlyList<DroppedItem> DroppedItems => _droppedItemsView;
 
     /// <summary>Observer event raised when player health changes (currentHp, maxHp).</summary>
     public event Action<int, int>? OnHealthChanged;
@@ -155,7 +191,10 @@ public sealed class GameSession : IDisposable
         Func<string, Item> itemResolver,
         DayNightCycle? dayNightCycle = null,
         RuleEngine? ruleEngine = null,
-        Difficulty difficulty = Difficulty.Normal)
+        Difficulty difficulty = Difficulty.Normal,
+        int viewDistanceChunks = ChunkManager.DEFAULT_VIEW_DISTANCE,
+        int minViewDistanceChunks = ChunkManager.DEFAULT_MIN_VIEW_DISTANCE,
+        int maxViewDistanceChunks = ChunkManager.DEFAULT_MAX_VIEW_DISTANCE)
     {
         ArgumentNullException.ThrowIfNull(level);
         ArgumentNullException.ThrowIfNull(player);
@@ -168,6 +207,19 @@ public sealed class GameSession : IDisposable
         _dayNightCycle = dayNightCycle ?? new DayNightCycle();
         _ruleEngine = ruleEngine ?? new RuleEngine();
         _difficulty = difficulty;
+        _chunkManager = new ChunkManager(level, viewDistanceChunks, minViewDistanceChunks, maxViewDistanceChunks);
+
+        _enemiesView = _enemies.AsReadOnly();
+        _animalsView = _animals.AsReadOnly();
+        _resourcesView = _resources.AsReadOnly();
+        _structuresView = _structures.AsReadOnly();
+        _projectilesView = _projectiles.AsReadOnly();
+        _droppedItemsView = _droppedItems.AsReadOnly();
+
+        _onActivateChunkResource = ActivateChunkResource;
+        _onActivateChunkStructure = ActivateChunkStructure;
+        _onDeactivateChunkEntities = DeactivateChunkEntities;
+        _onActivateChunkAnimal = ActivateChunkAnimal;
 
         _projectilePool = new ObjectPool<Projectile>(CreatePooledProjectile, p => p.Deactivate(), initialCapacity: 32, maxCapacity: 256);
         _droppedItemPool = new ObjectPool<DroppedItem>(CreatePooledDrop, d => d.Deactivate(), initialCapacity: 24, maxCapacity: 128);
@@ -176,6 +228,75 @@ public sealed class GameSession : IDisposable
 
         ConfigureStateMachine();
         SubscribeInternalEvents();
+    }
+
+    /// <summary>Configures procedural resource spawning for newly streamed chunks.</summary>
+    public void ConfigureChunkResourceSpawner(
+        Action<ChunkCoord, List<ResourceSpawnPoint>>? generator,
+        Func<ResourceType, Vector2D, ResourceNode>? resourceFactory)
+    {
+        _chunkManager.ConfigureResourceSpawner(generator, resourceFactory);
+    }
+
+    /// <summary>Configures procedural spawners for chunk resources, village structures, and animals.</summary>
+    public void ConfigureChunkWorldSpawners(
+        Action<ChunkCoord, List<ResourceSpawnPoint>>? resourceGenerator,
+        Func<ResourceType, Vector2D, ResourceNode>? resourceFactory,
+        Action<ChunkCoord, List<StructureSpawnPoint>>? structureGenerator = null,
+        Func<StructureType, int, int, Structure>? structureFactory = null,
+        Action<ChunkCoord, List<AnimalSpawnPoint>>? animalGenerator = null,
+        Func<AnimalType, Vector2D, Animal>? animalFactory = null)
+    {
+        _chunkManager.ConfigureWorldSpawners(
+            resourceGenerator,
+            resourceFactory,
+            structureGenerator,
+            structureFactory,
+            animalGenerator,
+            animalFactory);
+    }
+
+    /// <summary>Registers procedural villages for UI telemetry and minimap discovery.</summary>
+    public void SetVillages(IReadOnlyList<VillageSite> villages)
+    {
+        _villages = villages ?? Array.Empty<VillageSite>();
+    }
+
+    /// <summary>Returns the village enclosing or immediately adjacent to <paramref name="worldPosition"/>, if any.</summary>
+    public VillageSite? FindVillageAt(Vector2D worldPosition)
+    {
+        for (int i = 0; i < _villages.Count; i++)
+        {
+            if (_villages[i].IsNearWorldPosition(worldPosition, _level.TileSize))
+            {
+                return _villages[i];
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Updates chunk view distance at runtime and immediately reconciles loaded chunks.</summary>
+    public void SetViewDistanceChunks(int viewDistanceChunks)
+    {
+        _chunkManager.SetViewDistance(viewDistanceChunks);
+        if (_chunksInitialized)
+        {
+            _chunkManager.UpdateAround(
+                _player.Center,
+                _onActivateChunkResource,
+                _onActivateChunkStructure,
+                _onDeactivateChunkEntities,
+                maxChunksPerTick: _level.TotalChunkCount,
+                onActivateAnimal: _onActivateChunkAnimal);
+        }
+    }
+
+    /// <summary>Immediately streams the initial view-distance neighborhood around the player.</summary>
+    public void InitializeChunksAroundPlayer()
+    {
+        _chunkManager.InitializeAround(_player.Center, _onActivateChunkResource, _onActivateChunkStructure, _onActivateChunkAnimal);
+        _chunksInitialized = true;
     }
 
     /// <summary>Attaches a <see cref="RaidWaveSpawner"/> triggered automatically on night transitions.</summary>
@@ -202,7 +323,15 @@ public sealed class GameSession : IDisposable
     public void DetachHudObserver(IHudObserver observer) => _hudObservers.Remove(observer);
 
     /// <summary>Transitions the state machine into <see cref="GameState.Playing"/>.</summary>
-    public void Start() => _stateMachine.TransitionTo(GameState.Playing);
+    public void Start()
+    {
+        if (_level.UsesLazyChunkLoading && !_chunksInitialized)
+        {
+            InitializeChunksAroundPlayer();
+        }
+
+        _stateMachine.TransitionTo(GameState.Playing);
+    }
 
     /// <summary>Transitions the state machine from Playing into <see cref="GameState.Paused"/>.</summary>
     public void Pause()
@@ -242,41 +371,50 @@ public sealed class GameSession : IDisposable
         _collisionDetector.MoveWithTileCollision(_player, delta, _player.Size, _level);
     }
 
-    /// <summary>Adds a harvestable resource node to the active island.</summary>
+    /// <summary>Adds a harvestable resource node to the active island (or hibernates it if its chunk is unloaded).</summary>
     public void AddResource(ResourceNode resource)
     {
         ArgumentNullException.ThrowIfNull(resource);
-        _resources.Add(resource);
-    }
-
-    /// <summary>Places a structure onto the island and updates tile solid occupancy.</summary>
-    public void AddStructure(Structure structure)
-    {
-        ArgumentNullException.ThrowIfNull(structure);
-        _structures.Add(structure);
-
-        if (structure.IsSolid && _level.IsInBounds(structure.TileCol, structure.TileRow))
+        if (_level.UsesLazyChunkLoading)
         {
-            _level.SetStructureOccupancy(structure.TileCol, structure.TileRow, true);
-            structure.OnDefeated += HandleStructureDestroyed;
-        }
-
-        RequestSound("build");
-    }
-
-    /// <summary>Looks up a living structure occupying <paramref name="tile"/> (used by wall-breaching AI).</summary>
-    public Structure? FindStructureAtTile(GridPoint tile)
-    {
-        for (int i = 0; i < _structures.Count; i++)
-        {
-            Structure s = _structures[i];
-            if (s.IsAlive && s.TileCol == tile.Col && s.TileRow == tile.Row)
+            ChunkCoord coord = _level.GetChunkCoordForWorld(resource.Center);
+            if (!_level.IsChunkLoaded(coord))
             {
-                return s;
+                _chunkManager.HibernateResource(coord, resource);
+                return;
             }
         }
 
-        return null;
+        ActivateChunkResource(resource);
+    }
+
+    /// <summary>Places a structure onto the island and updates tile solid occupancy (hibernating if its chunk is unloaded).</summary>
+    public void AddStructure(Structure structure)
+    {
+        ArgumentNullException.ThrowIfNull(structure);
+        if (structure.IsSolid && _level.IsInBounds(structure.TileCol, structure.TileRow))
+        {
+            _level.SetStructureOccupancy(structure.TileCol, structure.TileRow, true);
+        }
+
+        if (_level.UsesLazyChunkLoading)
+        {
+            ChunkCoord coord = _level.GetChunkCoordForTile(structure.TileCol, structure.TileRow);
+            if (!_level.IsChunkLoaded(coord))
+            {
+                _chunkManager.HibernateStructure(coord, structure);
+                return;
+            }
+        }
+
+        ActivateChunkStructure(structure);
+        RequestSound("build");
+    }
+
+    /// <summary>Looks up a living structure occupying <paramref name="tile"/> in O(1) time (used by wall-breaching AI).</summary>
+    public Structure? FindStructureAtTile(GridPoint tile)
+    {
+        return _structureByTile.TryGetValue(tile, out Structure? s) && s.IsAlive ? s : null;
     }
 
     /// <summary>Registers a hostile enemy into the active session.</summary>
@@ -285,6 +423,23 @@ public sealed class GameSession : IDisposable
         ArgumentNullException.ThrowIfNull(enemy);
         _enemies.Add(enemy);
         enemy.OnDefeated += HandleEnemyDefeated;
+    }
+
+    /// <summary>Registers a passive wildlife/livestock animal into the session (or hibernates if its chunk is unloaded).</summary>
+    public void AddAnimal(Animal animal)
+    {
+        ArgumentNullException.ThrowIfNull(animal);
+        if (_level.UsesLazyChunkLoading)
+        {
+            ChunkCoord coord = _level.GetChunkCoordForWorld(animal.Center);
+            if (!_level.IsChunkLoaded(coord))
+            {
+                _chunkManager.HibernateAnimal(coord, animal);
+                return;
+            }
+        }
+
+        ActivateChunkAnimal(animal);
     }
 
     /// <summary>Spawns and tracks the island's boss.</summary>
@@ -427,6 +582,11 @@ public sealed class GameSession : IDisposable
             return true;
         }
 
+        if (TryMeleeStrikeAnimal(aimWorldPosition))
+        {
+            return true;
+        }
+
         return TryHarvestResourceNear(aimWorldPosition);
     }
 
@@ -463,9 +623,39 @@ public sealed class GameSession : IDisposable
         }
 
         Vector2D spawnPos = FindSafeBossSpawnPosition();
-        Boss boss = entityFactory.CreateBoss(bossConfig.BossType, spawnPos, _difficulty);
+        Boss boss = entityFactory.CreateBoss(bossConfig, spawnPos, _difficulty);
         SpawnBoss(boss);
         return true;
+    }
+
+    /// <summary>Snapshots previous positions of moving entities before a fixed physics step for smooth render interpolation.</summary>
+    public void CapturePreviousPositions()
+    {
+        _player.CapturePreviousPosition();
+
+        for (int i = 0; i < _enemies.Count; i++)
+        {
+            if (_enemies[i].IsActive)
+            {
+                _enemies[i].CapturePreviousPosition();
+            }
+        }
+
+        for (int i = 0; i < _animals.Count; i++)
+        {
+            if (_animals[i].IsActive)
+            {
+                _animals[i].CapturePreviousPosition();
+            }
+        }
+
+        for (int i = 0; i < _projectiles.Count; i++)
+        {
+            if (_projectiles[i].IsActive)
+            {
+                _projectiles[i].CapturePreviousPosition();
+            }
+        }
     }
 
     /// <summary>Delegates fixed-timestep simulation to the active <see cref="IGameState"/> in <see cref="StateMachine"/>.</summary>
@@ -500,11 +690,44 @@ public sealed class GameSession : IDisposable
         ArgumentNullException.ThrowIfNull(entityFactory);
 
         ClearActiveWorldEntities();
+        if (Enum.TryParse(snapshot.Difficulty, ignoreCase: true, out Difficulty restoredDifficulty))
+        {
+            _difficulty = restoredDifficulty;
+        }
+
         RestorePlayerFromSnapshot(snapshot.Player);
         _ruleEngine.RestoreScore(snapshot.Score);
-        _dayNightCycle.RestoreState(snapshot.DayNumber, snapshot.TimeOfDaySeconds);
+        _dayNightCycle.RestoreState(snapshot.DayNumber, snapshot.TimeOfDaySeconds, suppressEvents: true);
+        NotifyDayPhase(force: true);
         _currentWaveIndex = snapshot.CurrentWaveIndex;
         _waveSpawner?.RestoreWaveIndex(snapshot.CurrentWaveIndex);
+
+        if (snapshot.GeneratedChunks is { Count: > 0 })
+        {
+            var generated = new List<ChunkCoord>(snapshot.GeneratedChunks.Count);
+            for (int i = 0; i < snapshot.GeneratedChunks.Count; i++)
+            {
+                generated.Add(new ChunkCoord(snapshot.GeneratedChunks[i].ChunkX, snapshot.GeneratedChunks[i].ChunkY));
+            }
+
+            _chunkManager.RestoreGeneratedChunks(generated);
+        }
+        else if (_level.UsesLazyChunkLoading && snapshot.Resources.Count > 0)
+        {
+            var inferred = new HashSet<ChunkCoord>();
+            for (int i = 0; i < snapshot.Resources.Count; i++)
+            {
+                inferred.Add(_level.GetChunkCoordForWorld(new Vector2D(snapshot.Resources[i].X, snapshot.Resources[i].Y)));
+            }
+
+            _chunkManager.RestoreGeneratedChunks(inferred);
+        }
+
+        if (_level.UsesLazyChunkLoading)
+        {
+            InitializeChunksAroundPlayer();
+        }
+
         RestoreEntitiesFromSnapshot(snapshot, entityFactory);
     }
 
@@ -522,6 +745,7 @@ public sealed class GameSession : IDisposable
         _ruleEngine.OnScoreChanged -= HandleScoreChanged;
         _dayNightCycle.OnDayPhaseChanged -= HandleDayPhaseChanged;
         _stateMachine.OnStateChanged -= HandleStateChanged;
+        ClearActiveWorldEntities();
         _hudObservers.Clear();
         _disposed = true;
     }
@@ -553,10 +777,18 @@ public sealed class GameSession : IDisposable
             _swingEffectRemaining = MathF.Max(0f, _swingEffectRemaining - deltaTime);
         }
 
+        _pathfindingCoordinator.BeginTick(deltaTime);
+        _chunkManager.UpdateAround(
+            _player.Center,
+            _onActivateChunkResource,
+            _onActivateChunkStructure,
+            _onDeactivateChunkEntities,
+            onActivateAnimal: _onActivateChunkAnimal);
         _dayNightCycle.Advance(deltaTime);
         NotifyDayPhase();
         UpdateNightReinforcements(deltaTime);
         _player.Update(deltaTime);
+        UpdateAnimals(deltaTime);
         UpdateEnemies(deltaTime);
         RebuildSpatialGrids();
         UpdateProjectiles(deltaTime);
@@ -621,6 +853,49 @@ public sealed class GameSession : IDisposable
         return best;
     }
 
+    private bool TryMeleeStrikeAnimal(Vector2D aimWorldPosition)
+    {
+        float reach = _player.EquippedWeapon?.AttackRange ?? 54f;
+        Animal? bestTarget = FindClosestAnimalInReach(aimWorldPosition, reach);
+        if (bestTarget is null)
+        {
+            return false;
+        }
+
+        bool struck = _ruleEngine.ResolveMeleeAttack(_player, bestTarget);
+        if (struck)
+        {
+            RequestSound("hit");
+        }
+
+        return struck;
+    }
+
+    private Animal? FindClosestAnimalInReach(Vector2D aimWorldPosition, float reach)
+    {
+        Animal? best = null;
+        float bestAimDist = float.MaxValue;
+        float reachSq = (reach + 16f) * (reach + 16f);
+
+        for (int i = 0; i < _animals.Count; i++)
+        {
+            Animal animal = _animals[i];
+            if (!animal.IsAlive || Vector2D.DistanceSquared(_player.Center, animal.Center) > reachSq)
+            {
+                continue;
+            }
+
+            float aimDist = Vector2D.DistanceSquared(aimWorldPosition, animal.Center);
+            if (aimDist < bestAimDist)
+            {
+                bestAimDist = aimDist;
+                best = animal;
+            }
+        }
+
+        return best;
+    }
+
     private bool TryHarvestResourceNear(Vector2D aimWorldPosition)
     {
         const float HARVEST_REACH_SQ = 68f * 68f;
@@ -650,10 +925,15 @@ public sealed class GameSession : IDisposable
             return false;
         }
 
-        DroppedItem? drop = _ruleEngine.ResolveHarvest(bestNode, _player.EquippedToolType, _player.HarvestPower);
-        if (drop is not null)
+        if (_ruleEngine.TryResolveHarvest(
+                bestNode,
+                _player.EquippedToolType,
+                _player.HarvestPower,
+                out string dropItemId,
+                out int dropQuantity,
+                out Vector2D dropPosition))
         {
-            SpawnPooledDroppedItem(drop.ItemId, drop.Quantity, drop.Position);
+            SpawnPooledDroppedItem(dropItemId, dropQuantity, dropPosition);
         }
 
         _player.TriggerActionCooldown();
@@ -695,19 +975,58 @@ public sealed class GameSession : IDisposable
 
     private Vector2D FindSafeBossSpawnPosition()
     {
-        for (int row = 2; row < _level.Height - 2; row++)
+        (int pCol, int pRow) = _level.WorldToTile(_player.Center);
+        for (int radius = 6; radius <= 14; radius++)
         {
-            for (int col = 2; col < _level.Width - 2; col++)
+            for (int dy = -radius; dy <= radius; dy++)
             {
-                if (!_level.IsTileWalkable(col, row))
+                for (int dx = -radius; dx <= radius; dx++)
                 {
-                    continue;
-                }
+                    if (global::System.Math.Abs(dx) != radius && global::System.Math.Abs(dy) != radius)
+                    {
+                        continue;
+                    }
 
-                Vector2D candidate = _level.TileToWorldCenter(col, row);
-                if (Vector2D.Distance(candidate, _player.Center) >= 160f)
+                    int col = pCol + dx;
+                    int row = pRow + dy;
+                    if (!_level.IsTileWalkable(col, row))
+                    {
+                        continue;
+                    }
+
+                    Vector2D candidate = _level.TileToWorldCenter(col, row);
+                    float dist = Vector2D.Distance(candidate, _player.Center);
+                    if (dist >= 180f && dist <= 448f)
+                    {
+                        return candidate;
+                    }
+                }
+            }
+        }
+
+        IReadOnlyList<ChunkCoord> loadedCoords = _level.LoadedChunkCoords;
+        for (int idx = 0; idx < loadedCoords.Count; idx++)
+        {
+            if (!_level.TryGetLoadedChunk(loadedCoords[idx], out WorldChunk? chunk) || chunk is null)
+            {
+                continue;
+            }
+
+            for (int r = 0; r < chunk.Height; r++)
+            {
+                for (int c = 0; c < chunk.Width; c++)
                 {
-                    return candidate;
+                    Tile tile = chunk.GetLocalTile(c, r);
+                    if (!tile.IsWalkable)
+                    {
+                        continue;
+                    }
+
+                    Vector2D candidate = _level.TileToWorldCenter(tile.Col, tile.Row);
+                    if (Vector2D.Distance(candidate, _player.Center) >= 160f)
+                    {
+                        return candidate;
+                    }
                 }
             }
         }
@@ -717,13 +1036,63 @@ public sealed class GameSession : IDisposable
 
     private void RebuildSpatialGrids()
     {
-        _enemySpatialGrid.Clear();
-        _enemySpatialGrid.InsertRange(_enemies);
+        _playerTargetGrid.Clear();
+        for (int i = 0; i < _enemies.Count; i++)
+        {
+            Enemy enemy = _enemies[i];
+            if (!enemy.IsAlive)
+            {
+                continue;
+            }
+
+            if (!enemy.IsBoss && _level.UsesLazyChunkLoading && !_level.IsChunkLoaded(_level.GetChunkCoordForWorld(enemy.Center)))
+            {
+                continue;
+            }
+
+            _playerTargetGrid.Insert(enemy);
+        }
+
+        for (int i = 0; i < _animals.Count; i++)
+        {
+            Animal animal = _animals[i];
+            if (!animal.IsAlive)
+            {
+                continue;
+            }
+
+            if (_level.UsesLazyChunkLoading && !_level.IsChunkLoaded(_level.GetChunkCoordForWorld(animal.Center)))
+            {
+                continue;
+            }
+
+            _playerTargetGrid.Insert(animal);
+        }
 
         _playerSpatialGrid.Clear();
         if (_player.IsAlive)
         {
             _playerSpatialGrid.Insert(_player);
+        }
+    }
+
+    private void UpdateAnimals(float deltaTime)
+    {
+        for (int i = 0; i < _animals.Count; i++)
+        {
+            Animal animal = _animals[i];
+            if (!animal.IsAlive)
+            {
+                continue;
+            }
+
+            if (_level.UsesLazyChunkLoading && !_level.IsChunkLoaded(_level.GetChunkCoordForWorld(animal.Center)))
+            {
+                continue;
+            }
+
+            animal.Update(deltaTime);
+            animal.UpdateBehavior(_player, _level, _collisionDetector, deltaTime);
         }
     }
 
@@ -733,6 +1102,11 @@ public sealed class GameSession : IDisposable
         {
             Enemy enemy = _enemies[i];
             if (!enemy.IsAlive)
+            {
+                continue;
+            }
+
+            if (!enemy.IsBoss && _level.UsesLazyChunkLoading && !_level.IsChunkLoaded(_level.GetChunkCoordForWorld(enemy.Center)))
             {
                 continue;
             }
@@ -769,14 +1143,14 @@ public sealed class GameSession : IDisposable
             projectile,
             deltaTime,
             _level,
-            _enemySpatialGrid,
-            _enemyQueryBuffer,
-            out Enemy? hitEnemy,
+            _playerTargetGrid,
+            _characterQueryBuffer,
+            out Character? hitTarget,
             out _);
 
-        if (hit && hitEnemy is not null)
+        if (hit && hitTarget is not null)
         {
-            _ruleEngine.ResolveProjectileHit(projectile, hitEnemy);
+            _ruleEngine.ResolveProjectileHit(projectile, hitTarget);
             RequestSound("hit");
         }
     }
@@ -825,8 +1199,23 @@ public sealed class GameSession : IDisposable
         ReleaseInactiveProjectiles();
         ReleaseInactiveDrops();
         RemoveInactiveInPlace(_resources);
-        RemoveInactiveInPlace(_structures);
+        RemoveInactiveStructuresInPlace();
         RemoveInactiveInPlace(_enemies);
+        RemoveInactiveInPlace(_animals);
+    }
+
+    private void RemoveInactiveStructuresInPlace()
+    {
+        for (int i = _structures.Count - 1; i >= 0; i--)
+        {
+            Structure structure = _structures[i];
+            if (!structure.IsActive)
+            {
+                structure.OnDefeated -= HandleStructureDestroyed;
+                _structureByTile.Remove(new GridPoint(structure.TileCol, structure.TileRow));
+                _structures.RemoveAt(i);
+            }
+        }
     }
 
     private void ReleaseInactiveProjectiles()
@@ -915,7 +1304,7 @@ public sealed class GameSession : IDisposable
 
     private void HandleDayPhaseChanged(int dayNumber, DayPhase phase)
     {
-        NotifyDayPhase();
+        NotifyDayPhase(force: true);
         if (phase == DayPhase.Night && _waveSpawner is not null)
         {
             _nightReinforcementTimer = NIGHT_REINFORCEMENT_INTERVAL;
@@ -955,14 +1344,28 @@ public sealed class GameSession : IDisposable
         RequestSound("raid_horn");
     }
 
-    private void NotifyDayPhase()
+    private void NotifyDayPhase(bool force = false)
     {
+        int day = _dayNightCycle.DayNumber;
+        DayPhase phase = _dayNightCycle.CurrentPhase;
+        float progress = _dayNightCycle.NormalizedPhaseProgress;
+        int progressBucket = (int)(progress * 100f);
+
+        if (!force &&
+            day == _lastNotifiedDay &&
+            phase == _lastNotifiedPhase &&
+            progressBucket == _lastNotifiedProgressBucket)
+        {
+            return;
+        }
+
+        _lastNotifiedDay = day;
+        _lastNotifiedPhase = phase;
+        _lastNotifiedProgressBucket = progressBucket;
+
         for (int i = 0; i < _hudObservers.Count; i++)
         {
-            _hudObservers[i].OnDayPhaseUpdated(
-                _dayNightCycle.DayNumber,
-                _dayNightCycle.CurrentPhase,
-                _dayNightCycle.NormalizedPhaseProgress);
+            _hudObservers[i].OnDayPhaseUpdated(day, phase, progress);
         }
     }
 
@@ -1012,9 +1415,151 @@ public sealed class GameSession : IDisposable
         {
             if (ReferenceEquals(_structures[i], destroyed))
             {
-                _level.SetStructureOccupancy(_structures[i].TileCol, _structures[i].TileRow, false);
+                Structure structure = _structures[i];
+                _structureByTile.Remove(new GridPoint(structure.TileCol, structure.TileRow));
+                if (structure.IsSolid && _level.IsInBounds(structure.TileCol, structure.TileRow))
+                {
+                    _level.SetStructureOccupancy(structure.TileCol, structure.TileRow, false);
+                }
+
                 RequestSound("structure_break");
                 return;
+            }
+        }
+    }
+
+    private void ActivateChunkResource(ResourceNode resource)
+    {
+        if (resource.IsAlive)
+        {
+            _resources.Add(resource);
+        }
+    }
+
+    private void ActivateChunkStructure(Structure structure)
+    {
+        if (!structure.IsAlive)
+        {
+            return;
+        }
+
+        var tilePoint = new GridPoint(structure.TileCol, structure.TileRow);
+        if (_structureByTile.TryGetValue(tilePoint, out Structure? existing) && existing.IsAlive && !ReferenceEquals(existing, structure))
+        {
+            return;
+        }
+
+        _structures.Add(structure);
+        _structureByTile[tilePoint] = structure;
+        if (structure.IsSolid && _level.IsInBounds(structure.TileCol, structure.TileRow))
+        {
+            _level.SetStructureOccupancy(structure.TileCol, structure.TileRow, true);
+        }
+
+        structure.OnDefeated -= HandleStructureDestroyed;
+        structure.OnDefeated += HandleStructureDestroyed;
+    }
+
+    private void ActivateChunkAnimal(Animal animal)
+    {
+        if (!animal.IsAlive)
+        {
+            return;
+        }
+
+        _animals.Add(animal);
+        animal.OnDefeated -= HandleAnimalDefeated;
+        animal.OnDefeated += HandleAnimalDefeated;
+    }
+
+    private void HandleAnimalDefeated(IDamageable defeated)
+    {
+        defeated.OnDefeated -= HandleAnimalDefeated;
+        Animal? matched = FindAnimalByReference(defeated);
+        if (matched is null)
+        {
+            return;
+        }
+
+        if (matched.ScoreReward > 0)
+        {
+            _ruleEngine.AddScore(matched.ScoreReward);
+        }
+
+        RequestSound("harvest");
+        SpawnPooledDroppedItem(matched.PrimaryDropItemId, matched.PrimaryDropQuantity, matched.Center);
+        if (!string.IsNullOrWhiteSpace(matched.SecondaryDropItemId) && matched.SecondaryDropQuantity > 0)
+        {
+            SpawnPooledDroppedItem(matched.SecondaryDropItemId, matched.SecondaryDropQuantity, matched.Center + new Vector2D(8f, 4f));
+        }
+    }
+
+    private Animal? FindAnimalByReference(IDamageable target)
+    {
+        for (int i = 0; i < _animals.Count; i++)
+        {
+            if (ReferenceEquals(_animals[i], target))
+            {
+                return _animals[i];
+            }
+        }
+
+        return null;
+    }
+
+    private void DeactivateChunkEntities(ChunkCoord coord)
+    {
+        for (int i = _resources.Count - 1; i >= 0; i--)
+        {
+            ResourceNode resource = _resources[i];
+            if (!resource.IsAlive)
+            {
+                _resources.RemoveAt(i);
+                continue;
+            }
+
+            if (_level.GetChunkCoordForWorld(resource.Center) == coord)
+            {
+                _chunkManager.HibernateResource(coord, resource);
+                _resources.RemoveAt(i);
+            }
+        }
+
+        for (int i = _structures.Count - 1; i >= 0; i--)
+        {
+            Structure structure = _structures[i];
+            if (!structure.IsAlive)
+            {
+                structure.OnDefeated -= HandleStructureDestroyed;
+                _structureByTile.Remove(new GridPoint(structure.TileCol, structure.TileRow));
+                _structures.RemoveAt(i);
+                continue;
+            }
+
+            if (_level.GetChunkCoordForTile(structure.TileCol, structure.TileRow) == coord)
+            {
+                structure.OnDefeated -= HandleStructureDestroyed;
+                _chunkManager.HibernateStructure(coord, structure);
+                _structureByTile.Remove(new GridPoint(structure.TileCol, structure.TileRow));
+                _structures.RemoveAt(i);
+            }
+        }
+
+        for (int i = _animals.Count - 1; i >= 0; i--)
+        {
+            Animal animal = _animals[i];
+            if (!animal.IsAlive)
+            {
+                animal.OnDefeated -= HandleAnimalDefeated;
+                _animals.RemoveAt(i);
+                continue;
+            }
+
+            if (_level.GetChunkCoordForWorld(animal.Center) == coord)
+            {
+                animal.OnDefeated -= HandleAnimalDefeated;
+                _chunkManager.HibernateAnimal(coord, animal);
+                _animals.RemoveAt(i);
             }
         }
     }
@@ -1103,9 +1648,19 @@ public sealed class GameSession : IDisposable
             snapshot.Resources.Add(new EntityStateSnapshot { Id = r.Id, Type = r.ResourceType.ToString(), X = r.Position.X, Y = r.Position.Y, Hp = r.CurrentHp });
         }
 
+        foreach (ResourceNode r in _chunkManager.GetHibernatedResources())
+        {
+            snapshot.Resources.Add(new EntityStateSnapshot { Id = r.Id, Type = r.ResourceType.ToString(), X = r.Position.X, Y = r.Position.Y, Hp = r.CurrentHp });
+        }
+
         for (int i = 0; i < _structures.Count; i++)
         {
             Structure s = _structures[i];
+            snapshot.Structures.Add(new StructureStateSnapshot { Id = s.Id, Type = s.StructureType.ToString(), X = s.Position.X, Y = s.Position.Y, TileCol = s.TileCol, TileRow = s.TileRow, Hp = s.CurrentHp });
+        }
+
+        foreach (Structure s in _chunkManager.GetHibernatedStructures())
+        {
             snapshot.Structures.Add(new StructureStateSnapshot { Id = s.Id, Type = s.StructureType.ToString(), X = s.Position.X, Y = s.Position.Y, TileCol = s.TileCol, TileRow = s.TileRow, Hp = s.CurrentHp });
         }
 
@@ -1114,6 +1669,22 @@ public sealed class GameSession : IDisposable
             Enemy e = _enemies[i];
             snapshot.Enemies.Add(new EnemyStateSnapshot { Id = e.Id, Type = e.Archetype, X = e.Position.X, Y = e.Position.Y, Hp = e.CurrentHp, IsBoss = e.IsBoss });
         }
+
+        for (int i = 0; i < _animals.Count; i++)
+        {
+            Animal a = _animals[i];
+            snapshot.Animals.Add(new AnimalStateSnapshot { Id = a.Id, Type = a.AnimalType.ToString(), X = a.Position.X, Y = a.Position.Y, Hp = a.CurrentHp });
+        }
+
+        foreach (Animal a in _chunkManager.GetHibernatedAnimals())
+        {
+            snapshot.Animals.Add(new AnimalStateSnapshot { Id = a.Id, Type = a.AnimalType.ToString(), X = a.Position.X, Y = a.Position.Y, Hp = a.CurrentHp });
+        }
+
+        foreach (ChunkCoord coord in _chunkManager.GeneratedChunks)
+        {
+            snapshot.GeneratedChunks.Add(new ChunkCoordSnapshot { ChunkX = coord.ChunkX, ChunkY = coord.ChunkY });
+        }
     }
 
     private void ClearActiveWorldEntities()
@@ -1121,24 +1692,70 @@ public sealed class GameSession : IDisposable
         for (int i = 0; i < _structures.Count; i++)
         {
             Structure s = _structures[i];
+            s.OnDefeated -= HandleStructureDestroyed;
             if (s.IsSolid && _level.IsInBounds(s.TileCol, s.TileRow))
             {
                 _level.SetStructureOccupancy(s.TileCol, s.TileRow, false);
             }
         }
 
+        foreach (Structure s in _chunkManager.GetHibernatedStructures())
+        {
+            if (s.IsSolid && _level.IsInBounds(s.TileCol, s.TileRow))
+            {
+                _level.SetStructureOccupancy(s.TileCol, s.TileRow, false);
+            }
+        }
+
+        for (int i = 0; i < _animals.Count; i++)
+        {
+            _animals[i].OnDefeated -= HandleAnimalDefeated;
+        }
+
+        for (int i = 0; i < _enemies.Count; i++)
+        {
+            _enemies[i].OnDefeated -= HandleEnemyDefeated;
+        }
+
+        if (_activeBoss is not null)
+        {
+            _activeBoss.OnHealthChanged -= HandleBossHealthChanged;
+            _activeBoss.OnEnraged -= HandleBossEnraged;
+        }
+
+        for (int i = _projectiles.Count - 1; i >= 0; i--)
+        {
+            Projectile projectile = _projectiles[i];
+            projectile.Deactivate();
+            _projectilePool.Release(projectile);
+        }
+
+        for (int i = _droppedItems.Count - 1; i >= 0; i--)
+        {
+            DroppedItem drop = _droppedItems[i];
+            drop.Deactivate();
+            _droppedItemPool.Release(drop);
+        }
+
         _resources.Clear();
         _structures.Clear();
+        _structureByTile.Clear();
         _enemies.Clear();
+        _animals.Clear();
         _projectiles.Clear();
         _droppedItems.Clear();
+        _chunkManager.ClearHibernatedState();
+        _pathfindingCoordinator.ClearCache();
+        _chunksInitialized = false;
         _activeBoss = null;
         _bossDefeated = false;
+        _lastNotifiedDay = -1;
+        _lastNotifiedProgressBucket = -1;
     }
 
     private void RestorePlayerFromSnapshot(PlayerSnapshot playerDto)
     {
-        _player.SetPosition(new Vector2D(playerDto.X, playerDto.Y));
+        _player.TeleportTo(new Vector2D(playerDto.X, playerDto.Y));
         _player.RestoreHealth(playerDto.Hp);
         _player.Inventory.Clear();
 
@@ -1191,6 +1808,20 @@ public sealed class GameSession : IDisposable
                 Enemy enemy = entityFactory.CreateEnemy(e.Type, new Vector2D(e.X, e.Y), _difficulty);
                 enemy.RestoreHealth(global::System.Math.Min(e.Hp, enemy.MaxHp));
                 AddEnemy(enemy);
+            }
+        }
+
+        if (snapshot.Animals is not null)
+        {
+            for (int i = 0; i < snapshot.Animals.Count; i++)
+            {
+                AnimalStateSnapshot a = snapshot.Animals[i];
+                if (Enum.TryParse(a.Type, ignoreCase: true, out AnimalType animalType))
+                {
+                    Animal animal = entityFactory.CreateAnimal(animalType, new Vector2D(a.X, a.Y));
+                    animal.RestoreHealth(global::System.Math.Min(a.Hp, animal.MaxHp));
+                    AddAnimal(animal);
+                }
             }
         }
     }

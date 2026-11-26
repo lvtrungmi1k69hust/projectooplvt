@@ -12,6 +12,7 @@ public sealed class Inventory
 {
     private readonly int _capacity;
     private readonly List<ItemStack> _stacks;
+    private readonly IReadOnlyList<ItemStack> _stacksView;
 
     /// <summary>Gets the maximum number of distinct item stacks allowed in this inventory.</summary>
     public int Capacity => _capacity;
@@ -22,8 +23,8 @@ public sealed class Inventory
     /// <summary>Gets the number of empty inventory slots remaining.</summary>
     public int FreeSlots => _capacity - _stacks.Count;
 
-    /// <summary>Gets a read-only view of all active stacks to protect internal collection invariants.</summary>
-    public IReadOnlyList<ItemStack> Stacks => _stacks.AsReadOnly();
+    /// <summary>Gets a cached read-only view of all active stacks to protect internal collection invariants.</summary>
+    public IReadOnlyList<ItemStack> Stacks => _stacksView;
 
     /// <summary>Raised whenever items are added, removed, or cleared.</summary>
     public event Action? OnInventoryChanged;
@@ -40,6 +41,7 @@ public sealed class Inventory
 
         _capacity = capacity;
         _stacks = new List<ItemStack>(capacity);
+        _stacksView = _stacks.AsReadOnly();
     }
 
     /// <summary>Returns the total quantity of <paramref name="itemId"/> across all stacks.</summary>

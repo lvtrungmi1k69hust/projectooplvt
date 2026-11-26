@@ -18,5 +18,17 @@ public enum ResourceType
     IronDeposit = 3,
 
     /// <summary>Gold ore deposit mined with a pickaxe.</summary>
-    GoldDeposit = 4
+    GoldDeposit = 4,
+
+    /// <summary>Wild berry bush harvested by hand or tool for berries.</summary>
+    BerryBush = 5,
+
+    /// <summary>Ripe wheat crop harvested by hand or tool for wheat.</summary>
+    WheatCrop = 6,
+
+    /// <summary>Coal seam mined with a pickaxe for fuel and torches.</summary>
+    CoalDeposit = 7,
+
+    /// <summary>Arcane crystal cluster mined with a pickaxe for crystal.</summary>
+    CrystalCluster = 8
 }

@@ -10,6 +10,7 @@ public abstract class Entity
 {
     private readonly string _id;
     private Vector2D _position;
+    private Vector2D _previousPosition;
     private Vector2D _size;
     private bool _isActive;
 
@@ -18,6 +19,9 @@ public abstract class Entity
 
     /// <summary>Gets the top-left world position of this entity.</summary>
     public Vector2D Position => _position;
+
+    /// <summary>Gets the top-left world position captured at the start of the previous fixed tick.</summary>
+    public Vector2D PreviousPosition => _previousPosition;
 
     /// <summary>Gets the bounding box dimensions (width, height) in world units.</summary>
     public Vector2D Size => _size;
@@ -48,9 +52,19 @@ public abstract class Entity
 
         _id = id;
         _position = position;
+        _previousPosition = position;
         _size = size;
         _isActive = true;
     }
+
+    /// <summary>Snapshots the current position prior to a fixed physics step for smooth render interpolation.</summary>
+    public void CapturePreviousPosition() => _previousPosition = _position;
+
+    /// <summary>Computes the linearly interpolated top-left position for render factor <paramref name="alpha"/> in [0, 1].</summary>
+    public Vector2D GetInterpolatedPosition(float alpha) => Vector2D.Lerp(_previousPosition, _position, alpha);
+
+    /// <summary>Computes the linearly interpolated bounding box center for render factor <paramref name="alpha"/> in [0, 1].</summary>
+    public Vector2D GetInterpolatedCenter(float alpha) => GetInterpolatedPosition(alpha) + (_size * 0.5f);
 
     /// <summary>Returns the current axis-aligned bounding box of this entity.</summary>
     public RectF GetBounds() => new(_position, _size);
@@ -64,6 +78,13 @@ public abstract class Entity
 
     /// <summary>Updates the entity's internal world position.</summary>
     protected void UpdatePosition(Vector2D newPosition) => _position = newPosition;
+
+    /// <summary>Sets position while resetting previous position so pooled or teleported entities do not interpolate across warps.</summary>
+    protected void SnapPosition(Vector2D newPosition)
+    {
+        _position = newPosition;
+        _previousPosition = newPosition;
+    }
 
     /// <summary>Reactivates a pooled or deactivated entity.</summary>
     protected void Activate() => _isActive = true;

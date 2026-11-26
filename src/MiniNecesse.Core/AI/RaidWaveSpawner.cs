@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using MiniNecesse.Core.Entities;
 using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Math;
+using MiniNecesse.Core.World;
 
 namespace MiniNecesse.Core.AI;
 
@@ -41,12 +42,13 @@ public sealed class WaveSpawnEntry
 public sealed class WaveDefinition
 {
     private readonly List<WaveSpawnEntry> _entries;
+    private readonly IReadOnlyList<WaveSpawnEntry> _entriesView;
 
     /// <summary>Gets the 1-based wave number.</summary>
     public int WaveNumber { get; }
 
-    /// <summary>Gets the read-only spawn entries composing this wave.</summary>
-    public IReadOnlyList<WaveSpawnEntry> Entries => _entries.AsReadOnly();
+    /// <summary>Gets the cached read-only spawn entries composing this wave.</summary>
+    public IReadOnlyList<WaveSpawnEntry> Entries => _entriesView;
 
     /// <summary>Initializes a new instance of the <see cref="WaveDefinition"/> class.</summary>
     public WaveDefinition(int waveNumber, IEnumerable<WaveSpawnEntry> entries)
@@ -63,6 +65,7 @@ public sealed class WaveDefinition
             throw new ArgumentException("Wave must contain at least one spawn entry.", nameof(entries));
         }
 
+        _entriesView = _entries.AsReadOnly();
         WaveNumber = waveNumber;
     }
 }
@@ -228,12 +231,40 @@ public sealed class RaidWaveSpawner
     }
 
     /// <summary>
-    /// Finds a valid walkable world position outside the player's safe exclusion radius.
+    /// Finds a valid walkable world position outside the player's safe exclusion radius
+    /// and within loaded chunk bounds near the player on large worlds.
     /// Returns <see langword="false"/> if no walkable tile exists outside the exclusion circle.
     /// </summary>
     public bool TryFindSafeSpawnPosition(Vector2D playerCenter, out Vector2D spawnPosition)
     {
         float minSafeRadiusSq = _minSafeRadius * _minSafeRadius;
+        bool useLocalRadius = _level.UsesLazyChunkLoading || _level.Width > 64 || _level.Height > 64;
+
+        if (useLocalRadius)
+        {
+            (int pCol, int pRow) = _level.WorldToTile(playerCenter);
+            float maxSpawnRadius = MathF.Max(_minSafeRadius + 128f, 560f);
+            float maxSpawnRadiusSq = maxSpawnRadius * maxSpawnRadius;
+            int maxTileOffset = global::System.Math.Max(4, (int)MathF.Ceiling(maxSpawnRadius / _level.TileSize));
+
+            int minCol = global::System.Math.Max(0, pCol - maxTileOffset);
+            int maxCol = global::System.Math.Min(_level.Width - 1, pCol + maxTileOffset);
+            int minRow = global::System.Math.Max(0, pRow - maxTileOffset);
+            int maxRow = global::System.Math.Min(_level.Height - 1, pRow + maxTileOffset);
+
+            for (int attempt = 0; attempt < MAX_SPAWN_ATTEMPTS; attempt++)
+            {
+                int col = _random.Next(minCol, maxCol + 1);
+                int row = _random.Next(minRow, maxRow + 1);
+                if (IsValidSpawnTile(col, row, playerCenter, minSafeRadiusSq, out spawnPosition) &&
+                    Vector2D.DistanceSquared(spawnPosition, playerCenter) <= maxSpawnRadiusSq)
+                {
+                    return true;
+                }
+            }
+
+            return TryLoadedChunkFallbackScan(playerCenter, minSafeRadiusSq, out spawnPosition);
+        }
 
         for (int attempt = 0; attempt < MAX_SPAWN_ATTEMPTS; attempt++)
         {
@@ -275,6 +306,33 @@ public sealed class RaidWaveSpawner
 
         worldPos = candidate;
         return true;
+    }
+
+    private bool TryLoadedChunkFallbackScan(Vector2D playerCenter, float minSafeRadiusSq, out Vector2D spawnPosition)
+    {
+        IReadOnlyList<ChunkCoord> loadedCoords = _level.LoadedChunkCoords;
+        for (int i = 0; i < loadedCoords.Count; i++)
+        {
+            if (!_level.TryGetLoadedChunk(loadedCoords[i], out WorldChunk? chunk) || chunk is null)
+            {
+                continue;
+            }
+
+            for (int r = 0; r < chunk.Height; r++)
+            {
+                for (int c = 0; c < chunk.Width; c++)
+                {
+                    Tile tile = chunk.GetLocalTile(c, r);
+                    if (IsValidSpawnTile(tile.Col, tile.Row, playerCenter, minSafeRadiusSq, out spawnPosition))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        spawnPosition = Vector2D.Zero;
+        return false;
     }
 
     private bool TryDeterministicFallbackScan(Vector2D playerCenter, float minSafeRadiusSq, out Vector2D spawnPosition)

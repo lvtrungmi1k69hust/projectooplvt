@@ -14,6 +14,10 @@ internal sealed class GameConfigJson
     public int InventorySlots { get; set; }
     public int HotbarSlots { get; set; }
     public float WorkbenchInteractRadius { get; set; }
+    public int ChunkSize { get; set; }
+    public int DefaultViewDistanceChunks { get; set; }
+    public int MinViewDistanceChunks { get; set; }
+    public int MaxViewDistanceChunks { get; set; }
 }
 
 internal sealed class RecipeJson
@@ -36,9 +40,12 @@ internal sealed class IslandJson
     public string? IslandId { get; set; }
     public string? Name { get; set; }
     public string? Biome { get; set; }
+    public string? GenerationMode { get; set; }
     public int Width { get; set; }
     public int Height { get; set; }
     public int Seed { get; set; }
+    public float? ResourceDensity { get; set; }
+    public Dictionary<string, float>? ResourceWeights { get; set; }
     public GridCoordJson? PlayerSpawn { get; set; }
     public List<string>? TileLayout { get; set; }
     public List<ResourceSpawnJson>? ResourceSpawns { get; set; }

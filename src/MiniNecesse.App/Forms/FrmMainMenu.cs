@@ -28,6 +28,7 @@ public sealed class FrmMainMenu : Form
     private readonly Button _btnSettings;
     private readonly Button _btnExit;
     private readonly Label _lblStatus;
+    private readonly List<Font> _ownedFonts = new();
 
     /// <summary>Initializes a new instance of the <see cref="FrmMainMenu"/> class via Constructor DI.</summary>
     public FrmMainMenu(
@@ -58,7 +59,7 @@ public sealed class FrmMainMenu : Form
         MaximizeBox = false;
         BackColor = Color.FromArgb(18, 24, 34);
         ForeColor = Color.FromArgb(236, 240, 246);
-        Font = new Font("Segoe UI", 10.5f);
+        Font = CreateOwnedFont("Segoe UI", 10.5f);
 
         Controls.Add(new Label
         {
@@ -66,7 +67,7 @@ public sealed class FrmMainMenu : Form
             Location = new Point(0, 32),
             Size = new Size(524, 46),
             TextAlign = ContentAlignment.MiddleCenter,
-            Font = new Font("Segoe UI", 26f, FontStyle.Bold),
+            Font = CreateOwnedFont("Segoe UI", 26f, FontStyle.Bold),
             ForeColor = Color.FromArgb(242, 190, 84)
         });
 
@@ -76,7 +77,7 @@ public sealed class FrmMainMenu : Form
             Location = new Point(0, 82),
             Size = new Size(524, 24),
             TextAlign = ContentAlignment.MiddleCenter,
-            Font = new Font("Segoe UI", 10f, FontStyle.Italic),
+            Font = CreateOwnedFont("Segoe UI", 10f, FontStyle.Italic),
             ForeColor = Color.FromArgb(156, 174, 198)
         });
 
@@ -101,7 +102,7 @@ public sealed class FrmMainMenu : Form
         _btnNewGame = CreateMenuButton("Play New Game", 204, Color.FromArgb(46, 156, 98));
         _btnContinue = CreateMenuButton("Continue (Load Save Slot 1)", 258, Color.FromArgb(48, 118, 190));
         _btnHighScores = CreateMenuButton("High Scores (Top 10)", 312, Color.FromArgb(156, 112, 42));
-        _btnSettings = CreateMenuButton("Settings (Audio & Difficulty)", 366, Color.FromArgb(74, 88, 114));
+        _btnSettings = CreateMenuButton("Settings (Audio, Difficulty & Chunks)", 366, Color.FromArgb(74, 88, 114));
         _btnExit = CreateMenuButton("Exit", 420, Color.FromArgb(164, 58, 58));
 
         _lblStatus = new Label
@@ -109,7 +110,7 @@ public sealed class FrmMainMenu : Form
             Location = new Point(20, 480),
             Size = new Size(484, 26),
             TextAlign = ContentAlignment.MiddleCenter,
-            Font = new Font("Segoe UI", 9f),
+            Font = CreateOwnedFont("Segoe UI", 9f),
             ForeColor = Color.FromArgb(146, 166, 190)
         };
 
@@ -167,7 +168,7 @@ public sealed class FrmMainMenu : Form
     {
         bool hasSave = _saveStorage.Exists(1);
         _btnContinue.Enabled = hasSave;
-        _lblStatus.Text = $"Difficulty: {_settings.Difficulty} | Audio: {(_settings.IsMuted ? "Muted" : $"{_settings.Volume}%")} | Save Slot 1: {(hasSave ? "Available" : "Empty")}";
+        _lblStatus.Text = $"Difficulty: {_settings.Difficulty} | View: {_settings.ViewDistanceChunks} ch | Audio: {(_settings.IsMuted ? "Muted" : $"{_settings.Volume}%")} | Save Slot 1: {(hasSave ? "Available" : "Empty")}";
     }
 
     private void HandleNewGameClick(object? sender, EventArgs e)
@@ -219,7 +220,29 @@ public sealed class FrmMainMenu : Form
 
     private void HandleExitClick(object? sender, EventArgs e) => Close();
 
-    private static Button CreateMenuButton(string text, int topY, Color backColor)
+    /// <inheritdoc />
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing)
+        {
+            for (int i = 0; i < _ownedFonts.Count; i++)
+            {
+                _ownedFonts[i].Dispose();
+            }
+
+            _ownedFonts.Clear();
+        }
+    }
+
+    private Font CreateOwnedFont(string family, float size, FontStyle style = FontStyle.Regular)
+    {
+        var font = new Font(family, size, style);
+        _ownedFonts.Add(font);
+        return font;
+    }
+
+    private Button CreateMenuButton(string text, int topY, Color backColor)
     {
         return new Button
         {
@@ -229,7 +252,7 @@ public sealed class FrmMainMenu : Form
             FlatStyle = FlatStyle.Flat,
             BackColor = backColor,
             ForeColor = Color.White,
-            Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+            Font = CreateOwnedFont("Segoe UI", 10.5f, FontStyle.Bold),
             Cursor = Cursors.Hand
         };
     }

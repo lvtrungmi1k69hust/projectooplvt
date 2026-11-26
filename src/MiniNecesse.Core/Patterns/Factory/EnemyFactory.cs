@@ -5,6 +5,8 @@ using MiniNecesse.Core.Entities;
 using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Interfaces;
 using MiniNecesse.Core.Math;
+using MiniNecesse.Core.Physics;
+using MiniNecesse.Core.Rules;
 
 namespace MiniNecesse.Core.Patterns.Factory;
 
@@ -26,6 +28,7 @@ public sealed class EnemyFactory : IEntityFactory
     private readonly Dictionary<string, Func<IAIStrategy>> _strategyCreators = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<ResourceType, ResourceBlueprint> _resourceBlueprints = new();
     private readonly Dictionary<StructureType, StructureBlueprint> _structureBlueprints = new();
+    private readonly Dictionary<AnimalType, AnimalBlueprint> _animalBlueprints = new();
     private int _entitySequence;
 
     /// <summary>Registers an enemy or boss archetype blueprint.</summary>
@@ -59,6 +62,13 @@ public sealed class EnemyFactory : IEntityFactory
     {
         ArgumentNullException.ThrowIfNull(blueprint);
         _structureBlueprints[blueprint.StructureType] = blueprint;
+    }
+
+    /// <summary>Registers a passive wildlife/livestock animal blueprint.</summary>
+    public void RegisterAnimalBlueprint(AnimalBlueprint blueprint)
+    {
+        ArgumentNullException.ThrowIfNull(blueprint);
+        _animalBlueprints[blueprint.AnimalType] = blueprint;
     }
 
     /// <inheritdoc />
@@ -105,7 +115,41 @@ public sealed class EnemyFactory : IEntityFactory
             bp.ScoreReward,
             initialStrategy,
             enrageStrategy,
-            bp.EnrageThresholdRatio);
+            bp.EnrageThresholdRatio,
+            bp.ArchetypeId);
+    }
+
+    /// <inheritdoc />
+    public Boss CreateBoss(BossConfiguration bossConfig, Vector2D spawnPosition, Difficulty difficulty = Difficulty.Normal)
+    {
+        ArgumentNullException.ThrowIfNull(bossConfig);
+
+        _enemyBlueprints.TryGetValue(bossConfig.BossType, out EnemyBlueprint? fallbackBp);
+        string initialKey = !string.IsNullOrWhiteSpace(bossConfig.InitialStrategyKey)
+            ? bossConfig.InitialStrategyKey
+            : (fallbackBp?.StrategyKey ?? "melee");
+        string? enrageKey = !string.IsNullOrWhiteSpace(bossConfig.EnrageStrategyKey)
+            ? bossConfig.EnrageStrategyKey
+            : fallbackBp?.EnrageStrategyKey;
+
+        (int scaledHp, int scaledDamage) = ScaleByDifficulty(bossConfig.MaxHp, bossConfig.AttackDamage, difficulty);
+        IAIStrategy? initialStrategy = ResolveStrategy(initialKey);
+        IAIStrategy? enrageStrategy = string.IsNullOrWhiteSpace(enrageKey) ? null : ResolveStrategy(enrageKey);
+
+        return new Boss(
+            NextId("boss"),
+            bossConfig.DisplayName,
+            spawnPosition,
+            scaledHp,
+            bossConfig.MoveSpeed,
+            scaledDamage,
+            bossConfig.AttackRange,
+            bossConfig.AttackCooldown,
+            bossConfig.ScoreReward,
+            initialStrategy,
+            enrageStrategy,
+            bossConfig.EnrageThresholdRatio,
+            bossConfig.BossType);
     }
 
     /// <inheritdoc />
@@ -141,16 +185,51 @@ public sealed class EnemyFactory : IEntityFactory
             new Vector2D(tileSize, tileSize));
     }
 
+    /// <inheritdoc />
+    public Animal CreateAnimal(AnimalType animalType, Vector2D spawnPosition)
+    {
+        if (!_animalBlueprints.TryGetValue(animalType, out AnimalBlueprint? bp))
+        {
+            throw new KeyNotFoundException($"Animal blueprint '{animalType}' is not registered.");
+        }
+
+        return new Animal(
+            NextId("ani"),
+            bp.AnimalType,
+            bp.DisplayName,
+            spawnPosition,
+            bp.MaxHp,
+            bp.MoveSpeed,
+            bp.PrimaryDropItemId,
+            bp.PrimaryDropQuantity,
+            bp.SecondaryDropItemId,
+            bp.SecondaryDropQuantity,
+            bp.ScoreReward,
+            new Vector2D(bp.Width, bp.Height));
+    }
+
     /// <summary>Creates an <see cref="EnemyFactory"/> preloaded with standard island enemies, bosses, resources, and structures.</summary>
     public static EnemyFactory CreateDefault(
         Action<Vector2D, Vector2D, int, string>? projectileSpawner = null,
-        Func<GridPoint, Structure?>? structureLookup = null)
+        Func<GridPoint, Structure?>? structureLookup = null,
+        PathfindingCoordinator? pathCoordinator = null)
     {
         var factory = new EnemyFactory();
-        factory.RegisterStrategyCreator("melee", () => new MeleeChaseStrategy(structureAtTileLookup: structureLookup));
-        factory.RegisterStrategyCreator("ranged", () => new RangedKiteStrategy(projectileSpawner));
-        factory.RegisterStrategyCreator("boss_enrage", () => new BossEnrageStrategy(projectileSpawner, volleyCount: 3));
-        factory.RegisterStrategyCreator("boss_enrage_heavy", () => new BossEnrageStrategy(projectileSpawner, volleyCount: 5));
+        var sharedCollision = new CollisionDetector();
+        int staggerSequence = 0;
+
+        factory.RegisterStrategyCreator("melee", () =>
+        {
+            float stagger = ((staggerSequence++ % 7) * 0.05f);
+            return new MeleeChaseStrategy(
+                collisionDetector: sharedCollision,
+                structureAtTileLookup: structureLookup,
+                pathCoordinator: pathCoordinator,
+                initialStaggerSeconds: stagger);
+        });
+        factory.RegisterStrategyCreator("ranged", () => new RangedKiteStrategy(projectileSpawner, collisionDetector: sharedCollision));
+        factory.RegisterStrategyCreator("boss_enrage", () => new BossEnrageStrategy(projectileSpawner, sharedCollision, volleyCount: 3));
+        factory.RegisterStrategyCreator("boss_enrage_heavy", () => new BossEnrageStrategy(projectileSpawner, sharedCollision, volleyCount: 5));
 
         RegisterDefaultEnemiesAndBosses(factory);
         RegisterDefaultResourcesAndStructures(factory);
@@ -212,10 +291,20 @@ public sealed class EnemyFactory : IEntityFactory
         factory.RegisterResourceBlueprint(new ResourceBlueprint(ResourceType.CopperDeposit, 50, ToolType.Pickaxe, "copper_ore", 2));
         factory.RegisterResourceBlueprint(new ResourceBlueprint(ResourceType.IronDeposit, 70, ToolType.Pickaxe, "iron_ore", 2));
         factory.RegisterResourceBlueprint(new ResourceBlueprint(ResourceType.GoldDeposit, 90, ToolType.Pickaxe, "gold_ore", 2));
+        factory.RegisterResourceBlueprint(new ResourceBlueprint(ResourceType.BerryBush, 20, ToolType.None, "berry", 3));
+        factory.RegisterResourceBlueprint(new ResourceBlueprint(ResourceType.WheatCrop, 15, ToolType.None, "wheat", 3));
+        factory.RegisterResourceBlueprint(new ResourceBlueprint(ResourceType.CoalDeposit, 45, ToolType.Pickaxe, "coal", 2));
+        factory.RegisterResourceBlueprint(new ResourceBlueprint(ResourceType.CrystalCluster, 85, ToolType.Pickaxe, "crystal", 2));
 
         factory.RegisterStructureBlueprint(new StructureBlueprint(StructureType.WoodenWall, 80, IsSolid: true));
         factory.RegisterStructureBlueprint(new StructureBlueprint(StructureType.StoneWall, 160, IsSolid: true));
         factory.RegisterStructureBlueprint(new StructureBlueprint(StructureType.Workbench, 100, IsSolid: true, IsCraftingStation: true));
         factory.RegisterStructureBlueprint(new StructureBlueprint(StructureType.Torch, 40, IsSolid: false, LightRadius: 150f));
+        factory.RegisterStructureBlueprint(new StructureBlueprint(StructureType.WoodenFence, 50, IsSolid: true));
+
+        factory.RegisterAnimalBlueprint(new AnimalBlueprint(AnimalType.Chicken, "Chicken", 20, 72f, "raw_meat", 1, "feather", 2, 10, 18f, 18f));
+        factory.RegisterAnimalBlueprint(new AnimalBlueprint(AnimalType.Sheep, "Sheep", 35, 58f, "wool", 2, "raw_meat", 1, 15, 22f, 22f));
+        factory.RegisterAnimalBlueprint(new AnimalBlueprint(AnimalType.Cow, "Cow", 55, 50f, "raw_meat", 2, "leather", 2, 20, 26f, 24f));
+        factory.RegisterAnimalBlueprint(new AnimalBlueprint(AnimalType.Pig, "Pig", 40, 60f, "raw_meat", 2, null, 0, 15, 22f, 20f));
     }
 }

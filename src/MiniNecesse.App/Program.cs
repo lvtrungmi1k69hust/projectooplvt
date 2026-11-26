@@ -21,7 +21,7 @@ internal static class Program
         ILevelLoader levelLoader = new JsonLevelLoader();
         ISaveStorage saveStorage = new JsonSaveStorage();
         IHighScoreRepository highScoreRepository = new JsonHighScoreRepository();
-        var settings = new AppSettings();
+        var settings = AppSettings.LoadOrDefault();
         using var audioManager = new AudioManager
         {
             IsMuted = settings.IsMuted,

@@ -1,4 +1,5 @@
 using System;
+using MiniNecesse.Core.Crafting;
 using MiniNecesse.Core.Interfaces;
 using MiniNecesse.Core.Math;
 
@@ -75,6 +76,31 @@ public sealed class DroppedItem : Entity, ICollectible
         return true;
     }
 
+    /// <summary>
+    /// Collects this dropped item directly into <paramref name="inventory"/> without closure allocation.
+    /// </summary>
+    public bool TryCollect(Inventory inventory, Func<string, Item> itemResolver)
+    {
+        ArgumentNullException.ThrowIfNull(inventory);
+        ArgumentNullException.ThrowIfNull(itemResolver);
+
+        if (_isCollected || !IsActive)
+        {
+            return false;
+        }
+
+        Item resolvedItem = itemResolver(_itemId);
+        if (!inventory.TryAddItem(resolvedItem, _quantity))
+        {
+            return false;
+        }
+
+        _isCollected = true;
+        Deactivate();
+        OnCollected?.Invoke(this);
+        return true;
+    }
+
     /// <inheritdoc />
     public override void Update(float deltaTime)
     {
@@ -117,6 +143,6 @@ public sealed class DroppedItem : Entity, ICollectible
         _quantity = quantity;
         _isCollected = false;
         _remainingLifetime = despawnSeconds;
-        UpdatePosition(position);
+        SnapPosition(position);
     }
 }

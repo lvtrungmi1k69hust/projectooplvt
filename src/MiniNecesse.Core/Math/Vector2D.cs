@@ -135,23 +135,34 @@ public readonly struct Vector2D : IEquatable<Vector2D>
         return new Vector2D(vector.X / scalar, vector.Y / scalar);
     }
 
-    /// <summary>Determines whether two vectors are equal within floating-point tolerance.</summary>
+    /// <summary>Determines whether two vectors are equal.</summary>
     public static bool operator ==(Vector2D left, Vector2D right) => left.Equals(right);
 
     /// <summary>Determines whether two vectors are not equal.</summary>
     public static bool operator !=(Vector2D left, Vector2D right) => !left.Equals(right);
 
+    /// <summary>Checks whether another vector lies within <paramref name="epsilon"/> per component.</summary>
+    public bool ApproximatelyEquals(Vector2D other, float epsilon = EPSILON)
+    {
+        return MathF.Abs(X - other.X) <= epsilon && MathF.Abs(Y - other.Y) <= epsilon;
+    }
+
     /// <inheritdoc />
     public bool Equals(Vector2D other)
     {
-        return MathF.Abs(X - other.X) <= EPSILON && MathF.Abs(Y - other.Y) <= EPSILON;
+        return X == other.X && Y == other.Y;
     }
 
     /// <inheritdoc />
     public override bool Equals(object? obj) => obj is Vector2D other && Equals(other);
 
     /// <inheritdoc />
-    public override int GetHashCode() => HashCode.Combine(X, Y);
+    public override int GetHashCode()
+    {
+        float nx = X == 0f ? 0f : X;
+        float ny = Y == 0f ? 0f : Y;
+        return HashCode.Combine(nx, ny);
+    }
 
     /// <inheritdoc />
     public override string ToString() => string.Create(CultureInfo.InvariantCulture, $"({X:F2}, {Y:F2})");

@@ -27,6 +27,15 @@
     ]
   },
   {
+    "recipeId": "craft_wooden_fence",
+    "outputItemId": "wooden_fence",
+    "outputQuantity": 3,
+    "requiresWorkbench": false,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 2 }
+    ]
+  },
+  {
     "recipeId": "craft_torch",
     "outputItemId": "torch",
     "outputQuantity": 2,
@@ -34,6 +43,45 @@
     "ingredients": [
       { "itemId": "wood", "quantity": 2 },
       { "itemId": "stone", "quantity": 1 }
+    ]
+  },
+  {
+    "recipeId": "craft_coal_torch",
+    "outputItemId": "torch",
+    "outputQuantity": 4,
+    "requiresWorkbench": false,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 1 },
+      { "itemId": "coal", "quantity": 1 }
+    ]
+  },
+  {
+    "recipeId": "craft_bread",
+    "outputItemId": "bread",
+    "outputQuantity": 1,
+    "requiresWorkbench": false,
+    "ingredients": [
+      { "itemId": "wheat", "quantity": 3 }
+    ]
+  },
+  {
+    "recipeId": "craft_cooked_meat",
+    "outputItemId": "cooked_meat",
+    "outputQuantity": 2,
+    "requiresWorkbench": false,
+    "ingredients": [
+      { "itemId": "raw_meat", "quantity": 2 },
+      { "itemId": "coal", "quantity": 1 }
+    ]
+  },
+  {
+    "recipeId": "craft_berry_bandage",
+    "outputItemId": "health_potion",
+    "outputQuantity": 1,
+    "requiresWorkbench": false,
+    "ingredients": [
+      { "itemId": "wool", "quantity": 2 },
+      { "itemId": "berry", "quantity": 2 }
     ]
   },
   {
@@ -87,6 +135,17 @@
     ]
   },
   {
+    "recipeId": "craft_hunter_bow",
+    "outputItemId": "hunter_bow",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 6 },
+      { "itemId": "feather", "quantity": 4 },
+      { "itemId": "leather", "quantity": 2 }
+    ]
+  },
+  {
     "recipeId": "craft_fire_staff",
     "outputItemId": "fire_staff",
     "outputQuantity": 1,
@@ -95,6 +154,17 @@
       { "itemId": "wood", "quantity": 4 },
       { "itemId": "copper_ore", "quantity": 4 },
       { "itemId": "torch", "quantity": 2 }
+    ]
+  },
+  {
+    "recipeId": "craft_crystal_staff",
+    "outputItemId": "crystal_staff",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 3 },
+      { "itemId": "crystal", "quantity": 4 },
+      { "itemId": "gold_ore", "quantity": 3 }
     ]
   },
   {

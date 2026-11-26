@@ -15,6 +15,7 @@ public sealed class FrmHighScoresDialog : Form
 {
     private readonly ListView _listScores;
     private readonly Button _btnClose;
+    private readonly List<Font> _ownedFonts = new();
 
     /// <summary>Initializes a new instance of the <see cref="FrmHighScoresDialog"/> class.</summary>
     public FrmHighScoresDialog(IHighScoreRepository highScoreRepository)
@@ -29,14 +30,14 @@ public sealed class FrmHighScoresDialog : Form
         MinimizeBox = false;
         BackColor = Color.FromArgb(24, 30, 42);
         ForeColor = Color.FromArgb(236, 240, 246);
-        Font = new Font("Segoe UI", 10f);
+        Font = CreateOwnedFont("Segoe UI", 10f);
 
         var lblTitle = new Label
         {
             Text = "TOP 10 HIGH SCORES",
             Location = new Point(20, 16),
             AutoSize = true,
-            Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+            Font = CreateOwnedFont("Segoe UI", 14f, FontStyle.Bold),
             ForeColor = Color.FromArgb(240, 184, 77)
         };
         Controls.Add(lblTitle);
@@ -80,6 +81,28 @@ public sealed class FrmHighScoresDialog : Form
     {
         _btnClose.Click -= HandleCloseClick;
         base.OnFormClosing(e);
+    }
+
+    /// <inheritdoc />
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing)
+        {
+            for (int i = 0; i < _ownedFonts.Count; i++)
+            {
+                _ownedFonts[i].Dispose();
+            }
+
+            _ownedFonts.Clear();
+        }
+    }
+
+    private Font CreateOwnedFont(string family, float size, FontStyle style = FontStyle.Regular)
+    {
+        var font = new Font(family, size, style);
+        _ownedFonts.Add(font);
+        return font;
     }
 
     private void PopulateScores(IHighScoreRepository repository)

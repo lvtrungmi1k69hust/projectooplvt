@@ -56,6 +56,7 @@ public sealed class FrmGamePlay : Form
     private readonly Button _btnPauseLoad;
     private readonly Button _btnPauseSettings;
     private readonly Button _btnPauseMenu;
+    private readonly List<Font> _ownedFonts = new();
 
     private readonly GameConfig _config;
     private readonly IReadOnlyList<CraftingRecipe> _recipes;
@@ -67,6 +68,7 @@ public sealed class FrmGamePlay : Form
     private GameSession? _session;
     private GameLoopController? _loopController;
     private Vector2D _cameraOffset;
+    private float _renderInterpolationAlpha = 1f;
     private string _currentIslandId;
     private bool _highScoreRecordedForRun;
 
@@ -270,13 +272,36 @@ public sealed class FrmGamePlay : Form
             _config.HotbarSlots,
             inventory);
 
+        int viewDistance = Math.Clamp(
+            _settings.ViewDistanceChunks,
+            _config.MinViewDistanceChunks,
+            _config.MaxViewDistanceChunks);
+
         var dayNight = new DayNightCycle(_config.DayDurationSeconds, _config.NightDurationSeconds);
-        var session = new GameSession(package.Level, player, _itemFactory.ResolveItem, dayNight, difficulty: _settings.Difficulty);
+        var session = new GameSession(
+            package.Level,
+            player,
+            _itemFactory.ResolveItem,
+            dayNight,
+            difficulty: _settings.Difficulty,
+            viewDistanceChunks: viewDistance,
+            minViewDistanceChunks: _config.MinViewDistanceChunks,
+            maxViewDistanceChunks: _config.MaxViewDistanceChunks);
 
         EnemyFactory enemyFactory = EnemyFactory.CreateDefault(
             projectileSpawner: (origin, velocity, dmg, ownerId) =>
                 session.SpawnPooledProjectile(origin, velocity, dmg, ownerId, isFromPlayer: false),
-            structureLookup: session.FindStructureAtTile);
+            structureLookup: session.FindStructureAtTile,
+            pathCoordinator: session.PathfindingCoordinator);
+
+        session.SetVillages(package.Villages);
+        session.ConfigureChunkWorldSpawners(
+            package.ChunkResourceGenerator,
+            enemyFactory.CreateResourceNode,
+            package.ChunkStructureGenerator,
+            (type, col, row) => enemyFactory.CreateStructure(type, col, row, package.Level.TileSize),
+            package.ChunkAnimalGenerator,
+            enemyFactory.CreateAnimal);
 
         var spawner = new RaidWaveSpawner(
             package.Level,
@@ -289,6 +314,7 @@ public sealed class FrmGamePlay : Form
         if (seedStarterInventory)
         {
             SeedStarterResourcesAndGear(session, package, enemyFactory);
+            session.InitializeChunksAroundPlayer();
         }
 
         _enemyFactory = enemyFactory;
@@ -340,8 +366,11 @@ public sealed class FrmGamePlay : Form
 
         ProcessModalToggleInputs();
         _loopController.StepFrame(frameDt);
+        _renderInterpolationAlpha = _session.CurrentState == GameState.Playing
+            ? _loopController.InterpolationAlpha
+            : 1f;
         _renderer.UpdateVisuals(_session, frameDt);
-        _cameraOffset = _renderer.ComputeCameraOffset(_session, _canvas.ClientSize);
+        _cameraOffset = _renderer.ComputeCameraOffset(_session, _canvas.ClientSize, _renderInterpolationAlpha);
         _inputAdapter.UpdateCameraOffset(_cameraOffset);
         _canvas.Invalidate();
     }
@@ -379,6 +408,11 @@ public sealed class FrmGamePlay : Form
     {
         if (_session is null || _enemyFactory is null || _activePackage is null) return;
 
+        if (_session.CurrentState == GameState.Playing)
+        {
+            _session.CapturePreviousPositions();
+        }
+
         if (_session.CurrentState == GameState.Playing && !_craftingPanel.Visible)
         {
             int? hotbar = _inputAdapter.GetSelectedHotbarSlot();
@@ -412,7 +446,14 @@ public sealed class FrmGamePlay : Form
     private void HandleCanvasPaint(object? sender, PaintEventArgs e)
     {
         if (_session is null) return;
-        _renderer.Render(e.Graphics, _canvas.ClientSize, _session, _hud, _cameraOffset, _inputAdapter.GetAimWorldPosition());
+        _renderer.Render(
+            e.Graphics,
+            _canvas.ClientSize,
+            _session,
+            _hud,
+            _cameraOffset,
+            _inputAdapter.GetAimWorldPosition(),
+            _renderInterpolationAlpha);
     }
 
     private void HandleHudInventoryInvalidated()
@@ -567,7 +608,10 @@ public sealed class FrmGamePlay : Form
     private void HandlePauseSettingsClick(object? sender, EventArgs e)
     {
         using var dialog = new FrmSettingsDialog(_settings, _audioManager);
-        dialog.ShowDialog(this);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+        {
+            _session?.SetViewDistanceChunks(_settings.ViewDistanceChunks);
+        }
     }
 
     private void HandleSaveHighScoreClick(object? sender, EventArgs e)
@@ -606,7 +650,7 @@ public sealed class FrmGamePlay : Form
     private void HandlePlayAgainClick(object? sender, EventArgs e) => InitializeNewIslandSession(_currentIslandId);
     private void HandleReturnMenuClick(object? sender, EventArgs e) => Close();
 
-    private static (Panel Panel, Button Resume, Button Save, Button Load, Button Settings, Button Menu) BuildPauseOverlay()
+    private (Panel Panel, Button Resume, Button Save, Button Load, Button Settings, Button Menu) BuildPauseOverlay()
     {
         var panel = new Panel
         {
@@ -622,7 +666,7 @@ public sealed class FrmGamePlay : Form
             Location = new Point(0, 18),
             Size = new Size(318, 34),
             TextAlign = ContentAlignment.MiddleCenter,
-            Font = new Font("Segoe UI", 16f, FontStyle.Bold),
+            Font = CreateOwnedFont("Segoe UI", 16f, FontStyle.Bold),
             ForeColor = Color.FromArgb(246, 196, 82)
         });
 
@@ -636,7 +680,7 @@ public sealed class FrmGamePlay : Form
         return (panel, btnResume, btnSave, btnLoad, btnSettings, btnMenu);
     }
 
-    private static (Panel Panel, Label Title, Label Summary, TextBox NameBox, Button SaveScore, Button NextIsland, Button Replay, Button Menu) BuildOutcomeOverlay()
+    private (Panel Panel, Label Title, Label Summary, TextBox NameBox, Button SaveScore, Button NextIsland, Button Replay, Button Menu) BuildOutcomeOverlay()
     {
         var panel = new Panel
         {
@@ -652,7 +696,7 @@ public sealed class FrmGamePlay : Form
             Location = new Point(0, 18),
             Size = new Size(378, 38),
             TextAlign = ContentAlignment.MiddleCenter,
-            Font = new Font("Segoe UI", 18f, FontStyle.Bold),
+            Font = CreateOwnedFont("Segoe UI", 18f, FontStyle.Bold),
             ForeColor = Color.FromArgb(118, 236, 146)
         };
 
@@ -662,7 +706,7 @@ public sealed class FrmGamePlay : Form
             Location = new Point(20, 62),
             Size = new Size(340, 26),
             TextAlign = ContentAlignment.MiddleCenter,
-            Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+            Font = CreateOwnedFont("Segoe UI", 10.5f, FontStyle.Bold),
             ForeColor = Color.White
         };
 
@@ -694,7 +738,7 @@ public sealed class FrmGamePlay : Form
         return (panel, title, summary, nameBox, btnSaveScore, btnNext, btnReplay, btnMenu);
     }
 
-    private static Button MakeOverlayButton(string text, int topY, Color backColor, int parentWidth = 320)
+    private Button MakeOverlayButton(string text, int topY, Color backColor, int parentWidth = 320)
     {
         const int WIDTH = 240;
         return new Button
@@ -705,9 +749,31 @@ public sealed class FrmGamePlay : Form
             FlatStyle = FlatStyle.Flat,
             BackColor = backColor,
             ForeColor = Color.White,
-            Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+            Font = CreateOwnedFont("Segoe UI", 10f, FontStyle.Bold),
             Cursor = Cursors.Hand
         };
+    }
+
+    /// <inheritdoc />
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing)
+        {
+            for (int i = 0; i < _ownedFonts.Count; i++)
+            {
+                _ownedFonts[i].Dispose();
+            }
+
+            _ownedFonts.Clear();
+        }
+    }
+
+    private Font CreateOwnedFont(string family, float size, FontStyle style = FontStyle.Regular)
+    {
+        var font = new Font(family, size, style);
+        _ownedFonts.Add(font);
+        return font;
     }
 
     private sealed class DoubleBufferedCanvas : Control

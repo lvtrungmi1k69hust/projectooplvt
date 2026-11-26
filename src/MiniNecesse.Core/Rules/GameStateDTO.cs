@@ -47,6 +47,45 @@ public sealed class GameStateDTO
 
     /// <summary>Gets or sets living enemy and boss snapshots.</summary>
     public List<EnemyStateSnapshot> Enemies { get; set; } = new();
+
+    /// <summary>Gets or sets living passive animal snapshots.</summary>
+    public List<AnimalStateSnapshot> Animals { get; set; } = new();
+
+    /// <summary>Gets or sets chunk coordinates whose natural resources have already been generated.</summary>
+    public List<ChunkCoordSnapshot> GeneratedChunks { get; set; } = new();
+}
+
+/// <summary>
+/// Serializable record for living passive wildlife and livestock animals.
+/// </summary>
+public sealed class AnimalStateSnapshot
+{
+    /// <summary>Gets or sets the unique animal identifier.</summary>
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the animal species name.</summary>
+    public string Type { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the world X coordinate.</summary>
+    public float X { get; set; }
+
+    /// <summary>Gets or sets the world Y coordinate.</summary>
+    public float Y { get; set; }
+
+    /// <summary>Gets or sets the animal's remaining health.</summary>
+    public int Hp { get; set; }
+}
+
+/// <summary>
+/// Serializable chunk coordinate entry tracking visited/generated chunks across save/load.
+/// </summary>
+public sealed class ChunkCoordSnapshot
+{
+    /// <summary>Gets or sets the 0-based horizontal chunk index.</summary>
+    public int ChunkX { get; set; }
+
+    /// <summary>Gets or sets the 0-based vertical chunk index.</summary>
+    public int ChunkY { get; set; }
 }
 
 /// <summary>

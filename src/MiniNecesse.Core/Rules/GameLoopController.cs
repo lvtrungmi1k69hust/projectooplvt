@@ -14,6 +14,9 @@ public sealed class GameLoopController
     /// <summary>Maximum frame delta accepted per call to prevent spiral-of-death lag spikes.</summary>
     public const float MAX_FRAME_DELTA = 0.25f;
 
+    /// <summary>Maximum fixed simulation steps executed per render frame to bound catch-up spikes.</summary>
+    public const int MAX_STEPS_PER_FRAME = 6;
+
     private readonly Action<float> _fixedUpdate;
     private readonly float _fixedDeltaTime;
     private float _accumulator;
@@ -62,12 +65,17 @@ public sealed class GameLoopController
         _accumulator += clampedDelta;
 
         int stepsExecuted = 0;
-        while (_accumulator >= _fixedDeltaTime)
+        while (_accumulator >= _fixedDeltaTime && stepsExecuted < MAX_STEPS_PER_FRAME)
         {
             _fixedUpdate(_fixedDeltaTime);
             _accumulator -= _fixedDeltaTime;
             _totalFixedSteps++;
             stepsExecuted++;
+        }
+
+        if (_accumulator >= _fixedDeltaTime)
+        {
+            _accumulator = MathF.Min(_accumulator, _fixedDeltaTime * 0.99f);
         }
 
         return stepsExecuted;

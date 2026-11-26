@@ -135,6 +135,9 @@ public abstract class Character : Entity, IDamageable, IMovable
     /// <inheritdoc />
     public void SetPosition(Vector2D position) => UpdatePosition(position);
 
+    /// <summary>Teleports the character cleanly, snapping interpolation history to <paramref name="position"/>.</summary>
+    public void TeleportTo(Vector2D position) => SnapPosition(position);
+
     /// <summary>Restores exact health within [0, MaxHp] during save-state deserialization.</summary>
     public void RestoreHealth(int hp)
     {

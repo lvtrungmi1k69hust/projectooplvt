@@ -29,6 +29,7 @@ public sealed class SpriteAtlasCache : IDisposable
         RegisterResourceSprites();
         RegisterStructureSprites();
         RegisterCharacterAndEnemySprites();
+        RegisterAnimalSprites();
         RegisterItemAndProjectileSprites();
     }
 
@@ -162,6 +163,90 @@ public sealed class SpriteAtlasCache : IDisposable
         Register("res_copper", () => BuildRockNode(Color.FromArgb(242, 146, 66), Color.FromArgb(196, 98, 38)));
         Register("res_iron", () => BuildRockNode(Color.FromArgb(216, 228, 242), Color.FromArgb(156, 172, 192)));
         Register("res_gold", () => BuildRockNode(Color.FromArgb(255, 224, 78), Color.FromArgb(218, 162, 32)));
+        Register("res_coal", () => BuildRockNode(Color.FromArgb(46, 50, 62), Color.FromArgb(20, 22, 28)));
+
+        Register("res_berry_bush", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "................",
+            "....KKKKKKKK....",
+            "..KKGGLLLLGGKK..",
+            ".KGGLLRRLLLLGGK.",
+            ".KGLRRLGGLLRRGK.",
+            "KGGLLLLGGGRRLGDK",
+            "KGRRLLGGLLLLGGDK",
+            "KDGGGGGRRGGPPGDK",
+            "KDDGGGPPGGGGDDDK",
+            ".KDDGGGGGGGDDDK.",
+            "..KKDDDDDDDDKK..",
+            "....KKKKKKKK....",
+            "................",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(22, 36, 24),
+            ['D'] = Color.FromArgb(30, 92, 42),
+            ['G'] = Color.FromArgb(52, 146, 64),
+            ['L'] = Color.FromArgb(96, 186, 82),
+            ['R'] = Color.FromArgb(228, 48, 72),
+            ['P'] = Color.FromArgb(168, 44, 118)
+        }));
+
+        Register("res_wheat", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "....KK....KK....",
+            "...KYLK..KYLK...",
+            "...KYGK..KYGK...",
+            "...KYLK..KYLK...",
+            "..KKYLK.KKYLKK..",
+            ".KYLKGYKKYLKGYK.",
+            ".KYGKGGKKYGKGGK.",
+            ".KYLKGGKKYLKGGK.",
+            "..KGGGGKKGGGGK..",
+            "..KGGGGKKGGGGK..",
+            "...KGGK..KGGK...",
+            "...KBBK..KBBK...",
+            "..KBBBBKKBBBBK..",
+            "..KKKKKKKKKKKK..",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(52, 38, 16),
+            ['Y'] = Color.FromArgb(248, 214, 78),
+            ['L'] = Color.FromArgb(255, 242, 142),
+            ['G'] = Color.FromArgb(198, 152, 44),
+            ['B'] = Color.FromArgb(116, 86, 42)
+        }));
+
+        Register("res_crystal", () => PixelArtBuilder.FromGrid(new[]
+        {
+            ".......KK.......",
+            "......KWWK......",
+            ".....KWLCCK.....",
+            "..KK.KWLCCK.KK..",
+            ".KWLKKLLCCKKCWK.",
+            ".KWLCCLLCCKCWLK.",
+            ".KCLCCBBCCKCCCK.",
+            ".KCCBBBBBBCBDDK.",
+            "KKCBBBBBBBBDDDK.",
+            "KWLCBBBBBBBDDDKK",
+            "KCLBBBBBBBBDDDDK",
+            ".KCCDDDDDDDDDDK.",
+            ".KDDDDDDDDDDDDK.",
+            "..KKKKKKKKKKKK..",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(24, 20, 48),
+            ['W'] = Color.FromArgb(224, 252, 255),
+            ['L'] = Color.FromArgb(128, 236, 255),
+            ['C'] = Color.FromArgb(64, 198, 242),
+            ['B'] = Color.FromArgb(88, 124, 224),
+            ['D'] = Color.FromArgb(62, 68, 156)
+        }));
     }
 
     private static Bitmap BuildRockNode(Color veinLight, Color veinDark)
@@ -284,6 +369,26 @@ public sealed class SpriteAtlasCache : IDisposable
 
         Register("str_torch_0", () => BuildTorch(flickerRight: false));
         Register("str_torch_1", () => BuildTorch(flickerRight: true));
+
+        Register("str_wood_fence", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "..KKK......KKK..",
+            ".KLLLK....KLLLK.",
+            ".KMMMK....KMMMK.",
+            "KKKKKKKKKKKKKKKK",
+            "KLLLLLLLLLLLLLLK",
+            "KMMMMMMMMMMMMMMK",
+            "KKKKKKKKKKKKKKKK",
+            ".KMMMK....KMMMK.",
+            "KKKKKKKKKKKKKKKK",
+            "KLLLLLLLLLLLLLLK",
+            "KDDDDDDDDDDDDDDK",
+            "KKKKKKKKKKKKKKKK",
+            ".KDDDK....KDDDK.",
+            ".KKKKK....KKKKK.",
+            "................"
+        }, woodWallPal));
     }
 
     private static Bitmap BuildTorch(bool flickerRight)
@@ -648,6 +753,147 @@ public sealed class SpriteAtlasCache : IDisposable
         }, pal);
     }
 
+    private void RegisterAnimalSprites()
+    {
+        Register("animal_chicken_0", () => BuildChickenSprite(step: false));
+        Register("animal_chicken_1", () => BuildChickenSprite(step: true));
+        Register("animal_sheep_0", () => BuildSheepSprite(step: false));
+        Register("animal_sheep_1", () => BuildSheepSprite(step: true));
+        Register("animal_cow_0", () => BuildCowSprite(step: false));
+        Register("animal_cow_1", () => BuildCowSprite(step: true));
+        Register("animal_pig_0", () => BuildPigSprite(step: false));
+        Register("animal_pig_1", () => BuildPigSprite(step: true));
+    }
+
+    private static Bitmap BuildChickenSprite(bool step)
+    {
+        var pal = new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(30, 24, 24),
+            ['W'] = Color.FromArgb(248, 246, 238),
+            ['S'] = Color.FromArgb(212, 206, 194),
+            ['R'] = Color.FromArgb(228, 56, 56),
+            ['Y'] = Color.FromArgb(244, 178, 54),
+            ['E'] = Color.FromArgb(20, 22, 28)
+        };
+        return PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "......KKK.......",
+            ".....KRRRK......",
+            "....KWWWWWK.....",
+            "....KWEWWWK.....",
+            "...KYWWWWWK.....",
+            "...KKWWWRWK.....",
+            "....KWWWWWWWKK..",
+            "....KWWSSSSWWWK.",
+            "....KWWSSSSSSWK.",
+            ".....KWWWWWWWSK.",
+            "......KSSSSSSK..",
+            ".......KKKKKK...",
+            step ? "......KYK..KYK.." : ".......KYKKYK...",
+            step ? ".....KKK...KKK.." : "......KKKKKKKK..",
+            "................"
+        }, pal);
+    }
+
+    private static Bitmap BuildSheepSprite(bool step)
+    {
+        var pal = new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(28, 28, 34),
+            ['W'] = Color.FromArgb(244, 242, 236),
+            ['L'] = Color.FromArgb(214, 210, 200),
+            ['F'] = Color.FromArgb(88, 82, 78),
+            ['D'] = Color.FromArgb(62, 56, 52),
+            ['E'] = Color.FromArgb(20, 22, 28)
+        };
+        return PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "................",
+            "....KKKKKKKK....",
+            "...KWWWWWWWWK...",
+            "..KWWLLLLLLWWK..",
+            ".KWWLLWWWWLLWWK.",
+            ".KWLLWFFFFWLLWK.",
+            ".KWWKFEFFEFKWWK.",
+            ".KWWKFFFFFFKWWK.",
+            ".KWLLWWWWWWLLWK.",
+            "..KWWLLLLLLWWK..",
+            "..KKKWWWWWWKKK..",
+            step ? "....KDK..KDK...." : ".....KDKKDK.....",
+            step ? "....KKK..KKK...." : ".....KKKKKK.....",
+            "................",
+            "................"
+        }, pal);
+    }
+
+    private static Bitmap BuildCowSprite(bool step)
+    {
+        var pal = new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(26, 22, 22),
+            ['W'] = Color.FromArgb(244, 240, 234),
+            ['B'] = Color.FromArgb(88, 62, 46),
+            ['D'] = Color.FromArgb(58, 40, 30),
+            ['P'] = Color.FromArgb(236, 174, 174),
+            ['Y'] = Color.FromArgb(228, 212, 166),
+            ['E'] = Color.FromArgb(18, 20, 26)
+        };
+        return PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            ".KK..........KK.",
+            ".KYYKKKKKKKKYYK.",
+            "..KKWWWWWWWWKK..",
+            ".KBBWWWEWWWWBBK.",
+            ".KWWWWWWWWWWBWK.",
+            ".KWPPPPPPPPWWWK.",
+            "..KKPPPPPPWWBBK.",
+            "..KWWWWWWBBBBWK.",
+            "..KWBBWWWWWWBWK.",
+            "..KBBBWWWWWWWK..",
+            "..KWWWWWWWWWWK..",
+            "..KKKKKKKKKKKK..",
+            step ? "..KDDK....KDDK.." : "...KDDK..KDDK...",
+            step ? "..KKKK....KKKK.." : "...KKKK..KKKK...",
+            "................"
+        }, pal);
+    }
+
+    private static Bitmap BuildPigSprite(bool step)
+    {
+        var pal = new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(44, 24, 30),
+            ['P'] = Color.FromArgb(244, 158, 174),
+            ['L'] = Color.FromArgb(255, 194, 206),
+            ['D'] = Color.FromArgb(206, 114, 134),
+            ['N'] = Color.FromArgb(234, 134, 152),
+            ['E'] = Color.FromArgb(24, 20, 26)
+        };
+        return PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "................",
+            "...KK......KK...",
+            "...KPKKKKKKPK...",
+            "..KPPPPPPPPPPK..",
+            "..KPPEPPPPEPPK..",
+            "..KPPNNNNNNPPK..",
+            "..KPPNKNKNKPPK..",
+            ".KLLLNNNNNNLLPK.",
+            ".KPPPPPPPPPPPPK.",
+            ".KPPDDDDDDDDPPK.",
+            "..KKDDDDDDDDKK..",
+            step ? "....KDK..KDK...." : ".....KDKKDK.....",
+            step ? "....KKK..KKK...." : ".....KKKKKK.....",
+            "................",
+            "................"
+        }, pal);
+    }
+
     private void RegisterItemAndProjectileSprites()
     {
         Register("wood", () => PixelArtBuilder.FromGrid(new[]
@@ -680,11 +926,253 @@ public sealed class SpriteAtlasCache : IDisposable
         Register("copper_ore", () => _sprites["res_copper"]);
         Register("iron_ore", () => _sprites["res_iron"]);
         Register("gold_ore", () => _sprites["res_gold"]);
+        Register("coal", () => _sprites["res_coal"]);
+        Register("crystal", () => _sprites["res_crystal"]);
+        Register("wheat", () => _sprites["res_wheat"]);
         Register("slime_gel", () => _sprites["enemy_slime_0"]);
         Register("workbench", () => _sprites["str_workbench"]);
         Register("wooden_wall", () => _sprites["str_wood_wall"]);
         Register("stone_wall", () => _sprites["str_stone_wall"]);
         Register("torch", () => _sprites["str_torch_0"]);
+        Register("wooden_fence", () => _sprites["str_wood_fence"]);
+
+        Register("berry", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "......KKKK......",
+            ".....KGGGGK.....",
+            "....KKGGGGKK....",
+            "...KRRKGGKRRK...",
+            "..KRHHRKKRHHRK..",
+            "..KRRRRKKRRRRK..",
+            "..KDRRRKKRRRDK..",
+            "...KDDKRRKDDK...",
+            "....KKRHHRKK....",
+            ".....KRRRRK.....",
+            ".....KDRRDK.....",
+            "......KKKK......",
+            "................",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(30, 18, 28),
+            ['G'] = Color.FromArgb(62, 164, 72),
+            ['R'] = Color.FromArgb(228, 44, 72),
+            ['D'] = Color.FromArgb(164, 24, 52),
+            ['H'] = Color.FromArgb(255, 168, 186)
+        }));
+
+        Register("bread", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "................",
+            "................",
+            "....KKKKKKKK....",
+            "..KKLLLLLLLLKK..",
+            ".KLLLLMMLLLLLLK.",
+            ".KLLLMMLLMMLLMK.",
+            "KLLLLLLLLLLLLMMK",
+            "KMMMMMMMMMMMMMDK",
+            "KDDDDDDDDDDDDDDK",
+            ".KKKKKKKKKKKKKK.",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(54, 32, 16),
+            ['L'] = Color.FromArgb(246, 198, 102),
+            ['M'] = Color.FromArgb(218, 154, 62),
+            ['D'] = Color.FromArgb(168, 102, 34)
+        }));
+
+        Register("raw_meat", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "................",
+            "....KKKKKK......",
+            "...KWWWWWWKK....",
+            "..KWRRRRRRWWK...",
+            ".KWRRRWWRRRRRK..",
+            ".KWRRWWRRRRRDK..",
+            ".KWRRRRRRRRDDK..",
+            "..KWRRRRRRDDDK..",
+            "...KKDDDDDDKK...",
+            ".....KWWWK......",
+            ".....KWWK.......",
+            "......KK........",
+            "................",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(46, 18, 24),
+            ['W'] = Color.FromArgb(248, 238, 232),
+            ['R'] = Color.FromArgb(224, 72, 84),
+            ['D'] = Color.FromArgb(168, 42, 54)
+        }));
+
+        Register("cooked_meat", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "................",
+            "....KKKKKK......",
+            "...KLLLLLLKK....",
+            "..KLLBBBBBBLLK..",
+            ".KLBBBBBBBBBBBK.",
+            ".KBBWWBBBBBBDDK.",
+            ".KBBBBBBBBDDDDK.",
+            "..KBBBBDDDDDDK..",
+            "...KKDDDDDDKK...",
+            ".....KWWWK......",
+            ".....KWWK.......",
+            "......KK........",
+            "................",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(38, 20, 14),
+            ['L'] = Color.FromArgb(204, 128, 68),
+            ['B'] = Color.FromArgb(156, 82, 42),
+            ['D'] = Color.FromArgb(108, 52, 24),
+            ['W'] = Color.FromArgb(244, 236, 224)
+        }));
+
+        Register("wool", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "................",
+            "....KKKKKKKK....",
+            "...KWWWWWWWWK...",
+            "..KWWLLLLLLWWK..",
+            ".KWWLWWWWWWLWWK.",
+            ".KWLWWWWWWWWLWK.",
+            ".KWWLSSSSSSLWWK.",
+            "..KWWLLLLLLWWK..",
+            "...KSSSSSSSSK...",
+            "....KKKKKKKK....",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(48, 48, 56),
+            ['W'] = Color.FromArgb(248, 248, 242),
+            ['L'] = Color.FromArgb(228, 226, 218),
+            ['S'] = Color.FromArgb(196, 194, 186)
+        }));
+
+        Register("feather", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "..........KKKK..",
+            ".........KWWWWK.",
+            "........KWWWWSK.",
+            ".......KWWWWSK..",
+            "......KWWBWWSK..",
+            ".....KWWBWWSK...",
+            "....KWWBWWSK....",
+            "...KWWBWWSK.....",
+            "...KWBWWSK......",
+            "..KWBWWKK.......",
+            "..KBBKK.........",
+            ".KBBK...........",
+            ".KKK............",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(42, 42, 52),
+            ['W'] = Color.FromArgb(248, 248, 252),
+            ['S'] = Color.FromArgb(206, 214, 228),
+            ['B'] = Color.FromArgb(172, 134, 86)
+        }));
+
+        Register("leather", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "..KKK......KKK..",
+            ".KLLLK....KLLLK.",
+            "KLLLLKKKKKKLLLLK",
+            "KMMMMMMMMMMMMMMK",
+            "KMMLLLLLLLLLLMMK",
+            ".KMMMMMMMMMMMMK.",
+            ".KMMMMMMMMMMMMK.",
+            ".KMMDDDDDDDDMMK.",
+            "KDDDDDDDDDDDDDDK",
+            "KDDDK......KDDDK",
+            ".KKK........KKK.",
+            "................",
+            "................",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(42, 24, 14),
+            ['L'] = Color.FromArgb(198, 128, 72),
+            ['M'] = Color.FromArgb(162, 94, 46),
+            ['D'] = Color.FromArgb(118, 64, 28)
+        }));
+
+        Register("hunter_bow", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            ".......KKKK.....",
+            ".....KKGGGGK....",
+            "....KGGK..KSK...",
+            "...KBBK....KSK..",
+            "...KBK.....KSK..",
+            "..KBK......KSK..",
+            "..KBK......KSK..",
+            "..KBK......KSK..",
+            "...KBK.....KSK..",
+            "...KBBK....KSK..",
+            "....KGGK..KSK...",
+            ".....KKGGGGK....",
+            ".......KKKK.....",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(34, 22, 12),
+            ['B'] = Color.FromArgb(132, 78, 36),
+            ['G'] = Color.FromArgb(236, 188, 64),
+            ['S'] = Color.FromArgb(236, 232, 214)
+        }));
+
+        Register("crystal_staff", () => PixelArtBuilder.FromGrid(new[]
+        {
+            ".........KKK....",
+            "........KCCCK...",
+            ".......KCLWLK...",
+            ".......KCLCLK...",
+            "........KCCCK...",
+            "........KGGK....",
+            ".......KBBK.....",
+            "......KBBK......",
+            ".....KBBK.......",
+            "....KBBK........",
+            "...KBBK.........",
+            "..KBBK..........",
+            ".KGGK...........",
+            ".KKK............",
+            "................",
+            "................"
+        }, new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(24, 22, 44),
+            ['C'] = Color.FromArgb(64, 198, 244),
+            ['L'] = Color.FromArgb(148, 242, 255),
+            ['W'] = Color.FromArgb(234, 252, 255),
+            ['G'] = Color.FromArgb(242, 198, 68),
+            ['B'] = Color.FromArgb(128, 76, 40)
+        }));
 
         Register("wood_axe", () => BuildToolIcon(isAxe: true, Color.FromArgb(182, 128, 72), Color.FromArgb(132, 84, 42)));
         Register("wood_pickaxe", () => BuildToolIcon(isAxe: false, Color.FromArgb(182, 128, 72), Color.FromArgb(132, 84, 42)));

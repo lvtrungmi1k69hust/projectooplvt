@@ -194,5 +194,16 @@ public sealed class JsonSaveStorage : ISaveStorage
                 throw new SaveCorruptedException($"Invalid enemy snapshot at index {i}.", slotIndex);
             }
         }
+
+        if (snapshot.Animals is not null)
+        {
+            for (int i = 0; i < snapshot.Animals.Count; i++)
+            {
+                if (string.IsNullOrWhiteSpace(snapshot.Animals[i].Type) || snapshot.Animals[i].Hp < 0)
+                {
+                    throw new SaveCorruptedException($"Invalid animal snapshot at index {i}.", slotIndex);
+                }
+            }
+        }
     }
 }

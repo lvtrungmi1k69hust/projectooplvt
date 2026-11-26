@@ -10,6 +10,7 @@ using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Exceptions;
 using MiniNecesse.Core.Interfaces;
 using MiniNecesse.Core.Rules;
+using MiniNecesse.Core.World;
 using MiniNecesse.Data.Schemas;
 
 namespace MiniNecesse.Data;
@@ -66,6 +67,11 @@ public sealed class JsonLevelLoader : ILevelLoader
         GameConfigJson dto = ReadJsonOrThrow<GameConfigJson>(path, "CONFIG");
         ValidateConfig(dto);
 
+        int chunkSize = dto.ChunkSize == 0 ? IslandLevel.DEFAULT_CHUNK_SIZE : dto.ChunkSize;
+        int minView = dto.MinViewDistanceChunks == 0 ? ChunkManager.DEFAULT_MIN_VIEW_DISTANCE : dto.MinViewDistanceChunks;
+        int maxView = dto.MaxViewDistanceChunks == 0 ? ChunkManager.DEFAULT_MAX_VIEW_DISTANCE : dto.MaxViewDistanceChunks;
+        int defaultView = dto.DefaultViewDistanceChunks == 0 ? ChunkManager.DEFAULT_VIEW_DISTANCE : dto.DefaultViewDistanceChunks;
+
         return new GameConfig(
             dto.FixedDeltaTime,
             dto.TileSize,
@@ -76,7 +82,11 @@ public sealed class JsonLevelLoader : ILevelLoader
             dto.PlayerBaseDamage,
             dto.InventorySlots,
             dto.HotbarSlots,
-            dto.WorkbenchInteractRadius);
+            dto.WorkbenchInteractRadius,
+            chunkSize,
+            defaultView,
+            minView,
+            maxView);
     }
 
     /// <inheritdoc />
@@ -109,27 +119,79 @@ public sealed class JsonLevelLoader : ILevelLoader
 
         string filePath = ResolveIslandFilePath(islandId);
         IslandJson raw = ReadJsonOrThrow<IslandJson>(filePath, islandId);
-        ValidateIslandHeader(raw, islandId);
+        bool isProcedural = string.Equals(raw.GenerationMode, "procedural", StringComparison.OrdinalIgnoreCase);
+        ValidateIslandHeader(raw, islandId, isProcedural);
 
         GameConfig config = TryLoadConfigTileSize();
-        TileType[,] grid = ParseTileLayout(raw);
-        var level = new IslandLevel(
-            raw.IslandId!,
-            raw.Name!,
-            raw.Biome ?? "Forest",
-            raw.Boss!.Type!,
-            raw.Width,
-            raw.Height,
-            raw.PlayerSpawn!.X,
-            raw.PlayerSpawn.Y,
-            config.TileSize,
-            (col, row) => grid[row, col]);
+        IslandLevel level;
+        Action<ChunkCoord, List<ResourceSpawnPoint>>? chunkResourceGenerator = null;
+        Action<ChunkCoord, List<StructureSpawnPoint>>? chunkStructureGenerator = null;
+        Action<ChunkCoord, List<AnimalSpawnPoint>>? chunkAnimalGenerator = null;
+        IReadOnlyList<VillageSite> villages = Array.Empty<VillageSite>();
+
+        if (isProcedural)
+        {
+            ProceduralIslandConfig procConfig = ParseProceduralConfig(raw);
+            var generator = new ProceduralIslandGenerator(
+                raw.Width,
+                raw.Height,
+                raw.PlayerSpawn!.X,
+                raw.PlayerSpawn.Y,
+                raw.Biome ?? "Forest",
+                raw.Seed,
+                procConfig);
+
+            level = new IslandLevel(
+                raw.IslandId!,
+                raw.Name!,
+                raw.Biome ?? "Forest",
+                raw.Boss!.Type!,
+                raw.Width,
+                raw.Height,
+                raw.PlayerSpawn.X,
+                raw.PlayerSpawn.Y,
+                config.TileSize,
+                generator.GetTileType,
+                config.ChunkSize,
+                lazyChunkLoading: true);
+
+            chunkResourceGenerator = (coord, output) => generator.GenerateResourcesForChunk(level, coord, output);
+            chunkStructureGenerator = (coord, output) => generator.GenerateStructuresForChunk(level, coord, output);
+            chunkAnimalGenerator = (coord, output) => generator.GenerateAnimalsForChunk(level, coord, output);
+            villages = generator.Villages;
+        }
+        else
+        {
+            TileType[,] grid = ParseTileLayout(raw);
+            level = new IslandLevel(
+                raw.IslandId!,
+                raw.Name!,
+                raw.Biome ?? "Forest",
+                raw.Boss!.Type!,
+                raw.Width,
+                raw.Height,
+                raw.PlayerSpawn!.X,
+                raw.PlayerSpawn.Y,
+                config.TileSize,
+                (col, row) => grid[row, col],
+                config.ChunkSize,
+                lazyChunkLoading: false);
+        }
 
         IReadOnlyList<ResourceSpawnPoint> resources = ParseResourceSpawns(raw, level);
         IReadOnlyList<WaveDefinition> waves = ParseWaves(raw);
         BossConfiguration boss = ParseBoss(raw.Boss!, raw.IslandId!);
 
-        return new LoadedIslandPackage(level, resources, waves, boss, raw.Seed);
+        return new LoadedIslandPackage(
+            level,
+            resources,
+            waves,
+            boss,
+            raw.Seed,
+            chunkResourceGenerator,
+            chunkStructureGenerator,
+            chunkAnimalGenerator,
+            villages);
     }
 
     /// <inheritdoc />
@@ -209,6 +271,22 @@ public sealed class JsonLevelLoader : ILevelLoader
                 "config.json contains missing or non-positive game balance values.",
                 "CONFIG");
         }
+
+        if (dto.ChunkSize < 0 || dto.MinViewDistanceChunks < 0 || dto.MaxViewDistanceChunks < 0 || dto.DefaultViewDistanceChunks < 0)
+        {
+            throw new InvalidLevelDataException("config.json contains negative chunk streaming values.", "CONFIG");
+        }
+
+        int minView = dto.MinViewDistanceChunks == 0 ? ChunkManager.DEFAULT_MIN_VIEW_DISTANCE : dto.MinViewDistanceChunks;
+        int maxView = dto.MaxViewDistanceChunks == 0 ? ChunkManager.DEFAULT_MAX_VIEW_DISTANCE : dto.MaxViewDistanceChunks;
+        int defaultView = dto.DefaultViewDistanceChunks == 0 ? ChunkManager.DEFAULT_VIEW_DISTANCE : dto.DefaultViewDistanceChunks;
+
+        if (minView > maxView || defaultView < minView || defaultView > maxView)
+        {
+            throw new InvalidLevelDataException(
+                "config.json view distance bounds are inconsistent (require min <= default <= max).",
+                "CONFIG");
+        }
     }
 
     private static CraftingRecipe ParseRecipe(RecipeJson raw, int index)
@@ -238,7 +316,7 @@ public sealed class JsonLevelLoader : ILevelLoader
         return new CraftingRecipe(raw.RecipeId, raw.OutputItemId, raw.OutputQuantity, raw.RequiresWorkbench, ingredients);
     }
 
-    private static void ValidateIslandHeader(IslandJson raw, string requestedId)
+    private static void ValidateIslandHeader(IslandJson raw, string requestedId, bool isProcedural)
     {
         string id = raw.IslandId ?? requestedId;
         if (string.IsNullOrWhiteSpace(raw.IslandId) || string.IsNullOrWhiteSpace(raw.Name))
@@ -256,7 +334,7 @@ public sealed class JsonLevelLoader : ILevelLoader
             throw new InvalidLevelDataException("Island JSON is missing required 'playerSpawn' coordinates.", id);
         }
 
-        if (raw.TileLayout is null || raw.TileLayout.Count != raw.Height)
+        if (!isProcedural && (raw.TileLayout is null || raw.TileLayout.Count != raw.Height))
         {
             throw new InvalidLevelDataException($"Island 'tileLayout' must contain exactly {raw.Height} rows.", id);
         }
@@ -265,6 +343,36 @@ public sealed class JsonLevelLoader : ILevelLoader
         {
             throw new InvalidLevelDataException("Island JSON is missing required 'boss' configuration.", id);
         }
+
+        if (raw.ResourceDensity.HasValue && (raw.ResourceDensity.Value < 0f || raw.ResourceDensity.Value > 1f))
+        {
+            throw new InvalidLevelDataException("Island 'resourceDensity' must be within [0, 1].", id);
+        }
+    }
+
+    private static ProceduralIslandConfig ParseProceduralConfig(IslandJson raw)
+    {
+        float density = raw.ResourceDensity ?? 0.028f;
+        var weights = new Dictionary<ResourceType, float>();
+        if (raw.ResourceWeights is not null)
+        {
+            foreach (KeyValuePair<string, float> kvp in raw.ResourceWeights)
+            {
+                if (!Enum.TryParse(kvp.Key, ignoreCase: true, out ResourceType resourceType))
+                {
+                    throw new InvalidLevelDataException($"Unknown procedural resourceWeight key '{kvp.Key}'.", raw.IslandId);
+                }
+
+                if (kvp.Value < 0f)
+                {
+                    throw new InvalidLevelDataException($"Negative procedural resourceWeight for '{kvp.Key}'.", raw.IslandId);
+                }
+
+                weights[resourceType] = kvp.Value;
+            }
+        }
+
+        return new ProceduralIslandConfig(density, weights);
     }
 
     private static TileType[,] ParseTileLayout(IslandJson raw)

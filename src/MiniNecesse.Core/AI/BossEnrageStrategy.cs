@@ -18,6 +18,7 @@ public sealed class BossEnrageStrategy : IAIStrategy
 {
     private const float DEFAULT_VOLLEY_SPREAD_RADIANS = 0.65f;
     private const float DEFAULT_PROJECTILE_SPEED = 260f;
+    private const float DEFAULT_MAX_VOLLEY_RANGE = 420f;
     private const int DEFAULT_VOLLEY_COUNT = 3;
 
     private readonly CollisionDetector _collisionDetector;
@@ -25,12 +26,16 @@ public sealed class BossEnrageStrategy : IAIStrategy
     private readonly int _volleyCount;
     private readonly float _projectileSpeed;
     private readonly float _spreadRadians;
+    private readonly float _maxVolleyRange;
 
     /// <inheritdoc />
     public string StrategyName => nameof(BossEnrageStrategy);
 
     /// <summary>Gets the number of projectiles fired in each radial burst.</summary>
     public int VolleyCount => _volleyCount;
+
+    /// <summary>Gets the maximum distance in world units at which enraged projectile volleys fire.</summary>
+    public float MaxVolleyRange => _maxVolleyRange;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BossEnrageStrategy"/> class.
@@ -40,7 +45,8 @@ public sealed class BossEnrageStrategy : IAIStrategy
         CollisionDetector? collisionDetector = null,
         int volleyCount = DEFAULT_VOLLEY_COUNT,
         float projectileSpeed = DEFAULT_PROJECTILE_SPEED,
-        float spreadRadians = DEFAULT_VOLLEY_SPREAD_RADIANS)
+        float spreadRadians = DEFAULT_VOLLEY_SPREAD_RADIANS,
+        float maxVolleyRange = DEFAULT_MAX_VOLLEY_RANGE)
     {
         if (volleyCount <= 0)
         {
@@ -52,11 +58,17 @@ public sealed class BossEnrageStrategy : IAIStrategy
             throw new ArgumentOutOfRangeException(nameof(projectileSpeed), "Projectile speed must be positive.");
         }
 
+        if (maxVolleyRange <= 0f)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxVolleyRange), "Max volley range must be positive.");
+        }
+
         _projectileSpawner = projectileSpawner;
         _collisionDetector = collisionDetector ?? new CollisionDetector();
         _volleyCount = volleyCount;
         _projectileSpeed = projectileSpeed;
         _spreadRadians = spreadRadians;
+        _maxVolleyRange = maxVolleyRange;
     }
 
     /// <inheritdoc />
@@ -89,11 +101,10 @@ public sealed class BossEnrageStrategy : IAIStrategy
         if (distance <= enemy.AttackRange)
         {
             enemy.TryAttack(target);
-            SpawnVolley(enemy, direction);
             return;
         }
 
-        if (_projectileSpawner is not null && direction != Vector2D.Zero)
+        if (_projectileSpawner is not null && direction != Vector2D.Zero && distance <= _maxVolleyRange)
         {
             SpawnVolley(enemy, direction);
             enemy.TriggerAttackCooldown();

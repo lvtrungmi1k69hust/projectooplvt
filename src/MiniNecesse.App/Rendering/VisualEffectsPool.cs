@@ -18,6 +18,9 @@ public sealed class VisualEffectsPool
     private const int MAX_PARTICLES = 96;
     private const int MAX_FLOATING_TEXTS = 32;
 
+    private static readonly string[] DAMAGE_LABELS = BuildSignedLabels("-", 256);
+    private static readonly string[] HEAL_LABELS = BuildSignedLabels("+", 256);
+
     private struct Particle
     {
         public bool Active;
@@ -71,9 +74,43 @@ public sealed class VisualEffectsPool
     {
         ObservePlayerHp(session.Player);
         ObserveEnemyHps(session.Enemies);
+        ObserveAnimalHps(session.Animals);
         ObserveResourceHps(session.Resources);
+        PruneStaleHpCacheIfNeeded(session);
         StepParticles(deltaTime);
         StepFloatingTexts(deltaTime);
+    }
+
+    private void PruneStaleHpCacheIfNeeded(GameSession session)
+    {
+        if (_lastHpById.Count <= 512)
+        {
+            return;
+        }
+
+        _lastHpById.Clear();
+        _lastHpById[session.Player.Id] = session.Player.CurrentHp;
+
+        IReadOnlyList<Enemy> enemies = session.Enemies;
+        for (int i = 0; i < enemies.Count; i++)
+        {
+            Enemy e = enemies[i];
+            if (e.IsAlive) _lastHpById[e.Id] = e.CurrentHp;
+        }
+
+        IReadOnlyList<Animal> animals = session.Animals;
+        for (int i = 0; i < animals.Count; i++)
+        {
+            Animal a = animals[i];
+            if (a.IsAlive) _lastHpById[a.Id] = a.CurrentHp;
+        }
+
+        IReadOnlyList<ResourceNode> resources = session.Resources;
+        for (int i = 0; i < resources.Count; i++)
+        {
+            ResourceNode r = resources[i];
+            if (r.IsAlive) _lastHpById[r.Id] = r.CurrentHp;
+        }
     }
 
     /// <summary>Draws active pixel particles and floating damage/heal numbers using cached brushes.</summary>
@@ -105,12 +142,12 @@ public sealed class VisualEffectsPool
             int diff = player.CurrentHp - prev;
             if (diff < 0)
             {
-                SpawnText(player.Center.X - 10f, player.Position.Y - 12f, diff.ToString(), isHeal: false);
+                SpawnText(player.Center.X - 10f, player.Position.Y - 12f, GetSignedLabel(-diff, isHeal: false), isHeal: false);
                 SpawnBurst(player.Center, ColorType.Hit, 6);
             }
             else if (diff > 0)
             {
-                SpawnText(player.Center.X - 10f, player.Position.Y - 12f, $"+{diff}", isHeal: true);
+                SpawnText(player.Center.X - 10f, player.Position.Y - 12f, GetSignedLabel(diff, isHeal: true), isHeal: true);
             }
         }
 
@@ -125,12 +162,28 @@ public sealed class VisualEffectsPool
             if (_lastHpById.TryGetValue(e.Id, out int prev) && e.CurrentHp < prev)
             {
                 int dmg = prev - e.CurrentHp;
-                SpawnText(e.Center.X - 8f, e.Position.Y - 10f, $"-{dmg}", isHeal: false);
+                SpawnText(e.Center.X - 8f, e.Position.Y - 10f, GetSignedLabel(dmg, isHeal: false), isHeal: false);
                 ColorType kind = e.Archetype.Contains("Slime", StringComparison.OrdinalIgnoreCase) ? ColorType.Slime : ColorType.Hit;
                 SpawnBurst(e.Center, kind, 7);
             }
 
             _lastHpById[e.Id] = e.CurrentHp;
+        }
+    }
+
+    private void ObserveAnimalHps(IReadOnlyList<Animal> animals)
+    {
+        for (int i = 0; i < animals.Count; i++)
+        {
+            Animal a = animals[i];
+            if (_lastHpById.TryGetValue(a.Id, out int prev) && a.CurrentHp < prev)
+            {
+                int dmg = prev - a.CurrentHp;
+                SpawnText(a.Center.X - 8f, a.Position.Y - 10f, GetSignedLabel(dmg, isHeal: false), isHeal: false);
+                SpawnBurst(a.Center, ColorType.Hit, 5);
+            }
+
+            _lastHpById[a.Id] = a.CurrentHp;
         }
     }
 
@@ -141,9 +194,13 @@ public sealed class VisualEffectsPool
             ResourceNode r = resources[i];
             if (_lastHpById.TryGetValue(r.Id, out int prev) && r.CurrentHp < prev)
             {
-                ColorType kind = r.ResourceType == ResourceType.Tree
-                    ? ColorType.Wood
-                    : r.ResourceType == ResourceType.GoldDeposit ? ColorType.Gold : ColorType.Stone;
+                ColorType kind = r.ResourceType switch
+                {
+                    ResourceType.Tree or ResourceType.BerryBush => ColorType.Wood,
+                    ResourceType.GoldDeposit or ResourceType.WheatCrop => ColorType.Gold,
+                    ResourceType.CrystalCluster => ColorType.Slime,
+                    _ => ColorType.Stone
+                };
                 SpawnBurst(r.Center, kind, 6);
             }
 
@@ -229,5 +286,26 @@ public sealed class VisualEffectsPool
             ColorType.Slime => cache.SlimeBrush,
             _ => cache.EnemyProjectileBrush
         };
+    }
+
+    private static string GetSignedLabel(int absAmount, bool isHeal)
+    {
+        if ((uint)absAmount < (uint)DAMAGE_LABELS.Length)
+        {
+            return isHeal ? HEAL_LABELS[absAmount] : DAMAGE_LABELS[absAmount];
+        }
+
+        return isHeal ? $"+{absAmount}" : $"-{absAmount}";
+    }
+
+    private static string[] BuildSignedLabels(string prefix, int count)
+    {
+        var labels = new string[count];
+        for (int i = 0; i < count; i++)
+        {
+            labels[i] = $"{prefix}{i}";
+        }
+
+        return labels;
     }
 }

@@ -42,6 +42,22 @@ public sealed record StructureBlueprint(
     float LightRadius = 0f);
 
 /// <summary>
+/// Data-driven blueprint describing a passive wildlife or livestock animal species.
+/// </summary>
+public sealed record AnimalBlueprint(
+    AnimalType AnimalType,
+    string DisplayName,
+    int MaxHp,
+    float MoveSpeed,
+    string PrimaryDropItemId,
+    int PrimaryDropQuantity,
+    string? SecondaryDropItemId = null,
+    int SecondaryDropQuantity = 0,
+    int ScoreReward = 10,
+    float Width = 22f,
+    float Height = 22f);
+
+/// <summary>
 /// Data-driven blueprint describing an item definition loaded from JSON configuration.
 /// </summary>
 public sealed record ItemBlueprint(

@@ -13,6 +13,7 @@ public sealed class CraftingRecipe
     private readonly int _outputQuantity;
     private readonly bool _requiresWorkbench;
     private readonly List<RecipeIngredient> _ingredients;
+    private readonly IReadOnlyList<RecipeIngredient> _ingredientsView;
 
     /// <summary>Gets the unique identifier of this recipe.</summary>
     public string RecipeId => _recipeId;
@@ -26,8 +27,8 @@ public sealed class CraftingRecipe
     /// <summary>Gets a value indicating whether the player must stand near a workbench to craft this recipe.</summary>
     public bool RequiresWorkbench => _requiresWorkbench;
 
-    /// <summary>Gets a read-only list of ingredients consumed by this recipe.</summary>
-    public IReadOnlyList<RecipeIngredient> Ingredients => _ingredients.AsReadOnly();
+    /// <summary>Gets a cached read-only list of ingredients consumed by this recipe.</summary>
+    public IReadOnlyList<RecipeIngredient> Ingredients => _ingredientsView;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CraftingRecipe"/> class.
@@ -61,6 +62,7 @@ public sealed class CraftingRecipe
             throw new ArgumentException("A crafting recipe must declare at least one ingredient.", nameof(ingredients));
         }
 
+        _ingredientsView = _ingredients.AsReadOnly();
         _recipeId = recipeId;
         _outputItemId = outputItemId;
         _outputQuantity = outputQuantity;
