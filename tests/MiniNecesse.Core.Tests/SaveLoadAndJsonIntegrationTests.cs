@@ -101,6 +101,10 @@ public sealed class SaveLoadAndJsonIntegrationTests
 
         GameConfig config = loader.LoadConfig();
         Assert.Equal(32f, config.TileSize);
+        Assert.Equal(16, config.ChunkSize);
+        Assert.Equal(3, config.DefaultViewDistanceChunks);
+        Assert.Equal(1, config.MinViewDistanceChunks);
+        Assert.Equal(8, config.MaxViewDistanceChunks);
         Assert.True(config.PlayerBaseHp > 0);
 
         var recipes = loader.LoadRecipes();
@@ -109,13 +113,32 @@ public sealed class SaveLoadAndJsonIntegrationTests
         var islandIds = loader.GetAvailableIslandIds();
         Assert.Equal(5, islandIds.Count);
 
+        var itemFactory = ItemFactory.CreateDefault();
+        var enemyFactory = EnemyFactory.CreateDefault();
         int previousBossHp = 0;
         foreach (string islandId in islandIds)
         {
             LoadedIslandPackage package = loader.LoadIsland(islandId);
-            Assert.Equal(48, package.Level.Width);
-            Assert.Equal(36, package.Level.Height);
-            Assert.True(package.ResourceSpawns.Count >= 35);
+            Assert.Equal(320, package.Level.Width);
+            Assert.Equal(320, package.Level.Height);
+            Assert.True(package.Level.UsesLazyChunkLoading);
+            Assert.Equal(400, package.Level.TotalChunkCount);
+            Assert.True(package.Level.LoadedChunkCount < package.Level.TotalChunkCount);
+            Assert.NotNull(package.ChunkResourceGenerator);
+
+            var player = new Player("player_1", package.Level.PlayerSpawnWorldPosition);
+            using var session = new GameSession(
+                package.Level,
+                player,
+                itemFactory.ResolveItem,
+                viewDistanceChunks: config.DefaultViewDistanceChunks,
+                minViewDistanceChunks: config.MinViewDistanceChunks,
+                maxViewDistanceChunks: config.MaxViewDistanceChunks);
+            session.ConfigureChunkResourceSpawner(package.ChunkResourceGenerator, enemyFactory.CreateResourceNode);
+            session.InitializeChunksAroundPlayer();
+
+            Assert.Equal(49, package.Level.LoadedChunkCount);
+            Assert.True(session.Resources.Count >= 10);
             Assert.True(package.Waves.Count >= 3);
             Assert.True(package.Boss.MaxHp > previousBossHp);
             previousBossHp = package.Boss.MaxHp;
