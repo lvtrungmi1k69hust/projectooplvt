@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using MiniNecesse.App.UI;
@@ -19,7 +20,7 @@ namespace MiniNecesse.App.Forms;
 /// </summary>
 public sealed class FrmHighScoresDialog : Form
 {
-    private const float OPEN_ANIMATION_MS = 180f;
+    private const float OPEN_ANIMATION_MS = 140f;
 
     private static readonly GameMode[] MODES = { GameMode.Campaign, GameMode.Endless };
     private static readonly Difficulty[] DIFFICULTIES = { Difficulty.Tutorial, Difficulty.Normal, Difficulty.Hard };
@@ -39,7 +40,8 @@ public sealed class FrmHighScoresDialog : Form
     private readonly Button _btnClose;
     private readonly System.Windows.Forms.Timer _animTimer;
 
-    private int _animElapsedMs;
+    private readonly Stopwatch _animStopwatch = new();
+    private bool _layoutReady;
     private bool _disposed;
 
     /// <summary>Initializes a new instance of the <see cref="FrmHighScoresDialog"/> class.</summary>
@@ -56,8 +58,6 @@ public sealed class FrmHighScoresDialog : Form
         SuspendLayout();
         Text = "MiniNecesse — Leaderboard";
         AutoScaleMode = AutoScaleMode.Dpi;
-        ClientSize = new Size(760, 620);
-        MinimumSize = new Size(640, 540);
         FormBorderStyle = FormBorderStyle.Sizable;
         StartPosition = FormStartPosition.CenterParent;
         KeyPreview = true;
@@ -70,7 +70,8 @@ public sealed class FrmHighScoresDialog : Form
         {
             Text = "TOP 10 SURVIVOR LEADERBOARD",
             AutoSize = false,
-            Height = 32,
+            UseMnemonic = false,
+            Height = 36,
             Font = CreateOwnedFont(UiTheme.FontFamily, 15.5f, FontStyle.Bold),
             ForeColor = UiTheme.AccentGold,
             BackColor = UiTheme.BackgroundPrimary,
@@ -81,8 +82,9 @@ public sealed class FrmHighScoresDialog : Form
         {
             Text = "Scores are tracked independently per World Mode and Difficulty.",
             AutoSize = false,
-            Height = 20,
-            Font = CreateOwnedFont(UiTheme.FontFamily, 9f),
+            UseMnemonic = false,
+            Height = 24,
+            Font = CreateOwnedFont(UiTheme.FontFamily, 9.25f),
             ForeColor = UiTheme.TextMuted,
             BackColor = UiTheme.BackgroundPrimary,
             TextAlign = ContentAlignment.MiddleLeft
@@ -160,6 +162,9 @@ public sealed class FrmHighScoresDialog : Form
 
         _animTimer = new System.Windows.Forms.Timer { Interval = 16 };
         SubscribeEvents();
+        ClientSize = new Size(820, 640);
+        MinimumSize = new Size(680, 560);
+        _layoutReady = true;
         LayoutControls();
         ResumeLayout(false);
 
@@ -169,9 +174,8 @@ public sealed class FrmHighScoresDialog : Form
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
-        _animElapsedMs = 0;
-        Opacity = 0.20;
         _leaderboardCanvas.AnimationProgress = 0f;
+        _animStopwatch.Restart();
         _animTimer.Start();
     }
 
@@ -207,6 +211,7 @@ public sealed class FrmHighScoresDialog : Form
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         _animTimer.Stop();
+        _animStopwatch.Stop();
         UnsubscribeEvents();
         base.OnFormClosing(e);
     }
@@ -249,26 +254,29 @@ public sealed class FrmHighScoresDialog : Form
 
     private void HandleAnimTick(object? sender, EventArgs e)
     {
-        _animElapsedMs += _animTimer.Interval;
-        float progress = Math.Clamp(_animElapsedMs / OPEN_ANIMATION_MS, 0f, 1f);
-        Opacity = 0.20 + (0.80 * progress);
+        float progress = Math.Clamp(_animStopwatch.ElapsedMilliseconds / OPEN_ANIMATION_MS, 0f, 1f);
         _leaderboardCanvas.AnimationProgress = progress;
 
         if (progress >= 1f)
         {
             _animTimer.Stop();
-            Opacity = 1.0;
+            _animStopwatch.Stop();
         }
     }
 
     private void LayoutControls()
     {
+        if (!_layoutReady)
+        {
+            return;
+        }
+
         int pad = UiTheme.PagePadding;
         int contentW = Math.Max(320, ClientSize.Width - (pad * 2));
         int contentH = Math.Max(320, ClientSize.Height - (pad * 2));
 
-        _lblTitle.SetBounds(pad, pad, contentW, 32);
-        _lblSubtitle.SetBounds(pad, _lblTitle.Bottom + 2, contentW, 20);
+        _lblTitle.SetBounds(pad, pad, contentW, 36);
+        _lblSubtitle.SetBounds(pad, _lblTitle.Bottom + 2, contentW, 24);
 
         int filtersTop = _lblSubtitle.Bottom + UiTheme.SectionGap;
         int modeWidth = Math.Max(190, (int)(contentW * 0.36f));

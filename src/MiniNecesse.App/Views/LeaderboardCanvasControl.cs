@@ -148,7 +148,8 @@ public sealed class LeaderboardCanvasControl : Control
 
         float ease = 1f - MathF.Pow(1f - _animationProgress, 3f);
         float slideY = (1f - ease) * 14f;
-        if (slideY > 0.05f)
+        bool appliedSlide = slideY > 0.05f;
+        if (appliedSlide)
         {
             g.TranslateTransform(0f, slideY);
         }
@@ -169,7 +170,10 @@ public sealed class LeaderboardCanvasControl : Control
         if (_rows.Count == 0)
         {
             DrawEmptyState(g);
-            g.ResetTransform();
+            if (appliedSlide)
+            {
+                g.TranslateTransform(0f, -slideY);
+            }
             return;
         }
 
@@ -178,7 +182,10 @@ public sealed class LeaderboardCanvasControl : Control
             DrawRow(g, _rows[i], _rowRects[i], _rowPaths[i], hovered: i == _hoverRowIndex);
         }
 
-        g.ResetTransform();
+        if (appliedSlide)
+        {
+            g.TranslateTransform(0f, -slideY);
+        }
     }
 
     protected override void Dispose(bool disposing)
@@ -230,17 +237,17 @@ public sealed class LeaderboardCanvasControl : Control
             g.DrawString(row.RankLabel, _theme.RowPrimaryFont, _theme.TextMutedBrush, rRank, _theme.CenterMiddleFormat);
         }
 
-        Rectangle rPlayer = new Rectangle(_colPlayerRect.X, rect.Y, _colPlayerRect.Width - (row.IsHighlighted ? 44 : 0), rect.Height);
+        Rectangle rPlayer = new Rectangle(_colPlayerRect.X, rect.Y, _colPlayerRect.Width - (row.IsHighlighted ? 56 : 0), rect.Height);
         SolidBrush nameBrush = row.IsHighlighted || row.RankIndex < 3 ? _theme.TextPrimaryBrush : _theme.TextSecondaryBrush;
         g.DrawString(row.PlayerName, row.RankIndex < 3 || row.IsHighlighted ? _theme.RowPrimaryFont : _theme.RowBodyFont, nameBrush, rPlayer, _theme.LeftMiddleFormat);
 
         if (row.IsHighlighted && _newBadgeTemplatePath is not null)
         {
-            int badgeX = rPlayer.Right + 4;
-            int badgeY = rect.Y + ((rect.Height - 16) / 2);
+            int badgeX = rPlayer.Right + 6;
+            int badgeY = rect.Y + ((rect.Height - 18) / 2);
             g.TranslateTransform(badgeX, badgeY);
             g.FillPath(_theme.AccentGoldBrush, _newBadgeTemplatePath);
-            g.DrawString("NEW", _theme.BadgeFont, _theme.TextDarkBrush, new RectangleF(0f, 0f, 36f, 16f), _theme.CenterMiddleFormat);
+            g.DrawString("NEW", _theme.BadgeFont, _theme.TextDarkBrush, new RectangleF(0f, 0f, 46f, 18f), _theme.CenterMiddleFormat);
             g.TranslateTransform(-badgeX, -badgeY);
         }
 
@@ -315,11 +322,11 @@ public sealed class LeaderboardCanvasControl : Control
 
         int contentX = cardRect.X + INNER_MARGIN_X;
         int contentW = Math.Max(80, cardRect.Width - (INNER_MARGIN_X * 2));
-        int rankW = 54;
-        int dateW = 94;
-        int timeW = 72;
-        int scoreW = 92;
-        int playerW = Math.Max(80, contentW - rankW - dateW - timeW - scoreW - 20);
+        int rankW = 68;
+        int dateW = 124;
+        int timeW = 76;
+        int scoreW = 104;
+        int playerW = Math.Max(100, contentW - rankW - dateW - timeW - scoreW - 24);
 
         _colRankRect = new Rectangle(contentX, _headerBandRect.Y, rankW, HEADER_HEIGHT);
         _colPlayerRect = new Rectangle(_colRankRect.Right + 6, _headerBandRect.Y, playerW, HEADER_HEIGHT);
@@ -359,7 +366,7 @@ public sealed class LeaderboardCanvasControl : Control
             }
         }
 
-        _newBadgeTemplatePath = UiTheme.CreateRoundedRectPath(new Rectangle(0, 0, 36, 16), 4);
+        _newBadgeTemplatePath = UiTheme.CreateRoundedRectPath(new Rectangle(0, 0, 46, 18), 5);
 
         // Centered vector trophy illustration + text rectangles for empty state
         int centerX = cardRect.X + (cardRect.Width / 2);
