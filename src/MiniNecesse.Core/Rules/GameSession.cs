@@ -691,12 +691,13 @@ public sealed class GameSession : IDisposable
         int damage,
         string ownerId,
         bool isFromPlayer,
-        float lifetime = DEFAULT_PROJECTILE_LIFETIME)
+        float lifetime = DEFAULT_PROJECTILE_LIFETIME,
+        string? soundCue = null)
     {
         Projectile projectile = _projectilePool.Acquire();
         projectile.Reset(origin, velocity, damage, lifetime, ownerId, isFromPlayer);
         _projectiles.Add(projectile);
-        RequestSound("shoot");
+        RequestSound(string.IsNullOrWhiteSpace(soundCue) ? "shoot" : soundCue);
         return projectile;
     }
 
@@ -786,7 +787,10 @@ public sealed class GameSession : IDisposable
         if (_player.Inventory.TryRemoveItem(selected.Item.Id, 1))
         {
             _player.SyncEquippedFromSelectedSlot();
-            RequestSound("potion");
+            string useCue = selected.Item.AsArmorItem() is not null
+                ? "armor_equip"
+                : (selected.Item is ConsumableItem consumable && consumable.HungerRestore > 0f ? "eat" : "potion");
+            RequestSound(useCue);
             return true;
         }
 
@@ -1135,7 +1139,7 @@ public sealed class GameSession : IDisposable
             return false;
         }
 
-        SpawnPooledProjectile(_player.Center, aimDirection * weapon.ProjectileSpeed, weapon.ComputeDamage(), _player.Id, isFromPlayer: true);
+        SpawnPooledProjectile(_player.Center, aimDirection * weapon.ProjectileSpeed, weapon.ComputeDamage(), _player.Id, isFromPlayer: true, soundCue: "tool_bow");
         _player.TriggerActionCooldown(weapon.ComputeCooldown());
         return true;
     }
@@ -1153,6 +1157,7 @@ public sealed class GameSession : IDisposable
         if (struck)
         {
             _tutorialTracker.NotifyAction(TutorialTriggerType.DamageEnemy, bestTarget.Archetype);
+            RequestSound(GetActiveToolCue());
             RequestSound("hit");
         }
 
@@ -1196,6 +1201,7 @@ public sealed class GameSession : IDisposable
         bool struck = _ruleEngine.ResolveMeleeAttack(_player, bestTarget);
         if (struck)
         {
+            RequestSound(GetActiveToolCue());
             RequestSound("hit");
         }
 
@@ -1252,10 +1258,11 @@ public sealed class GameSession : IDisposable
         if (bestNode is null)
         {
             _player.TriggerActionCooldown();
-            RequestSound("swing");
+            RequestSound(GetActiveToolCue());
             return false;
         }
 
+        RequestSound(GetActiveToolCue());
         if (_ruleEngine.TryResolveHarvest(
                 bestNode,
                 _player.EquippedToolType,
@@ -1267,10 +1274,10 @@ public sealed class GameSession : IDisposable
             _tutorialTracker.NotifyAction(TutorialTriggerType.HarvestResource, bestNode.ResourceType.ToString());
             _questSystem.NotifyAction(QuestObjectiveType.HarvestResource, bestNode.ResourceType.ToString());
             SpawnPooledDroppedItem(dropItemId, dropQuantity, dropPosition);
+            RequestSound("harvest");
         }
 
         _player.TriggerActionCooldown();
-        RequestSound("harvest");
         return true;
     }
 
@@ -1321,7 +1328,7 @@ public sealed class GameSession : IDisposable
         }
 
         _player.TriggerActionCooldown(0.30f);
-        RequestSound("harvest");
+        RequestSound("tool_hoe");
         return true;
     }
 
@@ -1839,6 +1846,8 @@ public sealed class GameSession : IDisposable
                 _activeBoss.OnEnraged -= HandleBossEnraged;
                 NotifyBossHealth(_activeBoss.BossName, 0, _activeBoss.MaxHp, isVisible: false);
             }
+
+            RequestSound("boss_defeated");
         }
     }
 
@@ -2057,6 +2066,18 @@ public sealed class GameSession : IDisposable
 
         return null;
     }
+
+    private string GetActiveToolCue() => _player.EquippedToolType switch
+    {
+        ToolType.Axe => "tool_axe",
+        ToolType.Pickaxe => "tool_pickaxe",
+        ToolType.Hoe => "tool_hoe",
+        ToolType.Sword => "tool_sword",
+        ToolType.Bow => "tool_bow",
+        _ => _player.EquippedWeapon is { } weapon
+            ? (weapon.IsRanged ? "tool_bow" : "tool_sword")
+            : "swing"
+    };
 
     private void RequestSound(string soundKey) => OnSoundEffectRequested?.Invoke(soundKey);
 

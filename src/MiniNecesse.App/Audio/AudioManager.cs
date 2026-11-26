@@ -1,69 +1,132 @@
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Media;
+using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Rules;
 
 namespace MiniNecesse.App.Audio;
 
 /// <summary>
-/// Observer-driven audio subsystem subscribing to <see cref="GameSession.OnSoundEffectRequested"/>.
-/// Supports mute toggle, volume control, optional relative <c>Assets/Audio/*.wav</c> files,
-/// and a safe fallback when audio assets are absent.
+/// Observer-driven real-time audio subsystem combining <see cref="ProceduralSoundBank"/>
+/// and <see cref="WaveOutAudioEngine"/>. Plays looping map music (Day/Night/Boss) automatically
+/// on session attach and synthesizes distinct sound effects per tool, weapon, and action,
+/// while supporting optional drop-in <c>Assets/Audio/*.wav</c> overrides.
 /// </summary>
 public sealed class AudioManager : IDisposable
 {
-    private readonly string _audioDirectory;
-    private readonly Dictionary<string, SoundPlayer> _loadedPlayers = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> _missingCues = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ProceduralSoundBank _soundBank;
+    private readonly WaveOutAudioEngine _engine;
+
     private GameSession? _attachedSession;
+    private string? _activeBgmKey;
+    private bool _bossBgmActive;
     private bool _isMuted;
     private int _volume = 80;
     private bool _disposed;
 
-    /// <summary>Gets or sets whether audio output is muted.</summary>
+    /// <summary>Gets or sets whether audio output is muted live.</summary>
     public bool IsMuted
     {
         get => _isMuted;
-        set => _isMuted = value;
+        set
+        {
+            _isMuted = value;
+            _engine.IsMuted = value;
+        }
     }
 
     /// <summary>Gets or sets the master volume percentage clamped to [0, 100].</summary>
     public int Volume
     {
         get => _volume;
-        set => _volume = Math.Clamp(value, 0, 100);
+        set
+        {
+            _volume = Math.Clamp(value, 0, 100);
+            _engine.Volume = _volume;
+        }
     }
+
+    /// <summary>Gets the active looping BGM cue key (e.g. <c>bgm_day</c>, <c>bgm_night</c>, <c>bgm_boss</c>), or <see langword="null"/> if stopped.</summary>
+    public string? ActiveBgmKey => _activeBgmKey;
+
+    /// <summary>Gets whether the Win32 audio output device opened cleanly on this host.</summary>
+    public bool IsAudioDeviceReady => _engine.IsDeviceAvailable;
 
     /// <summary>Initializes a new instance of the <see cref="AudioManager"/> class.</summary>
     public AudioManager(string? audioDirectory = null)
     {
-        _audioDirectory = string.IsNullOrWhiteSpace(audioDirectory)
+        string resolvedDir = string.IsNullOrWhiteSpace(audioDirectory)
             ? Path.Combine(AppContext.BaseDirectory, "Assets", "Audio")
             : audioDirectory;
+
+        _soundBank = new ProceduralSoundBank(resolvedDir);
+        _engine = new WaveOutAudioEngine
+        {
+            IsMuted = _isMuted,
+            Volume = _volume
+        };
     }
 
-    /// <summary>Subscribes to <see cref="GameSession.OnSoundEffectRequested"/> cleanly.</summary>
+    /// <summary>Subscribes to session SFX, day/night transitions, and game state changes, starting map BGM immediately.</summary>
     public void AttachToSession(GameSession session)
     {
         ArgumentNullException.ThrowIfNull(session);
         DetachFromSession();
+
         _attachedSession = session;
         _attachedSession.OnSoundEffectRequested += HandleSoundRequested;
+        _attachedSession.DayNightCycle.OnDayPhaseChanged += HandleDayPhaseChanged;
+        _attachedSession.OnGameStateChanged += HandleGameStateChanged;
+
+        _bossBgmActive = _attachedSession.ActiveBoss is { IsAlive: true };
+        PlayBgm(ResolveExpectedBgmKey(_attachedSession));
     }
 
-    /// <summary>Unsubscribes cleanly from any attached <see cref="GameSession"/> to prevent memory leaks.</summary>
+    /// <summary>Unsubscribes cleanly from any attached <see cref="GameSession"/> and stops looping music.</summary>
     public void DetachFromSession()
     {
         if (_attachedSession is not null)
         {
             _attachedSession.OnSoundEffectRequested -= HandleSoundRequested;
+            _attachedSession.DayNightCycle.OnDayPhaseChanged -= HandleDayPhaseChanged;
+            _attachedSession.OnGameStateChanged -= HandleGameStateChanged;
             _attachedSession = null;
         }
+
+        _bossBgmActive = false;
+        StopBgm();
     }
 
-    /// <summary>Plays a logical sound cue if unmuted and volume &gt; 0, falling back safely if no WAV file exists.</summary>
+    /// <summary>Starts or switches the looping background music track cleanly if not already playing.</summary>
+    public void PlayBgm(string bgmKey)
+    {
+        if (_disposed || string.IsNullOrWhiteSpace(bgmKey))
+        {
+            return;
+        }
+
+        if (string.Equals(_activeBgmKey, bgmKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        short[]? clip = _soundBank.GetClip(bgmKey);
+        if (clip is null)
+        {
+            return;
+        }
+
+        _activeBgmKey = bgmKey;
+        _engine.PlayBgm(clip);
+    }
+
+    /// <summary>Stops the currently looping background music track.</summary>
+    public void StopBgm()
+    {
+        _activeBgmKey = null;
+        _engine.StopBgm();
+    }
+
+    /// <summary>Plays a logical sound cue if unmuted and volume &gt; 0, overlapping smoothly on the mixer.</summary>
     public void PlayCue(string cueKey)
     {
         if (_disposed || _isMuted || _volume <= 0 || string.IsNullOrWhiteSpace(cueKey))
@@ -71,12 +134,11 @@ public sealed class AudioManager : IDisposable
             return;
         }
 
-        if (TryPlayWavFile(cueKey))
+        short[]? clip = _soundBank.GetClip(cueKey);
+        if (clip is not null)
         {
-            return;
+            _engine.EnqueueSfx(clip);
         }
-
-        PlaySafeFallbackCue(cueKey);
     }
 
     /// <inheritdoc />
@@ -88,77 +150,54 @@ public sealed class AudioManager : IDisposable
         }
 
         DetachFromSession();
-        foreach (SoundPlayer player in _loadedPlayers.Values)
-        {
-            player.Dispose();
-        }
-
-        _loadedPlayers.Clear();
+        _engine.Dispose();
         _disposed = true;
     }
 
-    private void HandleSoundRequested(string cueKey) => PlayCue(cueKey);
-
-    private bool TryPlayWavFile(string cueKey)
+    private void HandleSoundRequested(string cueKey)
     {
-        if (_loadedPlayers.TryGetValue(cueKey, out SoundPlayer? cachedPlayer))
+        if (string.Equals(cueKey, "boss_spawn", StringComparison.OrdinalIgnoreCase))
         {
-            return TryInvokePlay(cachedPlayer, cueKey);
+            _bossBgmActive = true;
+            PlayBgm("bgm_boss");
+        }
+        else if (string.Equals(cueKey, "boss_defeated", StringComparison.OrdinalIgnoreCase))
+        {
+            _bossBgmActive = false;
+            if (_attachedSession is not null && _attachedSession.CurrentState == GameState.Playing)
+            {
+                PlayBgm(ResolveAmbientBgmKey(_attachedSession.DayNightCycle.CurrentPhase));
+            }
         }
 
-        if (_missingCues.Contains(cueKey))
+        PlayCue(cueKey);
+    }
+
+    private void HandleDayPhaseChanged(int dayNumber, DayPhase phase)
+    {
+        if (_attachedSession is null || _bossBgmActive || _attachedSession.CurrentState != GameState.Playing)
         {
-            return false;
+            return;
         }
 
-        string wavPath = Path.Combine(_audioDirectory, $"{cueKey}.wav");
-        if (!File.Exists(wavPath))
-        {
-            _missingCues.Add(cueKey);
-            return false;
-        }
+        PlayBgm(ResolveAmbientBgmKey(phase));
+    }
 
-        try
+    private void HandleGameStateChanged(GameState newState)
+    {
+        if (newState is GameState.Victory or GameState.GameOver or GameState.MainMenu)
         {
-            var player = new SoundPlayer(wavPath);
-            player.Load();
-            _loadedPlayers[cueKey] = player;
-            return TryInvokePlay(player, cueKey);
+            StopBgm();
         }
-        catch (Exception ex) when (ex is IOException or InvalidOperationException or TimeoutException)
+        else if (newState == GameState.Playing && _attachedSession is not null)
         {
-            Debug.WriteLine($"AudioManager WAV fallback for '{cueKey}': {ex.Message}");
-            return false;
+            PlayBgm(ResolveExpectedBgmKey(_attachedSession));
         }
     }
 
-    private static bool TryInvokePlay(SoundPlayer player, string cueKey)
-    {
-        try
-        {
-            player.Play();
-            return true;
-        }
-        catch (InvalidOperationException ex)
-        {
-            Debug.WriteLine($"AudioManager playback skipped for '{cueKey}': {ex.Message}");
-            return false;
-        }
-    }
+    private string ResolveExpectedBgmKey(GameSession session) =>
+        _bossBgmActive ? "bgm_boss" : ResolveAmbientBgmKey(session.DayNightCycle.CurrentPhase);
 
-    private static void PlaySafeFallbackCue(string cueKey)
-    {
-        if (string.Equals(cueKey, "victory", StringComparison.OrdinalIgnoreCase))
-        {
-            SystemSounds.Asterisk.Play();
-        }
-        else if (string.Equals(cueKey, "game_over", StringComparison.OrdinalIgnoreCase))
-        {
-            SystemSounds.Hand.Play();
-        }
-        else
-        {
-            Debug.WriteLine($"[Audio Cue] {cueKey} (no .wav asset present — silent fallback)");
-        }
-    }
+    private static string ResolveAmbientBgmKey(DayPhase phase) =>
+        phase == DayPhase.Night ? "bgm_night" : "bgm_day";
 }
