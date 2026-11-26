@@ -225,3 +225,16 @@ internal sealed class TutorialStepJson
     public string? TriggerType { get; set; }
     public string? TargetPattern { get; set; }
 }
+
+internal sealed class QuestJson
+{
+    public string? QuestId { get; set; }
+    public string? Title { get; set; }
+    public string? Description { get; set; }
+    public string? ObjectiveType { get; set; }
+    public string? TargetPattern { get; set; }
+    public int RequiredCount { get; set; }
+    public int RewardScore { get; set; }
+    public string? RewardItemId { get; set; }
+    public int RewardQuantity { get; set; }
+}

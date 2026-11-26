@@ -11,6 +11,7 @@ using MiniNecesse.Core.Exceptions;
 using MiniNecesse.Core.Farming;
 using MiniNecesse.Core.Interfaces;
 using MiniNecesse.Core.Loot;
+using MiniNecesse.Core.Quests;
 using MiniNecesse.Core.Rules;
 using MiniNecesse.Core.Settlement;
 using MiniNecesse.Core.Tutorial;
@@ -36,6 +37,7 @@ public sealed class JsonLevelLoader : ILevelLoader
     private const string ENDLESS_BIOMES_FILE_NAME = "endless_biomes.json";
     private const string DIFFICULTIES_FILE_NAME = "difficulties.json";
     private const string TUTORIAL_STEPS_FILE_NAME = "tutorial_steps.json";
+    private const string QUESTS_FILE_NAME = "quests.json";
 
     private static readonly JsonSerializerOptions JSON_OPTIONS = new()
     {
@@ -498,6 +500,46 @@ public sealed class JsonLevelLoader : ILevelLoader
         }
 
         return steps.AsReadOnly();
+    }
+
+    /// <summary>Loads data-driven survival quests from <c>quests.json</c>.</summary>
+    public IReadOnlyList<QuestDefinition> LoadQuests()
+    {
+        string path = Path.Combine(_assetsDirectory, QUESTS_FILE_NAME);
+        if (!File.Exists(path))
+        {
+            return QuestSystem.CreateDefaultQuests();
+        }
+
+        List<QuestJson> rawList = ReadJsonOrThrow<List<QuestJson>>(path, "QUESTS");
+        if (rawList.Count == 0)
+        {
+            return QuestSystem.CreateDefaultQuests();
+        }
+
+        var list = new List<QuestDefinition>(rawList.Count);
+        for (int i = 0; i < rawList.Count; i++)
+        {
+            QuestJson raw = rawList[i];
+            if (string.IsNullOrWhiteSpace(raw.QuestId) || string.IsNullOrWhiteSpace(raw.Title) ||
+                !Enum.TryParse(raw.ObjectiveType, ignoreCase: true, out QuestObjectiveType objective))
+            {
+                throw new InvalidLevelDataException($"Invalid quest entry at index {i}.", "QUESTS");
+            }
+
+            list.Add(new QuestDefinition(
+                raw.QuestId,
+                raw.Title,
+                raw.Description ?? string.Empty,
+                objective,
+                raw.TargetPattern ?? "*",
+                raw.RequiredCount,
+                raw.RewardScore,
+                raw.RewardItemId,
+                raw.RewardQuantity));
+        }
+
+        return list.AsReadOnly();
     }
 
     /// <inheritdoc />

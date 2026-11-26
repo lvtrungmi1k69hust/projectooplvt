@@ -67,8 +67,10 @@ public sealed class RenderResourceCache : IDisposable
     public SolidBrush MinimapAnimalBrush { get; } = new(Color.FromArgb(182, 240, 168));
     public SolidBrush UnloadedFogBrush { get; } = new(Color.FromArgb(14, 22, 34));
     public SolidBrush UnloadedFogAccentBrush { get; } = new(Color.FromArgb(20, 30, 46));
+    public SolidBrush WeatherFogVeilBrush { get; } = new(Color.FromArgb(62, 168, 184, 206));
 
     public Pen TileGridPen { get; } = new(Color.FromArgb(20, 0, 0, 0), 1f);
+    public Pen RainStreakPen { get; } = new(Color.FromArgb(135, 160, 208, 255), 1.35f);
     public Pen DarkOutlinePen { get; } = new(Color.FromArgb(22, 26, 36), 1.5f);
     public Pen HudBorderPen { get; } = new(Color.FromArgb(95, 118, 152), 1.5f);
     public Pen HotbarSelectedPen { get; } = new(Color.FromArgb(248, 204, 84), 2.5f);
@@ -178,8 +180,10 @@ public sealed class RenderResourceCache : IDisposable
         MinimapAnimalBrush.Dispose();
         UnloadedFogBrush.Dispose();
         UnloadedFogAccentBrush.Dispose();
+        WeatherFogVeilBrush.Dispose();
 
         TileGridPen.Dispose();
+        RainStreakPen.Dispose();
         DarkOutlinePen.Dispose();
         HudBorderPen.Dispose();
         HotbarSelectedPen.Dispose();

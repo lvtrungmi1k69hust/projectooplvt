@@ -18,6 +18,7 @@ using MiniNecesse.Core.Interfaces;
 using MiniNecesse.Core.Loot;
 using MiniNecesse.Core.Math;
 using MiniNecesse.Core.Patterns.Factory;
+using MiniNecesse.Core.Quests;
 using MiniNecesse.Core.Rules;
 using MiniNecesse.Core.Settlement;
 using MiniNecesse.Core.Tutorial;
@@ -75,6 +76,7 @@ public sealed class FrmGamePlay : Form
     private readonly SettlerCatalog _settlerCatalog;
     private readonly DifficultyCatalog _difficultyCatalog;
     private readonly IReadOnlyList<TutorialStepDefinition> _tutorialSteps;
+    private readonly IReadOnlyList<QuestDefinition> _questDefinitions;
     private readonly ILevelGenerator _levelGenerator;
     private readonly ItemFactory _itemFactory;
 
@@ -130,6 +132,7 @@ public sealed class FrmGamePlay : Form
         _settlerCatalog = SettlerCatalog.CreateDefault();
         _difficultyCatalog = DifficultyCatalog.CreateDefault();
         _tutorialSteps = TutorialTracker.CreateDefaultSteps();
+        _questDefinitions = QuestSystem.CreateDefaultQuests();
         if (_levelLoader is JsonLevelLoader jsonLoader)
         {
             IReadOnlyList<FoodDefinition> foods = jsonLoader.LoadFoods();
@@ -160,6 +163,7 @@ public sealed class FrmGamePlay : Form
             _settlerCatalog = jsonLoader.LoadSettlerCatalog();
             _difficultyCatalog = jsonLoader.LoadDifficultyCatalog();
             _tutorialSteps = jsonLoader.LoadTutorialSteps();
+            _questDefinitions = jsonLoader.LoadQuests();
             _levelGenerator = new SeededEndlessLevelGenerator(jsonLoader.LoadEndlessBiomeCatalog());
         }
         else
@@ -414,7 +418,8 @@ public sealed class FrmGamePlay : Form
             worldSeed: package.Seed,
             difficultyCatalog: _difficultyCatalog,
             difficultyProfile: difficultyProfile,
-            tutorialSteps: _tutorialSteps);
+            tutorialSteps: _tutorialSteps,
+            questDefinitions: _questDefinitions);
 
         EnemyFactory enemyFactory = EnemyFactory.CreateDefault(
             projectileSpawner: (origin, velocity, dmg, ownerId) =>

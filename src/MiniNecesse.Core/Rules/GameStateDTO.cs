@@ -33,6 +33,12 @@ public sealed class GameStateDTO
     /// <summary>Gets or sets completed tutorial checklist step count.</summary>
     public int TutorialStepIndex { get; set; }
 
+    /// <summary>Gets or sets active weather condition name.</summary>
+    public string Weather { get; set; } = "Clear";
+
+    /// <summary>Gets or sets normalized active weather intensity in [0, 1].</summary>
+    public float WeatherIntensity { get; set; }
+
     /// <summary>Gets or sets the accumulated player score.</summary>
     public int Score { get; set; }
 
@@ -71,6 +77,18 @@ public sealed class GameStateDTO
 
     /// <summary>Gets or sets recruited colony settler NPC snapshots.</summary>
     public List<SettlerStateSnapshot> Settlers { get; set; } = new();
+
+    /// <summary>Gets or sets tracked survival quest progress entries.</summary>
+    public List<QuestProgressSnapshot> Quests { get; set; } = new();
+}
+
+/// <summary>
+/// Serializable progress entry for a single survival quest inside <see cref="GameStateDTO"/>.
+/// </summary>
+public sealed class QuestProgressSnapshot
+{
+    public string QuestId { get; set; } = string.Empty;
+    public int CurrentCount { get; set; }
 }
 
 /// <summary>

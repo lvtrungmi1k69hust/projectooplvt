@@ -10,6 +10,7 @@ using MiniNecesse.Core.Entities;
 using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Farming;
 using MiniNecesse.Core.Math;
+using MiniNecesse.Core.Quests;
 using MiniNecesse.Core.Rules;
 using MiniNecesse.Core.Tutorial;
 using MiniNecesse.Core.World;
@@ -97,6 +98,11 @@ public sealed class TopDownRenderer : IDisposable
     private string _cachedTutorialTitle = string.Empty;
     private string _cachedTutorialInstruction = string.Empty;
 
+    private WeatherType _lastWeather = (WeatherType)(-1);
+    private string _lastQuestId = string.Empty;
+    private int _lastQuestCount = -1;
+    private string _cachedWeatherQuestText = "Weather: Clear  |  Quests Ready";
+
     private float _animTime;
     private bool _disposed;
 
@@ -116,6 +122,9 @@ public sealed class TopDownRenderer : IDisposable
         _lastMinimapStructureVersion = -1;
         _lastTitleIslandName = string.Empty;
         _lastTutorialStepIndex = -1;
+        _lastWeather = (WeatherType)(-1);
+        _lastQuestId = string.Empty;
+        _lastQuestCount = -1;
     }
 
     /// <summary>Advances presentation-only animation clocks and visual hit particles.</summary>
@@ -175,7 +184,9 @@ public sealed class TopDownRenderer : IDisposable
         _vfx.Render(g, cameraOffset, _cache);
 
         DrawDayNightOverlay(g, viewportSize, session, hud, cameraOffset, interpolationAlpha);
+        DrawWeatherOverlay(g, viewportSize, session);
         DrawTopHud(g, session, hud);
+        DrawWeatherAndQuestBar(g, session);
         DrawMinimap(g, viewportSize, session, cameraOffset);
         DrawBossBar(g, viewportSize, hud);
         DrawTutorialBanner(g, viewportSize, session, hud);
@@ -945,6 +956,56 @@ public sealed class TopDownRenderer : IDisposable
         g.DrawRectangle(_cache.HudBorderPen, x, y, boxW, 44);
         g.DrawString(_cachedTutorialTitle, _cache.SmallFont, active is null ? _cache.TextGreenBrush : _cache.TextGoldBrush, x + 10, y + 6);
         g.DrawString(_cachedTutorialInstruction, _cache.SmallFont, _cache.TextWhiteBrush, x + 10, y + 23);
+    }
+
+    private void DrawWeatherOverlay(Graphics g, Size viewport, GameSession session)
+    {
+        WeatherType weather = session.Weather.CurrentWeather;
+        if (weather == WeatherType.Clear)
+        {
+            return;
+        }
+
+        if (weather == WeatherType.Fog)
+        {
+            g.FillRectangle(_cache.WeatherFogVeilBrush, 0, 0, viewport.Width, viewport.Height);
+            return;
+        }
+
+        if (weather == WeatherType.Rain)
+        {
+            float shiftX = (_animTime * 110f) % 72f;
+            float shiftY = (_animTime * 430f) % 64f;
+            for (float y = -64f + shiftY; y < viewport.Height; y += 64f)
+            {
+                for (float x = -72f + shiftX; x < viewport.Width; x += 72f)
+                {
+                    g.DrawLine(_cache.RainStreakPen, x, y, x - 6f, y + 18f);
+                }
+            }
+        }
+    }
+
+    private void DrawWeatherAndQuestBar(Graphics g, GameSession session)
+    {
+        WeatherType weather = session.Weather.CurrentWeather;
+        QuestProgress? active = session.Quests.ActiveQuest;
+        string qId = active?.Definition.QuestId ?? "__ALL_DONE__";
+        int qCount = active?.CurrentCount ?? session.Quests.CompletedCount;
+
+        if (_lastWeather != weather || !string.Equals(_lastQuestId, qId, StringComparison.Ordinal) || _lastQuestCount != qCount)
+        {
+            _lastWeather = weather;
+            _lastQuestId = qId;
+            _lastQuestCount = qCount;
+            _cachedWeatherQuestText = active is null
+                ? $"Weather: {weather}  |  All {qCount} Quests Complete!"
+                : $"Weather: {weather}  |  Quest: {active.Definition.Title} ({active.CurrentCount}/{active.Definition.RequiredCount})";
+        }
+
+        g.FillRectangle(_cache.HudPanelBrush, 12, 186, 344, 24);
+        g.DrawRectangle(_cache.HudBorderPen, 12, 186, 344, 24);
+        g.DrawString(_cachedWeatherQuestText, _cache.SmallFont, active is null ? _cache.TextGreenBrush : _cache.TextWhiteBrush, 20, 191);
     }
 
     /// <summary>Checks whether a screen click landed on a hotbar slot (0..8) and returns that slot index.</summary>

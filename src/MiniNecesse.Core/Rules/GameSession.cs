@@ -11,6 +11,7 @@ using MiniNecesse.Core.Math;
 using MiniNecesse.Core.Patterns.Pool;
 using MiniNecesse.Core.Patterns.State;
 using MiniNecesse.Core.Physics;
+using MiniNecesse.Core.Quests;
 using MiniNecesse.Core.Settlement;
 using MiniNecesse.Core.Tutorial;
 using MiniNecesse.Core.World;
@@ -42,6 +43,8 @@ public sealed class GameSession : IDisposable
     private DifficultyCatalog _difficultyCatalog;
     private DifficultyProfile _difficultyProfile;
     private readonly TutorialTracker _tutorialTracker;
+    private readonly WeatherSystem _weatherSystem;
+    private readonly QuestSystem _questSystem;
     private double _elapsedPlayTimeSeconds;
 
     private readonly GameStateMachine _stateMachine = new();
@@ -173,6 +176,12 @@ public sealed class GameSession : IDisposable
     /// <summary>Gets the step-by-step tutorial tracker active in Tutorial mode.</summary>
     public TutorialTracker Tutorial => _tutorialTracker;
 
+    /// <summary>Gets the island weather coordinator synchronized with <see cref="DayNightCycle"/>.</summary>
+    public WeatherSystem Weather => _weatherSystem;
+
+    /// <summary>Gets the JSON-driven island survival quest coordinator.</summary>
+    public QuestSystem Quests => _questSystem;
+
     /// <summary>Gets total accumulated active play time in seconds for high-score telemetry.</summary>
     public double ElapsedPlayTimeSeconds => _elapsedPlayTimeSeconds;
 
@@ -248,7 +257,8 @@ public sealed class GameSession : IDisposable
         int worldSeed = 0,
         DifficultyCatalog? difficultyCatalog = null,
         DifficultyProfile? difficultyProfile = null,
-        IReadOnlyList<TutorialStepDefinition>? tutorialSteps = null)
+        IReadOnlyList<TutorialStepDefinition>? tutorialSteps = null,
+        IReadOnlyList<QuestDefinition>? questDefinitions = null)
     {
         ArgumentNullException.ThrowIfNull(level);
         ArgumentNullException.ThrowIfNull(player);
@@ -266,6 +276,8 @@ public sealed class GameSession : IDisposable
         _difficultyCatalog = difficultyCatalog ?? DifficultyCatalog.CreateDefault();
         _difficultyProfile = difficultyProfile ?? _difficultyCatalog.GetProfile(difficulty);
         _tutorialTracker = new TutorialTracker(_difficultyProfile.EnableTutorialGuide, tutorialSteps);
+        _weatherSystem = new WeatherSystem(_dayNightCycle, worldSeed == 0 ? 101 : worldSeed);
+        _questSystem = new QuestSystem(DispatchQuestReward, questDefinitions);
         _player.SetDamageMitigationStrategy(
             new DifficultyDamageMitigationDecorator(FlatDefenseMitigationStrategy.Instance, _difficultyProfile));
         _chunkManager = new ChunkManager(level, viewDistanceChunks, minViewDistanceChunks, maxViewDistanceChunks);
@@ -888,6 +900,8 @@ public sealed class GameSession : IDisposable
             Difficulty = _difficulty.ToString(),
             PlayTimeSeconds = _elapsedPlayTimeSeconds,
             TutorialStepIndex = _tutorialTracker.CurrentStepIndex,
+            Weather = _weatherSystem.CurrentWeather.ToString(),
+            WeatherIntensity = _weatherSystem.Intensity,
             Score = _ruleEngine.Score,
             DayNumber = _dayNightCycle.DayNumber,
             TimeOfDaySeconds = _dayNightCycle.ElapsedSecondsInCycle,
@@ -931,6 +945,16 @@ public sealed class GameSession : IDisposable
 
         _elapsedPlayTimeSeconds = snapshot.PlayTimeSeconds >= 0.0 ? snapshot.PlayTimeSeconds : 0.0;
         _tutorialTracker.RestoreProgress(snapshot.TutorialStepIndex);
+        if (Enum.TryParse(snapshot.Weather, ignoreCase: true, out WeatherType restoredWeather))
+        {
+            _weatherSystem.RestoreWeather(restoredWeather, snapshot.WeatherIntensity);
+        }
+        else
+        {
+            _weatherSystem.RestoreWeather(WeatherType.Clear, 0f);
+        }
+
+        _questSystem.RestoreSnapshots(snapshot.Quests);
 
         RestorePlayerFromSnapshot(snapshot.Player);
         _ruleEngine.RestoreScore(snapshot.Score);
@@ -982,6 +1006,7 @@ public sealed class GameSession : IDisposable
         _ruleEngine.OnScoreChanged -= HandleScoreChanged;
         _dayNightCycle.OnDayPhaseChanged -= HandleDayPhaseChanged;
         _stateMachine.OnStateChanged -= HandleStateChanged;
+        _weatherSystem.Dispose();
         ClearActiveWorldEntities();
         _hudObservers.Clear();
         _disposed = true;
@@ -1184,6 +1209,7 @@ public sealed class GameSession : IDisposable
                 out Vector2D dropPosition))
         {
             _tutorialTracker.NotifyAction(TutorialTriggerType.HarvestResource, bestNode.ResourceType.ToString());
+            _questSystem.NotifyAction(QuestObjectiveType.HarvestResource, bestNode.ResourceType.ToString());
             SpawnPooledDroppedItem(dropItemId, dropQuantity, dropPosition);
         }
 
@@ -1213,6 +1239,7 @@ public sealed class GameSession : IDisposable
 
         Vector2D dropPos = _level.TileToWorldCenter(col, row);
         SpawnPooledDroppedItem(harvestItemId, harvestQuantity, dropPos);
+        _questSystem.NotifyAction(QuestObjectiveType.HarvestCrop, harvestItemId);
         if (!string.IsNullOrWhiteSpace(bonusSeedItemId))
         {
             SpawnPooledDroppedItem(bonusSeedItemId, 1, dropPos + new Vector2D(6f, 6f));
@@ -1295,6 +1322,7 @@ public sealed class GameSession : IDisposable
         Structure structure = entityFactory.CreateStructure(structureType, col, row, _level.TileSize);
         AddStructure(structure);
         _tutorialTracker.NotifyAction(TutorialTriggerType.PlaceStructure, structureType.ToString());
+        _questSystem.NotifyAction(QuestObjectiveType.PlaceStructure, structureType.ToString());
         _player.Inventory.TryRemoveItem(selected.Item.Id, 1);
         _player.SyncEquippedFromSelectedSlot();
         return true;
@@ -1711,6 +1739,7 @@ public sealed class GameSession : IDisposable
         }
 
         _ruleEngine.ResolveEnemyDefeated(matched);
+        _questSystem.NotifyAction(QuestObjectiveType.DefeatEnemy, matched.Archetype);
         RequestSound("enemy_defeated");
 
         if (_lootTableRegistry.TryGetTable(matched.Archetype, out _))
@@ -2092,6 +2121,27 @@ public sealed class GameSession : IDisposable
         foreach (Settler s in _chunkManager.GetHibernatedSettlers())
         {
             snapshot.Settlers.Add(BuildSettlerSnapshot(s));
+        }
+
+        _questSystem.PopulateSnapshots(snapshot.Quests);
+    }
+
+    private void DispatchQuestReward(int rewardScore, string? rewardItemId, int rewardQuantity)
+    {
+        if (rewardScore > 0)
+        {
+            _ruleEngine.AddScore(rewardScore);
+        }
+
+        if (!string.IsNullOrWhiteSpace(rewardItemId) && rewardQuantity > 0)
+        {
+            Item reward = _itemResolver(rewardItemId);
+            if (!_player.Inventory.TryAddItem(reward, rewardQuantity))
+            {
+                SpawnPooledDroppedItem(rewardItemId, rewardQuantity, _player.Center);
+            }
+
+            _player.SyncEquippedFromSelectedSlot();
         }
     }
 

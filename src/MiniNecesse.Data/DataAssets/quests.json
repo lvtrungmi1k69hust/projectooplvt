@@ -1,0 +1,46 @@
+[
+  {
+    "questId": "gather_wood",
+    "title": "Gather Timber",
+    "description": "Harvest 3 Trees for wood.",
+    "objectiveType": "HarvestResource",
+    "targetPattern": "Tree",
+    "requiredCount": 3,
+    "rewardScore": 100,
+    "rewardItemId": "bread",
+    "rewardQuantity": 1
+  },
+  {
+    "questId": "build_shelter",
+    "title": "Fortify Base",
+    "description": "Place 4 structures or walls.",
+    "objectiveType": "PlaceStructure",
+    "targetPattern": "*",
+    "requiredCount": 4,
+    "rewardScore": 150,
+    "rewardItemId": "torch",
+    "rewardQuantity": 2
+  },
+  {
+    "questId": "slay_hostiles",
+    "title": "Island Defender",
+    "description": "Defeat 3 hostile monsters.",
+    "objectiveType": "DefeatEnemy",
+    "targetPattern": "*",
+    "requiredCount": 3,
+    "rewardScore": 200,
+    "rewardItemId": "health_potion",
+    "rewardQuantity": 1
+  },
+  {
+    "questId": "harvest_crops",
+    "title": "Homestead Harvest",
+    "description": "Harvest 2 grown farm crops.",
+    "objectiveType": "HarvestCrop",
+    "targetPattern": "*",
+    "requiredCount": 2,
+    "rewardScore": 150,
+    "rewardItemId": "cooked_meat",
+    "rewardQuantity": 2
+  }
+]
