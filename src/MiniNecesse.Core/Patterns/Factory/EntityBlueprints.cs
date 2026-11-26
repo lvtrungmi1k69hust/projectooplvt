@@ -75,4 +75,7 @@ public sealed record ItemBlueprint(
     int HarvestPower = 0,
     float HarvestRange = 48f,
     int HealAmount = 0,
-    StructureType StructureType = StructureType.WoodenWall);
+    StructureType StructureType = StructureType.WoodenWall,
+    float HungerRestore = 0f,
+    MiniNecesse.Core.Interfaces.IFoodBuffStrategy? BuffStrategy = null,
+    string? CropId = null);

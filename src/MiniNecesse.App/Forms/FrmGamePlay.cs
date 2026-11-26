@@ -13,10 +13,12 @@ using MiniNecesse.Core.Crafting;
 using MiniNecesse.Core.Entities;
 using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Exceptions;
+using MiniNecesse.Core.Farming;
 using MiniNecesse.Core.Interfaces;
 using MiniNecesse.Core.Math;
 using MiniNecesse.Core.Patterns.Factory;
 using MiniNecesse.Core.Rules;
+using MiniNecesse.Data;
 
 namespace MiniNecesse.App.Forms;
 
@@ -61,6 +63,7 @@ public sealed class FrmGamePlay : Form
     private readonly GameConfig _config;
     private readonly IReadOnlyList<CraftingRecipe> _recipes;
     private readonly IReadOnlyList<string> _availableIslands;
+    private readonly CropRegistry _cropRegistry;
     private readonly ItemFactory _itemFactory;
 
     private EnemyFactory? _enemyFactory;
@@ -100,6 +103,22 @@ public sealed class FrmGamePlay : Form
         _recipes = _levelLoader.LoadRecipes();
         _availableIslands = _levelLoader.GetAvailableIslandIds();
         _itemFactory = ItemFactory.CreateDefault();
+        _cropRegistry = CropRegistry.CreateDefault();
+        if (_levelLoader is JsonLevelLoader jsonLoader)
+        {
+            IReadOnlyList<FoodDefinition> foods = jsonLoader.LoadFoods();
+            if (foods.Count > 0)
+            {
+                _itemFactory.RegisterFoodDefinitions(foods);
+            }
+
+            IReadOnlyList<CropDefinition> crops = jsonLoader.LoadCrops();
+            if (crops.Count > 0)
+            {
+                _cropRegistry.RegisterRange(crops);
+                _itemFactory.RegisterCropDefinitions(crops);
+            }
+        }
 
         SuspendLayout();
         Text = "MiniNecesse — Survival Island";
@@ -270,7 +289,11 @@ public sealed class FrmGamePlay : Form
             _config.PlayerBaseHp,
             _config.PlayerBaseSpeed,
             _config.HotbarSlots,
-            inventory);
+            inventory,
+            _config.PlayerMaxHunger,
+            _config.HungerDrainPerSecond,
+            _config.StarvationDamageIntervalSeconds,
+            _config.StarvationDamageAmount);
 
         int viewDistance = Math.Clamp(
             _settings.ViewDistanceChunks,
@@ -286,7 +309,8 @@ public sealed class FrmGamePlay : Form
             difficulty: _settings.Difficulty,
             viewDistanceChunks: viewDistance,
             minViewDistanceChunks: _config.MinViewDistanceChunks,
-            maxViewDistanceChunks: _config.MaxViewDistanceChunks);
+            maxViewDistanceChunks: _config.MaxViewDistanceChunks,
+            cropRegistry: _cropRegistry);
 
         EnemyFactory enemyFactory = EnemyFactory.CreateDefault(
             projectileSpawner: (origin, velocity, dmg, ownerId) =>
@@ -337,6 +361,8 @@ public sealed class FrmGamePlay : Form
         session.Inventory.TryAddItem(_itemFactory.ResolveItem("copper_sword"), 1);
         session.Inventory.TryAddItem(_itemFactory.ResolveItem("health_potion"), 2);
         session.Inventory.TryAddItem(_itemFactory.ResolveItem("wooden_wall"), 6);
+        session.Inventory.TryAddItem(_itemFactory.ResolveItem("wood_hoe"), 1);
+        session.Inventory.TryAddItem(_itemFactory.ResolveItem("wheat_seed"), 4);
         session.Player.SelectHotbarSlot(0);
 
         for (int i = 0; i < package.ResourceSpawns.Count; i++)

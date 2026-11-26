@@ -18,6 +18,42 @@ internal sealed class GameConfigJson
     public int DefaultViewDistanceChunks { get; set; }
     public int MinViewDistanceChunks { get; set; }
     public int MaxViewDistanceChunks { get; set; }
+    public float PlayerMaxHunger { get; set; }
+    public float HungerDrainPerSecond { get; set; }
+    public float StarvationDamageIntervalSeconds { get; set; }
+    public int StarvationDamageAmount { get; set; }
+}
+
+internal sealed class FoodJson
+{
+    public string? Id { get; set; }
+    public string? Name { get; set; }
+    public string? Description { get; set; }
+    public int MaxStackSize { get; set; }
+    public int HealAmount { get; set; }
+    public float HungerRestore { get; set; }
+    public string? BuffId { get; set; }
+    public string? BuffName { get; set; }
+    public float BuffDurationSeconds { get; set; }
+    public float SpeedMultiplier { get; set; } = 1f;
+    public int BonusDamage { get; set; }
+    public int BonusDefense { get; set; }
+    public float RegenPerSecond { get; set; }
+}
+
+internal sealed class CropJson
+{
+    public string? CropId { get; set; }
+    public string? DisplayName { get; set; }
+    public string? SeedItemId { get; set; }
+    public string? SeedName { get; set; }
+    public string? HarvestItemId { get; set; }
+    public string? HarvestName { get; set; }
+    public int MinYield { get; set; }
+    public int MaxYield { get; set; }
+    public float BonusSeedChance { get; set; }
+    public float GrowthDurationSeconds { get; set; }
+    public int GrowthStages { get; set; }
 }
 
 internal sealed class RecipeJson

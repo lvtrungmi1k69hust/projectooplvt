@@ -124,6 +124,133 @@ public sealed class SpriteAtlasCache : IDisposable
             accentColor: Color.FromArgb(98, 144, 72), accentCount: 2));
         Register("tile_darkstone", () => PixelArtBuilder.CreateStoneBrickTile(
             Color.FromArgb(60, 52, 76), Color.FromArgb(36, 30, 48), Color.FromArgb(88, 76, 112), seed: 88));
+        Register("farm_tilled", () => PixelArtBuilder.CreateTexturedTile(
+            Color.FromArgb(92, 62, 36), Color.FromArgb(112, 76, 46), Color.FromArgb(68, 44, 24), seed: 99, speckleCount: 34));
+
+        var sproutPal = new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(24, 48, 22),
+            ['G'] = Color.FromArgb(72, 168, 62),
+            ['L'] = Color.FromArgb(134, 218, 92),
+            ['Y'] = Color.FromArgb(238, 198, 72),
+            ['B'] = Color.FromArgb(198, 148, 42),
+            ['O'] = Color.FromArgb(242, 134, 42),
+            ['D'] = Color.FromArgb(192, 86, 22)
+        };
+        Register("crop_stage_0", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................",
+            "......K..K......",
+            ".....KL..LK.....",
+            "......KGGK......",
+            ".......GG.......",
+            ".......KK.......",
+            "................",
+            "................",
+            "................"
+        }, sproutPal));
+        Register("crop_stage_1", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "................",
+            "................",
+            "................",
+            ".....K....K.....",
+            "....KLK..KLK....",
+            ".....KGGGGK.....",
+            "....KLGLLGLK....",
+            ".....KGGGGK.....",
+            "......KGGK......",
+            "......KGGK......",
+            ".......KK.......",
+            "................",
+            "................",
+            "................",
+            "................"
+        }, sproutPal));
+        Register("crop_stage_2", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "................",
+            "...K...KK...K...",
+            "..KLK.KLLK.KLK..",
+            "...KGKLLLLKGK...",
+            "...KGGLLLLGGK...",
+            "....KGGGGGGK....",
+            "...KLGGGGGGGLK..",
+            "....KGGGGGGK....",
+            ".....KGGGGK.....",
+            ".....KGGGGK.....",
+            "......KKKK......",
+            "................",
+            "................",
+            "................",
+            "................"
+        }, sproutPal));
+        Register("crop_wheat_mature", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "....K..KK..K....",
+            "...KYK.YY.KYK...",
+            "...KYB.YY.BYK...",
+            "..KYYBKYYKBYYK..",
+            "..KYBYBYYBYBYK..",
+            "...KBBBBBBBBK...",
+            "....KGGGGGGK....",
+            "...KLGGGGGGGLK..",
+            "....KGGGGGGK....",
+            ".....KGGGGK.....",
+            "......KGGK......",
+            "......KKKK......",
+            "................",
+            "................",
+            "................",
+            "................"
+        }, sproutPal));
+        Register("crop_carrot_mature", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "....KKKKKKKK....",
+            "...KLLGGGGLLK...",
+            "....KGGGGGGK....",
+            ".....KGGGGK.....",
+            "......KGGK......",
+            ".....KOOOOK.....",
+            "....KOODDOOK....",
+            "....KOOODOOK....",
+            ".....KOODOK.....",
+            ".....KOOOOK.....",
+            "......KOOK......",
+            "......KOOK......",
+            ".......KK.......",
+            "................",
+            "................",
+            "................"
+        }, sproutPal));
+        Register("crop_pumpkin_mature", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "......KKKK......",
+            "......KGGK......",
+            ".....KGGGGK.....",
+            "...KKKGGGGKKK...",
+            "..KOOODOODOOOK..",
+            ".KOOOODOODOOOOK.",
+            ".KOOOODOODOOOOK.",
+            ".KOOOODOODOOOOK.",
+            ".KOOOODOODOOOOK.",
+            ".KDDDODDDDODDDK.",
+            "..KDDDDDDDDDDK..",
+            "...KKKKKKKKKK...",
+            "................",
+            "................",
+            "................",
+            "................"
+        }, sproutPal));
     }
 
     private void RegisterResourceSprites()
@@ -1175,7 +1302,10 @@ public sealed class SpriteAtlasCache : IDisposable
         }));
 
         Register("wood_axe", () => BuildToolIcon(isAxe: true, Color.FromArgb(182, 128, 72), Color.FromArgb(132, 84, 42)));
+        Register("wood_hoe", () => BuildHoeIcon(Color.FromArgb(182, 128, 72), Color.FromArgb(132, 84, 42)));
         Register("wood_pickaxe", () => BuildToolIcon(isAxe: false, Color.FromArgb(182, 128, 72), Color.FromArgb(132, 84, 42)));
+
+        RegisterFoodAndSeedSprites();
         Register("stone_pickaxe", () => BuildToolIcon(isAxe: false, Color.FromArgb(168, 176, 188), Color.FromArgb(114, 122, 134)));
         Register("copper_pickaxe", () => BuildToolIcon(isAxe: false, Color.FromArgb(242, 148, 72), Color.FromArgb(186, 94, 38)));
 
@@ -1449,5 +1579,213 @@ public sealed class SpriteAtlasCache : IDisposable
             "................",
             "................"
         }, pal);
+    }
+
+    private static Bitmap BuildHoeIcon(Color headLight, Color headDark)
+    {
+        var pal = new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(30, 22, 16),
+            ['H'] = headLight,
+            ['D'] = headDark,
+            ['B'] = Color.FromArgb(148, 94, 48)
+        };
+        return PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            ".....KKKKKK.....",
+            "....KHHHHHHK....",
+            "....KDDDDHHK....",
+            "....KKKK.KBK....",
+            ".........KBK....",
+            "........KBK.....",
+            ".......KBK......",
+            "......KBK.......",
+            ".....KBK........",
+            "....KBK.........",
+            "...KBK..........",
+            "..KKK...........",
+            "................",
+            "................",
+            "................"
+        }, pal);
+    }
+
+    private void RegisterFoodAndSeedSprites()
+    {
+        var seedPal = new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(44, 34, 22),
+            ['P'] = Color.FromArgb(204, 174, 124),
+            ['D'] = Color.FromArgb(164, 134, 88),
+            ['G'] = Color.FromArgb(236, 198, 72),
+            ['O'] = Color.FromArgb(242, 128, 38),
+            ['L'] = Color.FromArgb(92, 186, 72)
+        };
+        Register("wheat_seed", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "................",
+            "....KKKKKKKK....",
+            "...KPPPPPPPPK...",
+            "...KPGGGGGGPK...",
+            "...KPPGGGGPPK...",
+            "...KPGGGGGGPK...",
+            "...KDDDDDDDDK...",
+            "...KPPPPPPPPK...",
+            "...KDDDDDDDDK...",
+            "....KKKKKKKK....",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................"
+        }, seedPal));
+        Register("carrot_seed", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "................",
+            "....KKKKKKKK....",
+            "...KPPPPPPPPK...",
+            "...KPPPLLPPPK...",
+            "...KPPPOOPPPK...",
+            "...KPPPOOPPPK...",
+            "...KDDDDDDDDK...",
+            "...KPPPPPPPPK...",
+            "...KDDDDDDDDK...",
+            "....KKKKKKKK....",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................"
+        }, seedPal));
+        Register("pumpkin_seed", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "................",
+            "....KKKKKKKK....",
+            "...KPPPPPPPPK...",
+            "...KPPOOOOPPK...",
+            "...KPOOOOOOPK...",
+            "...KPPOOOOPPK...",
+            "...KDDDDDDDDK...",
+            "...KPPPPPPPPK...",
+            "...KDDDDDDDDK...",
+            "....KKKKKKKK....",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................"
+        }, seedPal));
+
+        var cropFoodPal = new Dictionary<char, Color>
+        {
+            ['K'] = Color.FromArgb(36, 24, 18),
+            ['G'] = Color.FromArgb(62, 168, 66),
+            ['O'] = Color.FromArgb(242, 128, 38),
+            ['D'] = Color.FromArgb(196, 84, 24),
+            ['H'] = Color.FromArgb(255, 178, 96),
+            ['B'] = Color.FromArgb(164, 108, 62),
+            ['Y'] = Color.FromArgb(252, 214, 72),
+            ['W'] = Color.FromArgb(244, 238, 224),
+            ['C'] = Color.FromArgb(228, 174, 96)
+        };
+        Register("carrot", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            ".........KKK....",
+            "........KGGGK...",
+            ".......KGGK.....",
+            "......KOOOK.....",
+            ".....KOOHOK.....",
+            "....KOODOK......",
+            "....KOODOK......",
+            "...KOODOK.......",
+            "...KOODK........",
+            "..KOODK.........",
+            "..KOOK..........",
+            "...KK...........",
+            "................",
+            "................",
+            "................"
+        }, cropFoodPal));
+        Register("pumpkin", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "......KKKK......",
+            "......KGGK......",
+            "...KKKKKKKKKK...",
+            "..KOOOODDOOOOK..",
+            ".KOOOHODDOOOOOK.",
+            ".KOOOHODDOOOOOK.",
+            ".KOOOOODDOOOOOK.",
+            ".KOOOOODDOOOODK.",
+            ".KDDDDDDDDDDDDK.",
+            "..KDDDDDDDDDDK..",
+            "...KKKKKKKKKK...",
+            "................",
+            "................",
+            "................",
+            "................"
+        }, cropFoodPal));
+        Register("carrot_stew", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "......WWWW......",
+            "....W......W....",
+            "..KKKKKKKKKKKK..",
+            ".KOOOHHHGOOOOOK.",
+            ".KOODDOOOOOODDK.",
+            "KKKKKKKKKKKKKKKK",
+            "KBBBBBBBBBBBBBBK",
+            ".KBBBBBBBBBBBBK.",
+            "..KBBBBBBBBBBK..",
+            "...KKKKKKKKKK...",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................"
+        }, cropFoodPal));
+        Register("pumpkin_pie", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "................",
+            "....KKKKKKKK....",
+            "..KKCCCCCCCCKK..",
+            ".KCCOOOOOOOOCOK.",
+            ".KCOOOOWWOOOOCK.",
+            ".KCCOOOOOOOOCOK.",
+            ".KCCCCCCCCCCCCK.",
+            "..KBBBBBBBBBBK..",
+            "...KKKKKKKKKK...",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................"
+        }, cropFoodPal));
+        Register("golden_bread", () => PixelArtBuilder.FromGrid(new[]
+        {
+            "................",
+            "................",
+            "................",
+            "....KKKKKKKK....",
+            "..KKYYYYYYYYKK..",
+            ".KYYYYWWYYYYYYK.",
+            ".KYYYYYYYYYYYYK.",
+            "KYYYYDDDDDYYYYYK",
+            "KDDDDDDDDDDDDDDK",
+            ".KKKKKKKKKKKKKK.",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................"
+        }, cropFoodPal));
     }
 }

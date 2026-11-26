@@ -8,6 +8,7 @@ using MiniNecesse.Core.Crafting;
 using MiniNecesse.Core.Entities;
 using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Exceptions;
+using MiniNecesse.Core.Farming;
 using MiniNecesse.Core.Interfaces;
 using MiniNecesse.Core.Rules;
 using MiniNecesse.Core.World;
@@ -24,6 +25,8 @@ public sealed class JsonLevelLoader : ILevelLoader
     private const string DEFAULT_ASSETS_FOLDER = "DataAssets";
     private const string CONFIG_FILE_NAME = "config.json";
     private const string RECIPES_FILE_NAME = "recipes.json";
+    private const string FOODS_FILE_NAME = "foods.json";
+    private const string CROPS_FILE_NAME = "crops.json";
 
     private static readonly JsonSerializerOptions JSON_OPTIONS = new()
     {
@@ -71,6 +74,10 @@ public sealed class JsonLevelLoader : ILevelLoader
         int minView = dto.MinViewDistanceChunks == 0 ? ChunkManager.DEFAULT_MIN_VIEW_DISTANCE : dto.MinViewDistanceChunks;
         int maxView = dto.MaxViewDistanceChunks == 0 ? ChunkManager.DEFAULT_MAX_VIEW_DISTANCE : dto.MaxViewDistanceChunks;
         int defaultView = dto.DefaultViewDistanceChunks == 0 ? ChunkManager.DEFAULT_VIEW_DISTANCE : dto.DefaultViewDistanceChunks;
+        float maxHunger = dto.PlayerMaxHunger <= 0f ? 100f : dto.PlayerMaxHunger;
+        float hungerDrain = dto.HungerDrainPerSecond <= 0f ? 0.9f : dto.HungerDrainPerSecond;
+        float starveInterval = dto.StarvationDamageIntervalSeconds <= 0f ? 2.5f : dto.StarvationDamageIntervalSeconds;
+        int starveDamage = dto.StarvationDamageAmount <= 0 ? 3 : dto.StarvationDamageAmount;
 
         return new GameConfig(
             dto.FixedDeltaTime,
@@ -86,7 +93,92 @@ public sealed class JsonLevelLoader : ILevelLoader
             chunkSize,
             defaultView,
             minView,
-            maxView);
+            maxView,
+            maxHunger,
+            hungerDrain,
+            starveInterval,
+            starveDamage);
+    }
+
+    /// <summary>Loads data-driven food and temporary buff definitions from <c>foods.json</c>.</summary>
+    public IReadOnlyList<FoodDefinition> LoadFoods()
+    {
+        string path = Path.Combine(_assetsDirectory, FOODS_FILE_NAME);
+        if (!File.Exists(path))
+        {
+            return Array.Empty<FoodDefinition>();
+        }
+
+        List<FoodJson> rawList = ReadJsonOrThrow<List<FoodJson>>(path, "FOODS");
+        var foods = new List<FoodDefinition>(rawList.Count);
+        for (int i = 0; i < rawList.Count; i++)
+        {
+            FoodJson raw = rawList[i];
+            if (string.IsNullOrWhiteSpace(raw.Id) || string.IsNullOrWhiteSpace(raw.Name))
+            {
+                throw new InvalidLevelDataException($"Food entry at index {i} is missing 'id' or 'name'.", "FOODS");
+            }
+
+            IFoodBuffStrategy? buff = null;
+            if (!string.IsNullOrWhiteSpace(raw.BuffId) && raw.BuffDurationSeconds > 0f)
+            {
+                buff = new StatFoodBuffStrategy(
+                    raw.BuffId,
+                    string.IsNullOrWhiteSpace(raw.BuffName) ? raw.BuffId : raw.BuffName,
+                    raw.BuffDurationSeconds,
+                    raw.SpeedMultiplier <= 0f ? 1f : raw.SpeedMultiplier,
+                    global::System.Math.Max(0, raw.BonusDamage),
+                    global::System.Math.Max(0, raw.BonusDefense),
+                    MathF.Max(0f, raw.RegenPerSecond));
+            }
+
+            foods.Add(new FoodDefinition(
+                raw.Id,
+                raw.Name,
+                raw.Description ?? string.Empty,
+                raw.MaxStackSize <= 0 ? 20 : raw.MaxStackSize,
+                global::System.Math.Max(0, raw.HealAmount),
+                MathF.Max(0f, raw.HungerRestore),
+                buff));
+        }
+
+        return foods.AsReadOnly();
+    }
+
+    /// <summary>Loads data-driven farming crop definitions from <c>crops.json</c>.</summary>
+    public IReadOnlyList<CropDefinition> LoadCrops()
+    {
+        string path = Path.Combine(_assetsDirectory, CROPS_FILE_NAME);
+        if (!File.Exists(path))
+        {
+            return Array.Empty<CropDefinition>();
+        }
+
+        List<CropJson> rawList = ReadJsonOrThrow<List<CropJson>>(path, "CROPS");
+        var crops = new List<CropDefinition>(rawList.Count);
+        for (int i = 0; i < rawList.Count; i++)
+        {
+            CropJson raw = rawList[i];
+            if (string.IsNullOrWhiteSpace(raw.CropId) || string.IsNullOrWhiteSpace(raw.SeedItemId) || string.IsNullOrWhiteSpace(raw.HarvestItemId))
+            {
+                throw new InvalidLevelDataException($"Crop entry at index {i} is missing required fields.", "CROPS");
+            }
+
+            crops.Add(new CropDefinition(
+                raw.CropId,
+                raw.DisplayName ?? raw.CropId,
+                raw.SeedItemId,
+                raw.SeedName ?? raw.SeedItemId,
+                raw.HarvestItemId,
+                raw.HarvestName ?? raw.HarvestItemId,
+                global::System.Math.Max(1, raw.MinYield),
+                global::System.Math.Max(global::System.Math.Max(1, raw.MinYield), raw.MaxYield),
+                global::System.Math.Clamp(raw.BonusSeedChance, 0f, 1f),
+                raw.GrowthDurationSeconds <= 0f ? 20f : raw.GrowthDurationSeconds,
+                raw.GrowthStages <= 0 ? 3 : raw.GrowthStages));
+        }
+
+        return crops.AsReadOnly();
     }
 
     /// <inheritdoc />

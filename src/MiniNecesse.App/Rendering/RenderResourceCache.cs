@@ -21,6 +21,9 @@ public sealed class RenderResourceCache : IDisposable
     public SolidBrush HudPanelBrush { get; } = new(Color.FromArgb(196, 16, 22, 34));
     public SolidBrush HpBackgroundBrush { get; } = new(Color.FromArgb(65, 22, 28));
     public SolidBrush HpFillBrush { get; } = new(Color.FromArgb(224, 68, 76));
+    public SolidBrush HungerBackgroundBrush { get; } = new(Color.FromArgb(62, 44, 20));
+    public SolidBrush HungerFillBrush { get; } = new(Color.FromArgb(234, 152, 54));
+    public SolidBrush BuffTextBrush { get; } = new(Color.FromArgb(132, 224, 246));
     public SolidBrush BossHpFillBrush { get; } = new(Color.FromArgb(198, 42, 92));
     public SolidBrush EnemyHpFillBrush { get; } = new(Color.FromArgb(236, 98, 62));
     public SolidBrush AnimalHpFillBrush { get; } = new(Color.FromArgb(124, 224, 134));
@@ -129,6 +132,9 @@ public sealed class RenderResourceCache : IDisposable
         HudPanelBrush.Dispose();
         HpBackgroundBrush.Dispose();
         HpFillBrush.Dispose();
+        HungerBackgroundBrush.Dispose();
+        HungerFillBrush.Dispose();
+        BuffTextBrush.Dispose();
         BossHpFillBrush.Dispose();
         EnemyHpFillBrush.Dispose();
         AnimalHpFillBrush.Dispose();

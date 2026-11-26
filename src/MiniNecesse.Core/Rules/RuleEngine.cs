@@ -100,7 +100,8 @@ public sealed class RuleEngine
             return false;
         }
 
-        int damage = attacker.EquippedWeapon?.ComputeDamage() ?? attacker.HarvestPower;
+        int damage = attacker.EffectiveEquippedWeapon?.ComputeDamage()
+            ?? (attacker.HarvestPower + attacker.BonusAttackDamage);
         target.TakeDamage(damage);
         attacker.TriggerActionCooldown();
         return true;

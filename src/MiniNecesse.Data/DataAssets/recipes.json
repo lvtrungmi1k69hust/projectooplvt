@@ -196,5 +196,77 @@
     "ingredients": [
       { "itemId": "stone", "quantity": 4 }
     ]
+  },
+  {
+    "recipeId": "craft_wood_hoe",
+    "outputItemId": "wood_hoe",
+    "outputQuantity": 1,
+    "requiresWorkbench": false,
+    "ingredients": [
+      { "itemId": "wood", "quantity": 3 },
+      { "itemId": "stone", "quantity": 2 }
+    ]
+  },
+  {
+    "recipeId": "craft_wheat_seed",
+    "outputItemId": "wheat_seed",
+    "outputQuantity": 2,
+    "requiresWorkbench": false,
+    "ingredients": [
+      { "itemId": "wheat", "quantity": 1 }
+    ]
+  },
+  {
+    "recipeId": "craft_carrot_seed",
+    "outputItemId": "carrot_seed",
+    "outputQuantity": 2,
+    "requiresWorkbench": false,
+    "ingredients": [
+      { "itemId": "berry", "quantity": 1 },
+      { "itemId": "wood", "quantity": 1 }
+    ]
+  },
+  {
+    "recipeId": "craft_pumpkin_seed",
+    "outputItemId": "pumpkin_seed",
+    "outputQuantity": 2,
+    "requiresWorkbench": false,
+    "ingredients": [
+      { "itemId": "wheat", "quantity": 1 },
+      { "itemId": "berry", "quantity": 1 }
+    ]
+  },
+  {
+    "recipeId": "craft_carrot_stew",
+    "outputItemId": "carrot_stew",
+    "outputQuantity": 1,
+    "requiresWorkbench": false,
+    "ingredients": [
+      { "itemId": "carrot", "quantity": 2 },
+      { "itemId": "berry", "quantity": 1 },
+      { "itemId": "wood", "quantity": 1 }
+    ]
+  },
+  {
+    "recipeId": "craft_pumpkin_pie",
+    "outputItemId": "pumpkin_pie",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "pumpkin", "quantity": 1 },
+      { "itemId": "wheat", "quantity": 2 },
+      { "itemId": "coal", "quantity": 1 }
+    ]
+  },
+  {
+    "recipeId": "craft_golden_bread",
+    "outputItemId": "golden_bread",
+    "outputQuantity": 1,
+    "requiresWorkbench": true,
+    "ingredients": [
+      { "itemId": "wheat", "quantity": 2 },
+      { "itemId": "berry", "quantity": 1 },
+      { "itemId": "gold_ore", "quantity": 1 }
+    ]
   }
 ]

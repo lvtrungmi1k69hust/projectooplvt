@@ -54,6 +54,18 @@ public sealed class GameConfig
     /// <summary>Gets the maximum selectable chunk view distance.</summary>
     public int MaxViewDistanceChunks { get; }
 
+    /// <summary>Gets the player's maximum hunger capacity.</summary>
+    public float PlayerMaxHunger { get; }
+
+    /// <summary>Gets hunger drain per second while alive in Gameplay.</summary>
+    public float HungerDrainPerSecond { get; }
+
+    /// <summary>Gets seconds between starvation damage ticks when hunger hits 0.</summary>
+    public float StarvationDamageIntervalSeconds { get; }
+
+    /// <summary>Gets HP lost per starvation tick.</summary>
+    public int StarvationDamageAmount { get; }
+
     /// <summary>Initializes a new instance of the <see cref="GameConfig"/> class.</summary>
     public GameConfig(
         float fixedDeltaTime = 1f / 60f,
@@ -69,7 +81,11 @@ public sealed class GameConfig
         int chunkSize = IslandLevel.DEFAULT_CHUNK_SIZE,
         int defaultViewDistanceChunks = ChunkManager.DEFAULT_VIEW_DISTANCE,
         int minViewDistanceChunks = ChunkManager.DEFAULT_MIN_VIEW_DISTANCE,
-        int maxViewDistanceChunks = ChunkManager.DEFAULT_MAX_VIEW_DISTANCE)
+        int maxViewDistanceChunks = ChunkManager.DEFAULT_MAX_VIEW_DISTANCE,
+        float playerMaxHunger = 100f,
+        float hungerDrainPerSecond = 0.9f,
+        float starvationDamageIntervalSeconds = 2.5f,
+        int starvationDamageAmount = 3)
     {
         FixedDeltaTime = fixedDeltaTime;
         TileSize = tileSize;
@@ -85,8 +101,24 @@ public sealed class GameConfig
         DefaultViewDistanceChunks = defaultViewDistanceChunks;
         MinViewDistanceChunks = minViewDistanceChunks;
         MaxViewDistanceChunks = maxViewDistanceChunks;
+        PlayerMaxHunger = playerMaxHunger;
+        HungerDrainPerSecond = hungerDrainPerSecond;
+        StarvationDamageIntervalSeconds = starvationDamageIntervalSeconds;
+        StarvationDamageAmount = starvationDamageAmount;
     }
 }
+
+/// <summary>
+/// Data-driven food and temporary buff definition loaded from <c>foods.json</c>.
+/// </summary>
+public sealed record FoodDefinition(
+    string Id,
+    string Name,
+    string Description,
+    int MaxStackSize,
+    int HealAmount,
+    float HungerRestore,
+    MiniNecesse.Core.Interfaces.IFoodBuffStrategy? BuffStrategy);
 
 /// <summary>
 /// Immutable high-score leaderboard entry persisted in highscore.json.

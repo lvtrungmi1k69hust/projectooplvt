@@ -8,6 +8,7 @@ using MiniNecesse.Core.AI;
 using MiniNecesse.Core.Crafting;
 using MiniNecesse.Core.Entities;
 using MiniNecesse.Core.Enums;
+using MiniNecesse.Core.Farming;
 using MiniNecesse.Core.Math;
 using MiniNecesse.Core.Rules;
 using MiniNecesse.Core.World;
@@ -50,6 +51,13 @@ public sealed class TopDownRenderer : IDisposable
     private int _lastHp = -1;
     private int _lastMaxHp = -1;
     private string _cachedHpText = "HP 0/1";
+
+    private int _lastHunger = -1;
+    private int _lastMaxHunger = -1;
+    private string _cachedHungerText = "HUN 100/100";
+
+    private string _lastBuffSummary = string.Empty;
+    private string _cachedBuffLine = "Buffs: None";
 
     private int _lastScore = -1;
     private int _lastDay = -1;
@@ -147,6 +155,7 @@ public sealed class TopDownRenderer : IDisposable
         g.Clear(Color.FromArgb(14, 24, 38));
 
         DrawVisibleChunks(g, viewportSize, session.Level, cameraOffset);
+        DrawFarmPlots(g, viewportSize, session.Farming.Plots, session.Level.TileSize, cameraOffset);
         DrawBuildPlacementPreview(g, session, cameraOffset, aimWorldPos);
         DrawResources(g, viewportSize, session.Resources, cameraOffset);
         DrawStructures(g, viewportSize, session.Structures, cameraOffset);
@@ -240,10 +249,72 @@ public sealed class TopDownRenderer : IDisposable
         }
     }
 
+    private void DrawFarmPlots(Graphics g, Size viewport, IReadOnlyList<FarmPlot> plots, float tileSize, Vector2D cam)
+    {
+        Bitmap? tilledSprite = _sprites.Get("farm_tilled");
+        for (int i = 0; i < plots.Count; i++)
+        {
+            FarmPlot plot = plots[i];
+            float sx = (plot.TileCol * tileSize) - cam.X;
+            float sy = (plot.TileRow * tileSize) - cam.Y;
+            if (!IsInViewport(sx, sy, tileSize, tileSize, viewport))
+            {
+                continue;
+            }
+
+            if (tilledSprite is not null)
+            {
+                g.DrawImage(tilledSprite, sx, sy, tileSize, tileSize);
+            }
+
+            if (!plot.IsPlanted)
+            {
+                continue;
+            }
+
+            string cropSpriteKey = ResolveCropSpriteKey(plot);
+            Bitmap? cropSprite = _sprites.Get(cropSpriteKey);
+            if (cropSprite is not null)
+            {
+                g.DrawImage(cropSprite, sx + 2, sy - 2, tileSize - 4, tileSize - 2);
+            }
+        }
+    }
+
+    private static string ResolveCropSpriteKey(FarmPlot plot)
+    {
+        if (!plot.IsMature)
+        {
+            if (plot.CurrentStage == 0) return "crop_stage_0";
+            if (plot.CurrentStage == 1) return "crop_stage_1";
+            return "crop_stage_2";
+        }
+
+        if (string.Equals(plot.CropId, "carrot_crop", StringComparison.OrdinalIgnoreCase))
+        {
+            return "crop_carrot_mature";
+        }
+
+        if (string.Equals(plot.CropId, "pumpkin_crop", StringComparison.OrdinalIgnoreCase))
+        {
+            return "crop_pumpkin_mature";
+        }
+
+        return "crop_wheat_mature";
+    }
+
     private void DrawBuildPlacementPreview(Graphics g, GameSession session, Vector2D cam, Vector2D aimWorldPos)
     {
         ItemStack? selected = session.Player.SelectedItemStack;
-        if (selected is null || !selected.Item.TryGetPlaceableStructure(out _))
+        if (selected is null)
+        {
+            return;
+        }
+
+        bool isStructure = selected.Item.TryGetPlaceableStructure(out _);
+        bool isSeed = selected.Item.TryGetPlantableCropId(out _);
+        bool isHoe = session.Player.EquippedToolType == ToolType.Hoe;
+        if (!isStructure && !isSeed && !isHoe)
         {
             return;
         }
@@ -252,9 +323,25 @@ public sealed class TopDownRenderer : IDisposable
         if (!session.Level.IsInBounds(col, row)) return;
 
         float tileSize = session.Level.TileSize;
-        bool inReach = Vector2D.Distance(session.Player.Center, aimWorldPos) <= 112f;
-        bool freeTile = session.Level.IsTileWalkable(col, row) && session.FindStructureAtTile(new GridPoint(col, row)) is null;
-        bool valid = inReach && freeTile;
+        float maxReach = isHoe ? 96f : 112f;
+        bool inReach = Vector2D.Distance(session.Player.Center, aimWorldPos) <= maxReach;
+        bool valid;
+        if (isStructure)
+        {
+            valid = inReach && session.Level.IsTileWalkable(col, row) && session.FindStructureAtTile(new GridPoint(col, row)) is null;
+        }
+        else if (isSeed)
+        {
+            FarmPlot? plot = session.Farming.GetPlotAt(col, row);
+            valid = inReach && plot is not null && !plot.IsPlanted;
+        }
+        else
+        {
+            valid = inReach && session.Level.TryGetTile(col, row, out Tile? tile) && tile is not null &&
+                    tile.IsWalkable && (tile.TileType == TileType.Grass || tile.TileType == TileType.Sand) &&
+                    session.FindStructureAtTile(new GridPoint(col, row)) is null &&
+                    session.Farming.GetPlotAt(col, row) is null;
+        }
 
         float sx = (col * tileSize) - cam.X;
         float sy = (row * tileSize) - cam.Y;
@@ -714,21 +801,29 @@ public sealed class TopDownRenderer : IDisposable
 
     private void DrawTopHud(Graphics g, GameSession session, HudViewModel hud)
     {
-        g.FillRectangle(_cache.HudPanelBrush, 12, 12, 344, 132);
-        g.DrawRectangle(_cache.HudBorderPen, 12, 12, 344, 132);
+        g.FillRectangle(_cache.HudPanelBrush, 12, 12, 344, 170);
+        g.DrawRectangle(_cache.HudBorderPen, 12, 12, 344, 170);
 
         g.DrawString(GetTitleText(session.Level.Name, session.Difficulty), _cache.HudTitleFont, _cache.TextGoldBrush, 22, 18);
 
         int maxHp = Math.Max(1, hud.MaxHp);
         float hpRatio = Math.Clamp((float)hud.CurrentHp / maxHp, 0f, 1f);
-        g.FillRectangle(_cache.HpBackgroundBrush, 22, 42, 206, 16);
-        g.FillRectangle(_cache.HpFillBrush, 22, 42, 206f * hpRatio, 16);
-        g.DrawRectangle(_cache.DarkOutlinePen, 22, 42, 206, 16);
-        g.DrawString(GetHpText(hud.CurrentHp, maxHp), _cache.SmallFont, _cache.TextWhiteBrush, 234, 43);
+        g.FillRectangle(_cache.HpBackgroundBrush, 22, 42, 206, 15);
+        g.FillRectangle(_cache.HpFillBrush, 22, 42, 206f * hpRatio, 15);
+        g.DrawRectangle(_cache.DarkOutlinePen, 22, 42, 206, 15);
+        g.DrawString(GetHpText(hud.CurrentHp, maxHp), _cache.SmallFont, _cache.TextWhiteBrush, 234, 42);
+
+        int curHunger = (int)MathF.Round(session.Player.CurrentHunger);
+        int maxHunger = Math.Max(1, (int)MathF.Round(session.Player.MaxHunger));
+        float hungerRatio = Math.Clamp(session.Player.HungerRatio, 0f, 1f);
+        g.FillRectangle(_cache.HungerBackgroundBrush, 22, 62, 206, 13);
+        g.FillRectangle(_cache.HungerFillBrush, 22, 62, 206f * hungerRatio, 13);
+        g.DrawRectangle(_cache.DarkOutlinePen, 22, 62, 206, 13);
+        g.DrawString(GetHungerText(curHunger, maxHunger), _cache.SmallFont, _cache.TextWhiteBrush, 234, 61);
 
         SolidBrush phaseBrush = hud.DayPhase == DayPhase.Day ? _cache.TextGreenBrush : _cache.TextGoldBrush;
-        g.DrawString(GetScoreDayText(hud.Score, hud.DayNumber, hud.DayPhase), _cache.HudBodyFont, phaseBrush, 22, 65);
-        g.DrawString(GetWaveEnemiesText(session.CurrentWaveIndex, session.Enemies.Count), _cache.HudBodyFont, _cache.TextWhiteBrush, 22, 84);
+        g.DrawString(GetScoreDayText(hud.Score, hud.DayNumber, hud.DayPhase), _cache.HudBodyFont, phaseBrush, 22, 82);
+        g.DrawString(GetWaveEnemiesText(session.CurrentWaveIndex, session.Enemies.Count), _cache.HudBodyFont, _cache.TextWhiteBrush, 22, 101);
 
         ChunkCoord centerChunk = session.ChunkManager.CurrentCenterChunk;
         VillageSite? nearbyVillage = session.FindVillageAt(session.Player.Center);
@@ -743,8 +838,14 @@ public sealed class TopDownRenderer : IDisposable
             _cache.SmallFont,
             nearbyVillage is not null ? _cache.TextGoldBrush : _cache.TextMutedBrush,
             22,
-            104);
-        g.DrawString("[WASD] Move [LMB] Act [RMB] Build/Use [C] Craft [E] Boss [Esc] Pause", _cache.SmallFont, _cache.TextMutedBrush, 22, 121);
+            121);
+        g.DrawString(
+            GetBuffLine(session.Player.Buffs.PrimaryBuffSummary),
+            _cache.SmallFont,
+            session.Player.Buffs.ActiveBuffCount > 0 ? _cache.BuffTextBrush : _cache.TextMutedBrush,
+            22,
+            138);
+        g.DrawString("[WASD] Move [LMB] Act/Till [RMB] Use/Plant/Build [C] Craft [E] Boss [Esc] Pause", _cache.SmallFont, _cache.TextMutedBrush, 22, 155);
     }
 
     private void DrawBossBar(Graphics g, Size viewport, HudViewModel hud)
@@ -859,6 +960,29 @@ public sealed class TopDownRenderer : IDisposable
         }
 
         return _cachedHpText;
+    }
+
+    private string GetHungerText(int hunger, int maxHunger)
+    {
+        if (_lastHunger != hunger || _lastMaxHunger != maxHunger)
+        {
+            _lastHunger = hunger;
+            _lastMaxHunger = maxHunger;
+            _cachedHungerText = $"HUN {hunger}/{maxHunger}";
+        }
+
+        return _cachedHungerText;
+    }
+
+    private string GetBuffLine(string summary)
+    {
+        if (!string.Equals(_lastBuffSummary, summary, StringComparison.Ordinal))
+        {
+            _lastBuffSummary = summary;
+            _cachedBuffLine = string.IsNullOrEmpty(summary) ? "Buffs: None" : $"Buff: {summary}";
+        }
+
+        return _cachedBuffLine;
     }
 
     private string GetScoreDayText(int score, int day, DayPhase phase)

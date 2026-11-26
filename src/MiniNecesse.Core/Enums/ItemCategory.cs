@@ -18,5 +18,8 @@ public enum ItemCategory
     Consumable = 3,
 
     /// <summary>Placeable building structure such as a workbench or wall.</summary>
-    Structure = 4
+    Structure = 4,
+
+    /// <summary>Plantable crop seed item used on tilled farm plots.</summary>
+    Seed = 5
 }

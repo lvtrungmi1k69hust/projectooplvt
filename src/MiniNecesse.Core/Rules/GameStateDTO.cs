@@ -53,6 +53,20 @@ public sealed class GameStateDTO
 
     /// <summary>Gets or sets chunk coordinates whose natural resources have already been generated.</summary>
     public List<ChunkCoordSnapshot> GeneratedChunks { get; set; } = new();
+
+    /// <summary>Gets or sets tilled farm plot snapshots and planted crop progress.</summary>
+    public List<FarmPlotSnapshot> FarmPlots { get; set; } = new();
+}
+
+/// <summary>
+/// Serializable tilled farmland tile and crop growth state.
+/// </summary>
+public sealed class FarmPlotSnapshot
+{
+    public int TileCol { get; set; }
+    public int TileRow { get; set; }
+    public string? CropId { get; set; }
+    public float GrowthSeconds { get; set; }
 }
 
 /// <summary>
@@ -104,6 +118,12 @@ public sealed class PlayerSnapshot
 
     /// <summary>Gets or sets the player's maximum health.</summary>
     public int MaxHp { get; set; }
+
+    /// <summary>Gets or sets the player's current hunger.</summary>
+    public float Hunger { get; set; } = 100f;
+
+    /// <summary>Gets or sets the player's maximum hunger.</summary>
+    public float MaxHunger { get; set; } = 100f;
 
     /// <summary>Gets or sets the selected hotbar slot index.</summary>
     public int SelectedHotbarIndex { get; set; }

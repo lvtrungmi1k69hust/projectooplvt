@@ -18,5 +18,8 @@ public enum ToolType
     Sword = 3,
 
     /// <summary>Ranged bow firing projectiles.</summary>
-    Bow = 4
+    Bow = 4,
+
+    /// <summary>Farming hoe used to till grass or sand into fertile soil plots.</summary>
+    Hoe = 5
 }

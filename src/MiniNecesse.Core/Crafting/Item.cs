@@ -87,4 +87,13 @@ public abstract class Item
         structureType = default;
         return false;
     }
+
+    /// <summary>
+    /// Polymorphic hook indicating whether this item plants a crop seed onto tilled soil.
+    /// </summary>
+    public virtual bool TryGetPlantableCropId(out string cropId)
+    {
+        cropId = string.Empty;
+        return false;
+    }
 }

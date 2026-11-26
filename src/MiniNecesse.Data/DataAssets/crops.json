@@ -1,0 +1,41 @@
+[
+  {
+    "cropId": "wheat_crop",
+    "displayName": "Golden Wheat",
+    "seedItemId": "wheat_seed",
+    "seedName": "Wheat Seeds",
+    "harvestItemId": "wheat",
+    "harvestName": "Wheat",
+    "minYield": 2,
+    "maxYield": 4,
+    "bonusSeedChance": 0.45,
+    "growthDurationSeconds": 24.0,
+    "growthStages": 3
+  },
+  {
+    "cropId": "carrot_crop",
+    "displayName": "Sweet Carrot",
+    "seedItemId": "carrot_seed",
+    "seedName": "Carrot Seeds",
+    "harvestItemId": "carrot",
+    "harvestName": "Fresh Carrot",
+    "minYield": 2,
+    "maxYield": 3,
+    "bonusSeedChance": 0.45,
+    "growthDurationSeconds": 20.0,
+    "growthStages": 3
+  },
+  {
+    "cropId": "pumpkin_crop",
+    "displayName": "Giant Pumpkin",
+    "seedItemId": "pumpkin_seed",
+    "seedName": "Pumpkin Seeds",
+    "harvestItemId": "pumpkin",
+    "harvestName": "Harvest Pumpkin",
+    "minYield": 1,
+    "maxYield": 2,
+    "bonusSeedChance": 0.40,
+    "growthDurationSeconds": 32.0,
+    "growthStages": 3
+  }
+]

@@ -3,12 +3,13 @@ using MiniNecesse.Core.Crafting;
 using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Interfaces;
 using MiniNecesse.Core.Math;
+using MiniNecesse.Core.Patterns.Decorator;
 
 namespace MiniNecesse.Core.Entities;
 
 /// <summary>
 /// Represents the player-controlled survivor character with inventory aggregation,
-/// hotbar selection, equipped weapon/tool references, and attack cooldown management.
+/// hotbar selection, equipped weapon/tool references, hunger/starvation tracking, and food buff management.
 /// </summary>
 public sealed class Player : Character
 {
@@ -16,17 +17,35 @@ public sealed class Player : Character
     private const int DEFAULT_INVENTORY_CAPACITY = 20;
     private const float DEFAULT_BARE_HAND_COOLDOWN = 0.45f;
     private const int DEFAULT_BARE_HAND_HARVEST_POWER = 5;
+    private const float DEFAULT_MAX_HUNGER = 100f;
+    private const float DEFAULT_HUNGER_DRAIN_PER_SEC = 0.9f;
+    private const float DEFAULT_STARVATION_INTERVAL = 2.5f;
+    private const int DEFAULT_STARVATION_DAMAGE = 3;
 
     private readonly Inventory _inventory;
+    private readonly PlayerBuffManager _buffs = new();
     private readonly int _hotbarCapacity;
+    private readonly float _hungerDrainPerSecond;
+    private readonly float _starvationInterval;
+    private readonly int _starvationDamage;
+
     private int _selectedHotbarIndex;
     private IWeapon? _equippedWeapon;
+    private IWeapon? _effectiveEquippedWeapon;
     private ToolType _equippedToolType;
     private int _harvestPower;
     private float _attackCooldownRemaining;
 
+    private float _maxHunger;
+    private float _currentHunger;
+    private float _starvationTimer;
+    private int _lastNotifiedHungerInt;
+
     /// <summary>Gets the player's inventory (UML Aggregation).</summary>
     public Inventory Inventory => _inventory;
+
+    /// <summary>Gets the active food buff manager for this player.</summary>
+    public PlayerBuffManager Buffs => _buffs;
 
     /// <summary>Gets the number of hotbar slots available to the player.</summary>
     public int HotbarCapacity => _hotbarCapacity;
@@ -34,8 +53,14 @@ public sealed class Player : Character
     /// <summary>Gets the 0-based index of the currently selected hotbar slot.</summary>
     public int SelectedHotbarIndex => _selectedHotbarIndex;
 
-    /// <summary>Gets the currently equipped combat weapon, if any.</summary>
+    /// <summary>Gets the base currently equipped combat weapon, if any.</summary>
     public IWeapon? EquippedWeapon => _equippedWeapon;
+
+    /// <summary>
+    /// Gets the equipped weapon wrapped dynamically with <see cref="FoodDamageBuffDecorator"/>
+    /// whenever active food buffs grant bonus attack damage (0 allocations during combat).
+    /// </summary>
+    public IWeapon? EffectiveEquippedWeapon => _effectiveEquippedWeapon;
 
     /// <summary>Gets the currently equipped harvesting tool archetype.</summary>
     public ToolType EquippedToolType => _equippedToolType;
@@ -49,11 +74,35 @@ public sealed class Player : Character
     /// <summary>Gets a value indicating whether the player can attack or swing right now.</summary>
     public bool CanAct => IsAlive && _attackCooldownRemaining <= 0f;
 
+    /// <summary>Gets effective movement speed scaled by active food buffs.</summary>
+    public float EffectiveMoveSpeed => MoveSpeed * _buffs.SpeedMultiplier;
+
+    /// <summary>Gets bonus attack damage from active food buffs.</summary>
+    public int BonusAttackDamage => _buffs.BonusDamage;
+
+    /// <summary>Gets bonus defense from active food buffs.</summary>
+    public int BonusDefense => _buffs.BonusDefense;
+
+    /// <summary>Gets maximum hunger points.</summary>
+    public float MaxHunger => _maxHunger;
+
+    /// <summary>Gets current hunger points within [0, MaxHunger].</summary>
+    public float CurrentHunger => _currentHunger;
+
+    /// <summary>Gets normalized hunger ratio within [0, 1].</summary>
+    public float HungerRatio => _maxHunger > 0f ? _currentHunger / _maxHunger : 0f;
+
+    /// <summary>Gets whether the player's hunger is completely depleted and causing starvation damage.</summary>
+    public bool IsStarving => _currentHunger <= 0f;
+
     /// <summary>Raised when the player switches the active hotbar slot.</summary>
     public event Action<int>? OnHotbarSelectionChanged;
 
     /// <summary>Raised when the equipped weapon changes.</summary>
     public event Action<IWeapon?>? OnWeaponEquipped;
+
+    /// <summary>Raised when player hunger changes appreciably.</summary>
+    public event Action<float, float>? OnHungerChanged;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Player"/> class.
@@ -64,7 +113,11 @@ public sealed class Player : Character
         int maxHp = 100,
         float moveSpeed = 140f,
         int hotbarCapacity = DEFAULT_HOTBAR_CAPACITY,
-        Inventory? inventory = null)
+        Inventory? inventory = null,
+        float maxHunger = DEFAULT_MAX_HUNGER,
+        float hungerDrainPerSecond = DEFAULT_HUNGER_DRAIN_PER_SEC,
+        float starvationInterval = DEFAULT_STARVATION_INTERVAL,
+        int starvationDamage = DEFAULT_STARVATION_DAMAGE)
         : base(id, spawnPosition, new Vector2D(24f, 24f), maxHp, moveSpeed)
     {
         if (hotbarCapacity <= 0)
@@ -72,17 +125,37 @@ public sealed class Player : Character
             throw new ArgumentOutOfRangeException(nameof(hotbarCapacity), "Hotbar capacity must be positive.");
         }
 
+        if (maxHunger <= 0f)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxHunger), "Maximum hunger must be positive.");
+        }
+
+        if (hungerDrainPerSecond < 0f || starvationInterval <= 0f || starvationDamage < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(hungerDrainPerSecond), "Invalid hunger or starvation tuning parameter.");
+        }
+
         _inventory = inventory ?? new Inventory(DEFAULT_INVENTORY_CAPACITY);
         _hotbarCapacity = hotbarCapacity;
         _selectedHotbarIndex = 0;
         _equippedToolType = ToolType.None;
         _harvestPower = DEFAULT_BARE_HAND_HARVEST_POWER;
+
+        _maxHunger = maxHunger;
+        _currentHunger = maxHunger;
+        _hungerDrainPerSecond = hungerDrainPerSecond;
+        _starvationInterval = starvationInterval;
+        _starvationDamage = starvationDamage;
+        _lastNotifiedHungerInt = (int)MathF.Round(_currentHunger);
+
+        _buffs.OnBuffsChanged += RebuildEffectiveWeapon;
     }
 
     /// <summary>Equips a weapon implementing <see cref="IWeapon"/> (Association).</summary>
     public void EquipWeapon(IWeapon? weapon)
     {
         _equippedWeapon = weapon;
+        RebuildEffectiveWeapon();
         OnWeaponEquipped?.Invoke(_equippedWeapon);
     }
 
@@ -142,6 +215,51 @@ public sealed class Player : Character
         _attackCooldownRemaining = global::System.Math.Max(0f, cooldown);
     }
 
+    /// <summary>Restores hunger points clamped at <see cref="MaxHunger"/>.</summary>
+    public void RestoreHunger(float amount)
+    {
+        if (amount < 0f)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), "Hunger restore amount cannot be negative.");
+        }
+
+        if (!IsAlive || amount == 0f)
+        {
+            return;
+        }
+
+        _currentHunger = global::System.Math.Min(_maxHunger, _currentHunger + amount);
+        if (_currentHunger > 0f)
+        {
+            _starvationTimer = 0f;
+        }
+
+        NotifyHungerIfChanged(force: true);
+    }
+
+    /// <summary>Restores exact hunger state from persisted snapshot data.</summary>
+    public void RestoreHungerExact(float currentHunger, float maxHunger)
+    {
+        if (maxHunger > 0f)
+        {
+            _maxHunger = maxHunger;
+        }
+
+        _currentHunger = global::System.Math.Clamp(currentHunger, 0f, _maxHunger);
+        _starvationTimer = 0f;
+        NotifyHungerIfChanged(force: true);
+    }
+
+    /// <summary>Applies a temporary <see cref="IFoodBuffStrategy"/> to this player.</summary>
+    public void ApplyBuff(IFoodBuffStrategy buffStrategy)
+    {
+        ArgumentNullException.ThrowIfNull(buffStrategy);
+        if (IsAlive)
+        {
+            _buffs.ApplyBuff(buffStrategy);
+        }
+    }
+
     /// <inheritdoc />
     public override void Update(float deltaTime)
     {
@@ -153,6 +271,57 @@ public sealed class Player : Character
         if (_attackCooldownRemaining > 0f)
         {
             _attackCooldownRemaining = global::System.Math.Max(0f, _attackCooldownRemaining - deltaTime);
+        }
+
+        if (!IsAlive)
+        {
+            return;
+        }
+
+        _buffs.Update(deltaTime, this);
+
+        if (_hungerDrainPerSecond > 0f && deltaTime > 0f)
+        {
+            _currentHunger = global::System.Math.Max(0f, _currentHunger - (_hungerDrainPerSecond * deltaTime));
+            NotifyHungerIfChanged();
+
+            if (_currentHunger <= 0f && _starvationDamage > 0)
+            {
+                _starvationTimer += deltaTime;
+                if (_starvationTimer >= _starvationInterval)
+                {
+                    _starvationTimer -= _starvationInterval;
+                    TakeDamage(_starvationDamage);
+                }
+            }
+            else
+            {
+                _starvationTimer = 0f;
+            }
+        }
+    }
+
+    private void RebuildEffectiveWeapon()
+    {
+        if (_equippedWeapon is null)
+        {
+            _effectiveEquippedWeapon = null;
+            return;
+        }
+
+        int bonus = _buffs.BonusDamage;
+        _effectiveEquippedWeapon = bonus > 0
+            ? new FoodDamageBuffDecorator(_equippedWeapon, bonus)
+            : _equippedWeapon;
+    }
+
+    private void NotifyHungerIfChanged(bool force = false)
+    {
+        int rounded = (int)MathF.Round(_currentHunger);
+        if (force || rounded != _lastNotifiedHungerInt)
+        {
+            _lastNotifiedHungerInt = rounded;
+            OnHungerChanged?.Invoke(_currentHunger, _maxHunger);
         }
     }
 }

@@ -12,5 +12,9 @@
   "chunkSize": 16,
   "defaultViewDistanceChunks": 3,
   "minViewDistanceChunks": 1,
-  "maxViewDistanceChunks": 8
+  "maxViewDistanceChunks": 8,
+  "playerMaxHunger": 100.0,
+  "hungerDrainPerSecond": 0.9,
+  "starvationDamageIntervalSeconds": 2.5,
+  "starvationDamageAmount": 3
 }

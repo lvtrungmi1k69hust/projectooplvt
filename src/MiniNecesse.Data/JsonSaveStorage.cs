@@ -205,5 +205,16 @@ public sealed class JsonSaveStorage : ISaveStorage
                 }
             }
         }
+
+        if (snapshot.FarmPlots is not null)
+        {
+            for (int i = 0; i < snapshot.FarmPlots.Count; i++)
+            {
+                if (snapshot.FarmPlots[i].GrowthSeconds < 0f)
+                {
+                    throw new SaveCorruptedException($"Invalid farm plot snapshot at index {i}.", slotIndex);
+                }
+            }
+        }
     }
 }

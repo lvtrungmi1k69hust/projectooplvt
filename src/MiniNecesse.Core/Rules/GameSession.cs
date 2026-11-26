@@ -4,6 +4,7 @@ using MiniNecesse.Core.AI;
 using MiniNecesse.Core.Crafting;
 using MiniNecesse.Core.Entities;
 using MiniNecesse.Core.Enums;
+using MiniNecesse.Core.Farming;
 using MiniNecesse.Core.Interfaces;
 using MiniNecesse.Core.Math;
 using MiniNecesse.Core.Patterns.Pool;
@@ -67,6 +68,8 @@ public sealed class GameSession : IDisposable
     private readonly Action<Animal> _onActivateChunkAnimal;
 
     private readonly ChunkManager _chunkManager;
+    private readonly FarmingSystem _farmingSystem;
+    private readonly Random _gameplayRng;
     private IReadOnlyList<VillageSite> _villages = Array.Empty<VillageSite>();
     private RaidWaveSpawner? _waveSpawner;
     private Boss? _activeBoss;
@@ -91,6 +94,9 @@ public sealed class GameSession : IDisposable
 
     /// <summary>Gets the active chunk streaming manager.</summary>
     public ChunkManager ChunkManager => _chunkManager;
+
+    /// <summary>Gets the farmland tilling, crop growth, and harvest coordinator.</summary>
+    public FarmingSystem Farming => _farmingSystem;
 
     /// <summary>Gets the current chunk view distance radius around the player.</summary>
     public int ViewDistanceChunks => _chunkManager.ViewDistanceChunks;
@@ -194,7 +200,9 @@ public sealed class GameSession : IDisposable
         Difficulty difficulty = Difficulty.Normal,
         int viewDistanceChunks = ChunkManager.DEFAULT_VIEW_DISTANCE,
         int minViewDistanceChunks = ChunkManager.DEFAULT_MIN_VIEW_DISTANCE,
-        int maxViewDistanceChunks = ChunkManager.DEFAULT_MAX_VIEW_DISTANCE)
+        int maxViewDistanceChunks = ChunkManager.DEFAULT_MAX_VIEW_DISTANCE,
+        CropRegistry? cropRegistry = null,
+        int? gameplaySeed = null)
     {
         ArgumentNullException.ThrowIfNull(level);
         ArgumentNullException.ThrowIfNull(player);
@@ -208,6 +216,8 @@ public sealed class GameSession : IDisposable
         _ruleEngine = ruleEngine ?? new RuleEngine();
         _difficulty = difficulty;
         _chunkManager = new ChunkManager(level, viewDistanceChunks, minViewDistanceChunks, maxViewDistanceChunks);
+        _farmingSystem = new FarmingSystem(cropRegistry);
+        _gameplayRng = gameplaySeed.HasValue ? new Random(gameplaySeed.Value) : new Random();
 
         _enemiesView = _enemies.AsReadOnly();
         _animalsView = _animals.AsReadOnly();
@@ -365,7 +375,7 @@ public sealed class GameSession : IDisposable
         Vector2D normalized = direction.Normalized();
         (int col, int row) = _level.WorldToTile(_player.Center);
         float terrainFactor = _level.TryGetTile(col, row, out Tile? tile) && tile is not null ? tile.MovementSpeedMultiplier : 1f;
-        Vector2D delta = normalized * (_player.MoveSpeed * terrainFactor * deltaTime);
+        Vector2D delta = normalized * (_player.EffectiveMoveSpeed * terrainFactor * deltaTime);
 
         _player.Move(normalized, 0f);
         _collisionDetector.MoveWithTileCollision(_player, delta, _player.Size, _level);
@@ -587,11 +597,21 @@ public sealed class GameSession : IDisposable
             return true;
         }
 
+        if (TryHarvestMatureFarmPlot(aimWorldPosition))
+        {
+            return true;
+        }
+
+        if (_player.EquippedToolType == ToolType.Hoe && TryTillTileWithHoe(aimWorldPosition))
+        {
+            return true;
+        }
+
         return TryHarvestResourceNear(aimWorldPosition);
     }
 
     /// <summary>
-    /// Executes the player's secondary action: consumes a potion or places a structure at <paramref name="aimWorldPosition"/>.
+    /// Executes the player's secondary action: consumes food/potion, plants seed, or places a structure at <paramref name="aimWorldPosition"/>.
     /// </summary>
     public bool ExecuteSecondaryAction(Vector2D aimWorldPosition, IEntityFactory entityFactory)
     {
@@ -602,6 +622,11 @@ public sealed class GameSession : IDisposable
         }
 
         if (TryUseSelectedHotbarItem())
+        {
+            return true;
+        }
+
+        if (TryPlantSelectedSeed(aimWorldPosition))
         {
             return true;
         }
@@ -788,6 +813,7 @@ public sealed class GameSession : IDisposable
         NotifyDayPhase();
         UpdateNightReinforcements(deltaTime);
         _player.Update(deltaTime);
+        _farmingSystem.Update(deltaTime);
         UpdateAnimals(deltaTime);
         UpdateEnemies(deltaTime);
         RebuildSpatialGrids();
@@ -799,7 +825,7 @@ public sealed class GameSession : IDisposable
 
     private bool TryFireEquippedRangedWeapon(Vector2D aimDirection)
     {
-        IWeapon? weapon = _player.EquippedWeapon;
+        IWeapon? weapon = _player.EffectiveEquippedWeapon;
         if (weapon is null || !weapon.IsRanged || aimDirection == Vector2D.Zero)
         {
             return false;
@@ -938,6 +964,81 @@ public sealed class GameSession : IDisposable
 
         _player.TriggerActionCooldown();
         RequestSound("harvest");
+        return true;
+    }
+
+    private bool TryHarvestMatureFarmPlot(Vector2D aimWorldPosition)
+    {
+        if (Vector2D.Distance(_player.Center, aimWorldPosition) > 68f)
+        {
+            return false;
+        }
+
+        (int col, int row) = _level.WorldToTile(aimWorldPosition);
+        if (!_farmingSystem.TryHarvestPlot(
+                col,
+                row,
+                _gameplayRng,
+                out string harvestItemId,
+                out int harvestQuantity,
+                out string? bonusSeedItemId))
+        {
+            return false;
+        }
+
+        Vector2D dropPos = _level.TileToWorldCenter(col, row);
+        SpawnPooledDroppedItem(harvestItemId, harvestQuantity, dropPos);
+        if (!string.IsNullOrWhiteSpace(bonusSeedItemId))
+        {
+            SpawnPooledDroppedItem(bonusSeedItemId, 1, dropPos + new Vector2D(6f, 6f));
+        }
+
+        _ruleEngine.AddScore(RuleEngine.HARVEST_SCORE);
+        _player.TriggerActionCooldown();
+        RequestSound("harvest");
+        return true;
+    }
+
+    private bool TryTillTileWithHoe(Vector2D aimWorldPosition)
+    {
+        if (Vector2D.Distance(_player.Center, aimWorldPosition) > 96f)
+        {
+            return false;
+        }
+
+        (int col, int row) = _level.WorldToTile(aimWorldPosition);
+        if (!_farmingSystem.TryTillTile(_level, col, row, FindStructureAtTile))
+        {
+            return false;
+        }
+
+        _player.TriggerActionCooldown(0.30f);
+        RequestSound("harvest");
+        return true;
+    }
+
+    private bool TryPlantSelectedSeed(Vector2D aimWorldPosition)
+    {
+        ItemStack? selected = _player.SelectedItemStack;
+        if (selected is null || !selected.Item.TryGetPlantableCropId(out string cropId))
+        {
+            return false;
+        }
+
+        if (Vector2D.Distance(_player.Center, aimWorldPosition) > 112f)
+        {
+            return false;
+        }
+
+        (int col, int row) = _level.WorldToTile(aimWorldPosition);
+        if (!_farmingSystem.TryPlantSeed(col, row, cropId))
+        {
+            return false;
+        }
+
+        _player.Inventory.TryRemoveItem(selected.Item.Id, 1);
+        _player.SyncEquippedFromSelectedSlot();
+        RequestSound("build");
         return true;
     }
 
@@ -1624,6 +1725,8 @@ public sealed class GameSession : IDisposable
             Y = _player.Position.Y,
             Hp = _player.CurrentHp,
             MaxHp = _player.MaxHp,
+            Hunger = _player.CurrentHunger,
+            MaxHunger = _player.MaxHunger,
             SelectedHotbarIndex = _player.SelectedHotbarIndex
         };
 
@@ -1685,6 +1788,18 @@ public sealed class GameSession : IDisposable
         {
             snapshot.GeneratedChunks.Add(new ChunkCoordSnapshot { ChunkX = coord.ChunkX, ChunkY = coord.ChunkY });
         }
+
+        for (int i = 0; i < _farmingSystem.Plots.Count; i++)
+        {
+            FarmPlot plot = _farmingSystem.Plots[i];
+            snapshot.FarmPlots.Add(new FarmPlotSnapshot
+            {
+                TileCol = plot.TileCol,
+                TileRow = plot.TileRow,
+                CropId = plot.CropId,
+                GrowthSeconds = plot.GrowthElapsedSeconds
+            });
+        }
     }
 
     private void ClearActiveWorldEntities()
@@ -1744,6 +1859,7 @@ public sealed class GameSession : IDisposable
         _animals.Clear();
         _projectiles.Clear();
         _droppedItems.Clear();
+        _farmingSystem.Clear();
         _chunkManager.ClearHibernatedState();
         _pathfindingCoordinator.ClearCache();
         _chunksInitialized = false;
@@ -1757,6 +1873,11 @@ public sealed class GameSession : IDisposable
     {
         _player.TeleportTo(new Vector2D(playerDto.X, playerDto.Y));
         _player.RestoreHealth(playerDto.Hp);
+        if (playerDto.MaxHunger > 0f)
+        {
+            _player.RestoreHungerExact(playerDto.Hunger, playerDto.MaxHunger);
+        }
+
         _player.Inventory.Clear();
 
         for (int i = 0; i < playerDto.Inventory.Count; i++)
@@ -1822,6 +1943,15 @@ public sealed class GameSession : IDisposable
                     animal.RestoreHealth(global::System.Math.Min(a.Hp, animal.MaxHp));
                     AddAnimal(animal);
                 }
+            }
+        }
+
+        if (snapshot.FarmPlots is not null)
+        {
+            for (int i = 0; i < snapshot.FarmPlots.Count; i++)
+            {
+                FarmPlotSnapshot fp = snapshot.FarmPlots[i];
+                _farmingSystem.RestorePlot(fp.TileCol, fp.TileRow, fp.CropId, fp.GrowthSeconds);
             }
         }
     }
