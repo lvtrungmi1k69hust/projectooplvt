@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using MiniNecesse.App.Audio;
 using MiniNecesse.App.Settings;
+using MiniNecesse.App.UI;
 using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Interfaces;
 
@@ -63,9 +64,9 @@ public sealed class FrmMainMenu : Form
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
-        BackColor = Color.FromArgb(18, 24, 34);
-        ForeColor = Color.FromArgb(236, 240, 246);
-        Font = CreateOwnedFont("Segoe UI", 10.5f);
+        BackColor = UiTheme.BackgroundPrimary;
+        ForeColor = UiTheme.TextPrimary;
+        Font = CreateOwnedFont(UiTheme.FontFamily, 10.5f);
 
         Controls.Add(new Label
         {
@@ -73,8 +74,8 @@ public sealed class FrmMainMenu : Form
             Location = new Point(0, 24),
             Size = new Size(544, 44),
             TextAlign = ContentAlignment.MiddleCenter,
-            Font = CreateOwnedFont("Segoe UI", 26f, FontStyle.Bold),
-            ForeColor = Color.FromArgb(242, 190, 84)
+            Font = CreateOwnedFont(UiTheme.FontFamily, 26f, FontStyle.Bold),
+            ForeColor = UiTheme.AccentGold
         });
 
         Controls.Add(new Label
@@ -83,8 +84,8 @@ public sealed class FrmMainMenu : Form
             Location = new Point(0, 72),
             Size = new Size(544, 24),
             TextAlign = ContentAlignment.MiddleCenter,
-            Font = CreateOwnedFont("Segoe UI", 9.8f, FontStyle.Italic),
-            ForeColor = Color.FromArgb(156, 174, 198)
+            Font = CreateOwnedFont(UiTheme.FontFamily, 9.8f, FontStyle.Italic),
+            ForeColor = UiTheme.TextMuted
         });
 
         Controls.Add(new Label
@@ -92,8 +93,8 @@ public sealed class FrmMainMenu : Form
             Text = "World Mode:",
             Location = new Point(110, 110),
             Size = new Size(146, 22),
-            Font = CreateOwnedFont("Segoe UI", 9.5f, FontStyle.Bold),
-            ForeColor = Color.FromArgb(204, 214, 228)
+            Font = CreateOwnedFont(UiTheme.FontFamily, 9.5f, FontStyle.Bold),
+            ForeColor = UiTheme.TextSecondary
         });
 
         Controls.Add(new Label
@@ -101,8 +102,8 @@ public sealed class FrmMainMenu : Form
             Text = "Difficulty:",
             Location = new Point(268, 110),
             Size = new Size(146, 22),
-            Font = CreateOwnedFont("Segoe UI", 9.5f, FontStyle.Bold),
-            ForeColor = Color.FromArgb(204, 214, 228)
+            Font = CreateOwnedFont(UiTheme.FontFamily, 9.5f, FontStyle.Bold),
+            ForeColor = UiTheme.TextSecondary
         });
 
         _cmbGameMode = new ComboBox
@@ -110,8 +111,8 @@ public sealed class FrmMainMenu : Form
             Location = new Point(110, 134),
             Size = new Size(146, 30),
             DropDownStyle = ComboBoxStyle.DropDownList,
-            BackColor = Color.FromArgb(30, 39, 54),
-            ForeColor = Color.White
+            BackColor = UiTheme.SurfaceInput,
+            ForeColor = UiTheme.TextPrimary
         };
         _cmbGameMode.Items.AddRange(new object[] { GameMode.Campaign, GameMode.Endless });
         _cmbGameMode.SelectedItem = _settings.GameMode;
@@ -122,8 +123,8 @@ public sealed class FrmMainMenu : Form
             Location = new Point(268, 134),
             Size = new Size(146, 30),
             DropDownStyle = ComboBoxStyle.DropDownList,
-            BackColor = Color.FromArgb(30, 39, 54),
-            ForeColor = Color.White
+            BackColor = UiTheme.SurfaceInput,
+            ForeColor = UiTheme.TextPrimary
         };
         _cmbDifficulty.Items.AddRange(new object[] { Difficulty.Tutorial, Difficulty.Normal, Difficulty.Hard });
         _cmbDifficulty.SelectedItem = _cmbDifficulty.Items.Contains(_settings.Difficulty)
@@ -136,8 +137,8 @@ public sealed class FrmMainMenu : Form
             Text = "Starting Island:",
             Location = new Point(110, 174),
             AutoSize = true,
-            Font = CreateOwnedFont("Segoe UI", 9.5f, FontStyle.Bold),
-            ForeColor = Color.FromArgb(204, 214, 228)
+            Font = CreateOwnedFont(UiTheme.FontFamily, 9.5f, FontStyle.Bold),
+            ForeColor = UiTheme.TextSecondary
         };
         Controls.Add(_lblWorldOption);
 
@@ -146,8 +147,8 @@ public sealed class FrmMainMenu : Form
             Location = new Point(110, 198),
             Size = new Size(304, 30),
             DropDownStyle = ComboBoxStyle.DropDownList,
-            BackColor = Color.FromArgb(30, 39, 54),
-            ForeColor = Color.White
+            BackColor = UiTheme.SurfaceInput,
+            ForeColor = UiTheme.TextPrimary
         };
         Controls.Add(_cmbIslandSelector);
 
@@ -155,8 +156,8 @@ public sealed class FrmMainMenu : Form
         {
             Location = new Point(110, 198),
             Size = new Size(218, 30),
-            BackColor = Color.FromArgb(30, 39, 54),
-            ForeColor = Color.White,
+            BackColor = UiTheme.SurfaceInput,
+            ForeColor = UiTheme.TextPrimary,
             Text = _settings.EndlessSeed.ToString(),
             Visible = false
         };
@@ -168,27 +169,27 @@ public sealed class FrmMainMenu : Form
             Location = new Point(334, 197),
             Size = new Size(80, 30),
             FlatStyle = FlatStyle.Flat,
-            BackColor = Color.FromArgb(74, 88, 114),
-            ForeColor = Color.White,
-            Font = CreateOwnedFont("Segoe UI", 9f, FontStyle.Bold),
+            BackColor = UiTheme.ButtonNeutral,
+            ForeColor = UiTheme.TextPrimary,
+            Font = CreateOwnedFont(UiTheme.FontFamily, 9f, FontStyle.Bold),
             Cursor = Cursors.Hand,
             Visible = false
         };
         Controls.Add(_btnRandomSeed);
 
-        _btnNewGame = CreateMenuButton("Play New Game", 248, Color.FromArgb(46, 156, 98));
-        _btnContinue = CreateMenuButton("Continue (Load Save Slot 1)", 302, Color.FromArgb(48, 118, 190));
-        _btnHighScores = CreateMenuButton("High Scores (Top 10)", 356, Color.FromArgb(156, 112, 42));
-        _btnSettings = CreateMenuButton("Settings (Audio, Difficulty & Chunks)", 410, Color.FromArgb(74, 88, 114));
-        _btnExit = CreateMenuButton("Exit", 464, Color.FromArgb(164, 58, 58));
+        _btnNewGame = CreateMenuButton("Play New Game", 248, UiTheme.AccentGreen);
+        _btnContinue = CreateMenuButton("Continue (Load Save Slot 1)", 302, UiTheme.AccentBlue);
+        _btnHighScores = CreateMenuButton("High Scores (Top 10)", 356, UiTheme.AccentGoldDark);
+        _btnSettings = CreateMenuButton("Settings (Audio, Difficulty & Chunks)", 410, UiTheme.ButtonNeutral);
+        _btnExit = CreateMenuButton("Exit", 464, UiTheme.ButtonDanger);
 
         _lblStatus = new Label
         {
             Location = new Point(20, 524),
             Size = new Size(504, 28),
             TextAlign = ContentAlignment.MiddleCenter,
-            Font = CreateOwnedFont("Segoe UI", 9f),
-            ForeColor = Color.FromArgb(146, 166, 190)
+            Font = CreateOwnedFont(UiTheme.FontFamily, 9f),
+            ForeColor = UiTheme.TextMuted
         };
 
         Controls.AddRange(new Control[]
@@ -359,7 +360,7 @@ public sealed class FrmMainMenu : Form
 
     private void HandleHighScoresClick(object? sender, EventArgs e)
     {
-        using var dialog = new FrmHighScoresDialog(_highScoreRepository);
+        using var dialog = new FrmHighScoresDialog(_highScoreRepository, SelectedMode, SelectedDifficulty);
         dialog.ShowDialog(this);
     }
 

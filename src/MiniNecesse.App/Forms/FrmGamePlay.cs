@@ -57,6 +57,7 @@ public sealed class FrmGamePlay : Form
     private readonly TextBox _txtHighScoreName;
     private readonly Button _btnSaveHighScore;
     private readonly Button _btnNextIsland;
+    private readonly Button _btnOutcomeLeaderboard;
     private readonly Button _btnPlayAgain;
     private readonly Button _btnOutcomeMenu;
     private readonly Button _btnPauseResume;
@@ -88,6 +89,7 @@ public sealed class FrmGamePlay : Form
     private int _activeWorldSeed;
     private string _currentIslandId;
     private bool _highScoreRecordedForRun;
+    private HighScoreEntry? _lastRecordedScore;
 
     /// <summary>Initializes a new instance of the <see cref="FrmGamePlay"/> class via Constructor DI.</summary>
     public FrmGamePlay(
@@ -191,7 +193,7 @@ public sealed class FrmGamePlay : Form
         Controls.Add(_pausePanel);
         _pausePanel.BringToFront();
 
-        (_outcomePanel, _lblOutcomeTitle, _lblOutcomeSummary, _txtHighScoreName, _btnSaveHighScore, _btnNextIsland, _btnPlayAgain, _btnOutcomeMenu) = BuildOutcomeOverlay();
+        (_outcomePanel, _lblOutcomeTitle, _lblOutcomeSummary, _txtHighScoreName, _btnSaveHighScore, _btnNextIsland, _btnOutcomeLeaderboard, _btnPlayAgain, _btnOutcomeMenu) = BuildOutcomeOverlay();
         Controls.Add(_outcomePanel);
         _outcomePanel.BringToFront();
 
@@ -265,6 +267,7 @@ public sealed class FrmGamePlay : Form
 
         _btnSaveHighScore.Click += HandleSaveHighScoreClick;
         _btnNextIsland.Click += HandleNextIslandClick;
+        _btnOutcomeLeaderboard.Click += HandleOutcomeLeaderboardClick;
         _btnPlayAgain.Click += HandlePlayAgainClick;
         _btnOutcomeMenu.Click += HandleReturnMenuClick;
     }
@@ -296,6 +299,7 @@ public sealed class FrmGamePlay : Form
 
         _btnSaveHighScore.Click -= HandleSaveHighScoreClick;
         _btnNextIsland.Click -= HandleNextIslandClick;
+        _btnOutcomeLeaderboard.Click -= HandleOutcomeLeaderboardClick;
         _btnPlayAgain.Click -= HandlePlayAgainClick;
         _btnOutcomeMenu.Click -= HandleReturnMenuClick;
     }
@@ -370,6 +374,7 @@ public sealed class FrmGamePlay : Form
         _activePackage = package;
         _currentIslandId = package.Level.IslandId;
         _highScoreRecordedForRun = false;
+        _lastRecordedScore = null;
 
         var inventory = new Inventory(_config.InventorySlots);
         var player = new Player(
@@ -847,23 +852,34 @@ public sealed class FrmGamePlay : Form
             GameMode mode = _session?.GameMode ?? _activeMode;
             Difficulty diff = _session?.Difficulty ?? _activeDifficulty;
             double playTime = _session?.ElapsedPlayTimeSeconds ?? 0.0;
-            _highScoreRepository.RecordScore(new HighScoreEntry(
+            var entry = new HighScoreEntry(
                 playerName,
                 _hud.Score,
                 _currentIslandId,
                 diff.ToString(),
                 DateTime.UtcNow,
                 mode.ToString(),
-                playTime));
+                playTime);
+            _highScoreRepository.RecordScore(entry);
+            _lastRecordedScore = entry;
 
             _highScoreRecordedForRun = true;
             _btnSaveHighScore.Enabled = false;
-            MessageBox.Show(this, "Score recorded to highscore.json!", "High Score Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            using var dialog = new FrmHighScoresDialog(_highScoreRepository, mode, diff, entry);
+            dialog.ShowDialog(this);
         }
         catch (SaveCorruptedException ex)
         {
             MessageBox.Show(this, $"Could not save high score: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    private void HandleOutcomeLeaderboardClick(object? sender, EventArgs e)
+    {
+        GameMode mode = _session?.GameMode ?? _activeMode;
+        Difficulty diff = _session?.Difficulty ?? _activeDifficulty;
+        using var dialog = new FrmHighScoresDialog(_highScoreRepository, mode, diff, _lastRecordedScore);
+        dialog.ShowDialog(this);
     }
 
     private void HandleNextIslandClick(object? sender, EventArgs e)
@@ -917,11 +933,11 @@ public sealed class FrmGamePlay : Form
         return (panel, btnResume, btnSave, btnLoad, btnSettings, btnMenu);
     }
 
-    private (Panel Panel, Label Title, Label Summary, TextBox NameBox, Button SaveScore, Button NextIsland, Button Replay, Button Menu) BuildOutcomeOverlay()
+    private (Panel Panel, Label Title, Label Summary, TextBox NameBox, Button SaveScore, Button NextIsland, Button Leaderboard, Button Replay, Button Menu) BuildOutcomeOverlay()
     {
         var panel = new Panel
         {
-            Size = new Size(380, 360),
+            Size = new Size(380, 408),
             BackColor = Color.FromArgb(20, 26, 38),
             BorderStyle = BorderStyle.FixedSingle,
             Visible = false
@@ -968,11 +984,12 @@ public sealed class FrmGamePlay : Form
         };
 
         Button btnNext = MakeOverlayButton("Next Island", 148, Color.FromArgb(46, 156, 98), 380);
-        Button btnReplay = MakeOverlayButton("Play Again", 200, Color.FromArgb(48, 118, 190), 380);
-        Button btnMenu = MakeOverlayButton("Return to Main Menu", 252, Color.FromArgb(164, 58, 58), 380);
+        Button btnLeaderboard = MakeOverlayButton("Leaderboard", 198, Color.FromArgb(156, 112, 42), 380);
+        Button btnReplay = MakeOverlayButton("Play Again", 248, Color.FromArgb(48, 118, 190), 380);
+        Button btnMenu = MakeOverlayButton("Return to Main Menu", 298, Color.FromArgb(164, 58, 58), 380);
 
-        panel.Controls.AddRange(new Control[] { title, summary, nameBox, btnSaveScore, btnNext, btnReplay, btnMenu });
-        return (panel, title, summary, nameBox, btnSaveScore, btnNext, btnReplay, btnMenu);
+        panel.Controls.AddRange(new Control[] { title, summary, nameBox, btnSaveScore, btnNext, btnLeaderboard, btnReplay, btnMenu });
+        return (panel, title, summary, nameBox, btnSaveScore, btnNext, btnLeaderboard, btnReplay, btnMenu);
     }
 
     private Button MakeOverlayButton(string text, int topY, Color backColor, int parentWidth = 320)

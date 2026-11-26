@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
+using MiniNecesse.App.UI;
+using MiniNecesse.App.Views;
+using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.Exceptions;
 using MiniNecesse.Core.Interfaces;
 using MiniNecesse.Core.Rules;
@@ -9,92 +12,303 @@ using MiniNecesse.Core.Rules;
 namespace MiniNecesse.App.Forms;
 
 /// <summary>
-/// Read-only leaderboard dialog displaying Top 10 high scores loaded via <see cref="IHighScoreRepository"/>.
+/// Modern, dark-minimalist GDI+ leaderboard dialog presenting Top 10 high scores
+/// isolated per (<see cref="GameMode"/> × <see cref="Difficulty"/>) bucket.
+/// Features DPI-responsive layout, vector Top-3 medals, hover &amp; record highlights,
+/// smooth entrance transition, and full keyboard navigation (←/→, ↑/↓/Tab, Esc).
 /// </summary>
 public sealed class FrmHighScoresDialog : Form
 {
-    private readonly ListView _listScores;
-    private readonly Button _btnClose;
+    private const float OPEN_ANIMATION_MS = 180f;
+
+    private static readonly GameMode[] MODES = { GameMode.Campaign, GameMode.Endless };
+    private static readonly Difficulty[] DIFFICULTIES = { Difficulty.Tutorial, Difficulty.Normal, Difficulty.Hard };
+
+    private readonly IHighScoreRepository _repository;
+    private readonly HighScoreEntry? _highlightedEntry;
     private readonly List<Font> _ownedFonts = new();
 
+    private readonly Label _lblTitle;
+    private readonly Label _lblSubtitle;
+    private readonly Label _lblModeCaption;
+    private readonly Label _lblDiffCaption;
+    private readonly SegmentedTabControl _modeTabs;
+    private readonly SegmentedTabControl _diffTabs;
+    private readonly LeaderboardCanvasControl _leaderboardCanvas;
+    private readonly Label _lblKeyboardHint;
+    private readonly Button _btnClose;
+    private readonly System.Windows.Forms.Timer _animTimer;
+
+    private int _animElapsedMs;
+    private bool _disposed;
+
     /// <summary>Initializes a new instance of the <see cref="FrmHighScoresDialog"/> class.</summary>
-    public FrmHighScoresDialog(IHighScoreRepository highScoreRepository)
+    public FrmHighScoresDialog(
+        IHighScoreRepository highScoreRepository,
+        GameMode initialMode = GameMode.Campaign,
+        Difficulty initialDifficulty = Difficulty.Normal,
+        HighScoreEntry? highlightedEntry = null)
     {
         ArgumentNullException.ThrowIfNull(highScoreRepository);
+        _repository = highScoreRepository;
+        _highlightedEntry = highlightedEntry;
 
-        Text = "High Scores — Top 10 Survivors";
-        Size = new Size(560, 420);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        SuspendLayout();
+        Text = "MiniNecesse — Leaderboard";
+        AutoScaleMode = AutoScaleMode.Dpi;
+        ClientSize = new Size(760, 620);
+        MinimumSize = new Size(640, 540);
+        FormBorderStyle = FormBorderStyle.Sizable;
         StartPosition = FormStartPosition.CenterParent;
-        MaximizeBox = false;
-        MinimizeBox = false;
-        BackColor = Color.FromArgb(24, 30, 42);
-        ForeColor = Color.FromArgb(236, 240, 246);
-        Font = CreateOwnedFont("Segoe UI", 10f);
+        KeyPreview = true;
+        DoubleBuffered = true;
+        BackColor = UiTheme.BackgroundPrimary;
+        ForeColor = UiTheme.TextPrimary;
+        Font = CreateOwnedFont(UiTheme.FontFamily, 10f);
 
-        var lblTitle = new Label
+        _lblTitle = new Label
         {
-            Text = "TOP 10 HIGH SCORES",
-            Location = new Point(20, 16),
-            AutoSize = true,
-            Font = CreateOwnedFont("Segoe UI", 14f, FontStyle.Bold),
-            ForeColor = Color.FromArgb(240, 184, 77)
+            Text = "TOP 10 SURVIVOR LEADERBOARD",
+            AutoSize = false,
+            Height = 32,
+            Font = CreateOwnedFont(UiTheme.FontFamily, 15.5f, FontStyle.Bold),
+            ForeColor = UiTheme.AccentGold,
+            BackColor = UiTheme.BackgroundPrimary,
+            TextAlign = ContentAlignment.MiddleLeft
         };
-        Controls.Add(lblTitle);
 
-        _listScores = new ListView
+        _lblSubtitle = new Label
         {
-            Location = new Point(20, 56),
-            Size = new Size(504, 265),
-            View = View.Details,
-            FullRowSelect = true,
-            GridLines = true,
-            BackColor = Color.FromArgb(32, 40, 56),
-            ForeColor = Color.White
+            Text = "Scores are tracked independently per World Mode and Difficulty.",
+            AutoSize = false,
+            Height = 20,
+            Font = CreateOwnedFont(UiTheme.FontFamily, 9f),
+            ForeColor = UiTheme.TextMuted,
+            BackColor = UiTheme.BackgroundPrimary,
+            TextAlign = ContentAlignment.MiddleLeft
         };
-        _listScores.Columns.Add("#", 38);
-        _listScores.Columns.Add("Player", 145);
-        _listScores.Columns.Add("Score", 85);
-        _listScores.Columns.Add("Island", 95);
-        _listScores.Columns.Add("Difficulty", 80);
-        _listScores.Columns.Add("Date", 110);
-        Controls.Add(_listScores);
+
+        _lblModeCaption = new Label
+        {
+            Text = "WORLD MODE",
+            AutoSize = false,
+            Height = 18,
+            Font = CreateOwnedFont(UiTheme.FontFamily, 8f, FontStyle.Bold),
+            ForeColor = UiTheme.TextMuted,
+            BackColor = UiTheme.BackgroundPrimary
+        };
+
+        _lblDiffCaption = new Label
+        {
+            Text = "DIFFICULTY",
+            AutoSize = false,
+            Height = 18,
+            Font = CreateOwnedFont(UiTheme.FontFamily, 8f, FontStyle.Bold),
+            ForeColor = UiTheme.TextMuted,
+            BackColor = UiTheme.BackgroundPrimary
+        };
+
+        _modeTabs = new SegmentedTabControl();
+        _modeTabs.SetOptions("Campaign", "Endless");
+        _modeTabs.SelectedIndex = initialMode == GameMode.Endless ? 1 : 0;
+
+        _diffTabs = new SegmentedTabControl();
+        _diffTabs.SetOptions("Tutorial", "Normal", "Hard");
+        _diffTabs.SelectedIndex = ResolveDifficultyTabIndex(initialDifficulty);
+
+        _leaderboardCanvas = new LeaderboardCanvasControl
+        {
+            AnimationProgress = 0f
+        };
+
+        _lblKeyboardHint = new Label
+        {
+            Text = "[← / →] Difficulty   •   [↑ / ↓ or Tab] World Mode   •   [Esc] Close",
+            AutoSize = false,
+            Height = 24,
+            Font = CreateOwnedFont(UiTheme.FontFamily, 8.75f),
+            ForeColor = UiTheme.TextMuted,
+            BackColor = UiTheme.BackgroundPrimary,
+            TextAlign = ContentAlignment.MiddleLeft
+        };
 
         _btnClose = new Button
         {
             Text = "Close",
-            Location = new Point(424, 334),
-            Size = new Size(100, 34),
+            Size = new Size(108, 34),
             FlatStyle = FlatStyle.Flat,
-            BackColor = Color.FromArgb(72, 86, 112),
-            ForeColor = Color.White,
+            BackColor = UiTheme.ButtonNeutral,
+            ForeColor = UiTheme.TextPrimary,
+            Font = CreateOwnedFont(UiTheme.FontFamily, 9.5f, FontStyle.Bold),
             Cursor = Cursors.Hand
         };
-        _btnClose.Click += HandleCloseClick;
-        Controls.Add(_btnClose);
+        _btnClose.FlatAppearance.BorderColor = UiTheme.BorderSubtle;
+        _btnClose.FlatAppearance.BorderSize = 1;
 
-        PopulateScores(highScoreRepository);
+        Controls.AddRange(new Control[]
+        {
+            _lblTitle,
+            _lblSubtitle,
+            _lblModeCaption,
+            _lblDiffCaption,
+            _modeTabs,
+            _diffTabs,
+            _leaderboardCanvas,
+            _lblKeyboardHint,
+            _btnClose
+        });
+
+        _animTimer = new System.Windows.Forms.Timer { Interval = 16 };
+        SubscribeEvents();
+        LayoutControls();
+        ResumeLayout(false);
+
+        ReloadActiveBucket();
     }
 
-    /// <inheritdoc />
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        _animElapsedMs = 0;
+        Opacity = 0.20;
+        _leaderboardCanvas.AnimationProgress = 0f;
+        _animTimer.Start();
+    }
+
+    protected override void OnResize(EventArgs e)
+    {
+        base.OnResize(e);
+        LayoutControls();
+    }
+
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        switch (keyData)
+        {
+            case Keys.Left:
+                _diffTabs.SelectPrevious();
+                return true;
+            case Keys.Right:
+                _diffTabs.SelectNext();
+                return true;
+            case Keys.Up:
+            case Keys.Down:
+            case Keys.Tab:
+                _modeTabs.SelectNext();
+                return true;
+            case Keys.Escape:
+                Close();
+                return true;
+        }
+
+        return base.ProcessCmdKey(ref msg, keyData);
+    }
+
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
-        _btnClose.Click -= HandleCloseClick;
+        _animTimer.Stop();
+        UnsubscribeEvents();
         base.OnFormClosing(e);
     }
 
-    /// <inheritdoc />
     protected override void Dispose(bool disposing)
     {
-        base.Dispose(disposing);
-        if (disposing)
+        if (disposing && !_disposed)
         {
+            _disposed = true;
+            _animTimer.Dispose();
             for (int i = 0; i < _ownedFonts.Count; i++)
             {
                 _ownedFonts[i].Dispose();
             }
 
             _ownedFonts.Clear();
+        }
+
+        base.Dispose(disposing);
+    }
+
+    private void SubscribeEvents()
+    {
+        _modeTabs.SelectedIndexChanged += HandleFilterChanged;
+        _diffTabs.SelectedIndexChanged += HandleFilterChanged;
+        _btnClose.Click += HandleCloseClick;
+        _animTimer.Tick += HandleAnimTick;
+    }
+
+    private void UnsubscribeEvents()
+    {
+        _modeTabs.SelectedIndexChanged -= HandleFilterChanged;
+        _diffTabs.SelectedIndexChanged -= HandleFilterChanged;
+        _btnClose.Click -= HandleCloseClick;
+        _animTimer.Tick -= HandleAnimTick;
+    }
+
+    private void HandleFilterChanged(object? sender, EventArgs e) => ReloadActiveBucket();
+    private void HandleCloseClick(object? sender, EventArgs e) => Close();
+
+    private void HandleAnimTick(object? sender, EventArgs e)
+    {
+        _animElapsedMs += _animTimer.Interval;
+        float progress = Math.Clamp(_animElapsedMs / OPEN_ANIMATION_MS, 0f, 1f);
+        Opacity = 0.20 + (0.80 * progress);
+        _leaderboardCanvas.AnimationProgress = progress;
+
+        if (progress >= 1f)
+        {
+            _animTimer.Stop();
+            Opacity = 1.0;
+        }
+    }
+
+    private void LayoutControls()
+    {
+        int pad = UiTheme.PagePadding;
+        int contentW = Math.Max(320, ClientSize.Width - (pad * 2));
+        int contentH = Math.Max(320, ClientSize.Height - (pad * 2));
+
+        _lblTitle.SetBounds(pad, pad, contentW, 32);
+        _lblSubtitle.SetBounds(pad, _lblTitle.Bottom + 2, contentW, 20);
+
+        int filtersTop = _lblSubtitle.Bottom + UiTheme.SectionGap;
+        int modeWidth = Math.Max(190, (int)(contentW * 0.36f));
+        int gap = 16;
+        int diffWidth = Math.Max(220, contentW - modeWidth - gap);
+
+        _lblModeCaption.SetBounds(pad, filtersTop, modeWidth, 18);
+        _lblDiffCaption.SetBounds(pad + modeWidth + gap, filtersTop, diffWidth, 18);
+
+        _modeTabs.SetBounds(pad, _lblModeCaption.Bottom + 4, modeWidth, 36);
+        _diffTabs.SetBounds(pad + modeWidth + gap, _lblDiffCaption.Bottom + 4, diffWidth, 36);
+
+        int footerTop = pad + contentH - 36;
+        _btnClose.SetBounds(pad + contentW - _btnClose.Width, footerTop, _btnClose.Width, 34);
+        _lblKeyboardHint.SetBounds(pad, footerTop + 5, Math.Max(120, _btnClose.Left - pad - 12), 24);
+
+        int canvasTop = _modeTabs.Bottom + UiTheme.SectionGap;
+        int canvasHeight = Math.Max(180, footerTop - canvasTop - UiTheme.SectionGap);
+        _leaderboardCanvas.SetBounds(pad, canvasTop, contentW, canvasHeight);
+    }
+
+    private void ReloadActiveBucket()
+    {
+        GameMode mode = MODES[Math.Clamp(_modeTabs.SelectedIndex, 0, MODES.Length - 1)];
+        Difficulty diff = DIFFICULTIES[Math.Clamp(_diffTabs.SelectedIndex, 0, DIFFICULTIES.Length - 1)];
+        _lblSubtitle.Text = diff == Difficulty.Tutorial
+            ? $"Showing {mode} • {diff} scores (kept separate from Normal & Hard runs)."
+            : $"Showing Top 10 survivors for {mode} • {diff}.";
+
+        try
+        {
+            IReadOnlyList<HighScoreEntry> entries = _repository.LoadTopScores(mode, diff);
+            string emptyMsg = diff == Difficulty.Tutorial
+                ? "Complete a Tutorial run to record an onboarding practice score."
+                : $"Complete a {mode} ({diff}) run to claim rank #1!";
+            _leaderboardCanvas.SetEntries(entries, _highlightedEntry, emptyMsg);
+        }
+        catch (SaveCorruptedException)
+        {
+            _leaderboardCanvas.SetEntries(Array.Empty<HighScoreEntry>(), null, "High score data unavailable.");
         }
     }
 
@@ -105,35 +319,13 @@ public sealed class FrmHighScoresDialog : Form
         return font;
     }
 
-    private void PopulateScores(IHighScoreRepository repository)
+    private static int ResolveDifficultyTabIndex(Difficulty difficulty)
     {
-        try
+        return difficulty switch
         {
-            IReadOnlyList<HighScoreEntry> entries = repository.LoadTopScores();
-            for (int i = 0; i < entries.Count; i++)
-            {
-                HighScoreEntry entry = entries[i];
-                var row = new ListViewItem((i + 1).ToString());
-                row.SubItems.Add(entry.PlayerName);
-                row.SubItems.Add(entry.Score.ToString());
-                row.SubItems.Add(entry.IslandId);
-                row.SubItems.Add(entry.Difficulty);
-                row.SubItems.Add(entry.AchievedAtUtc.ToLocalTime().ToString("yyyy-MM-dd"));
-                _listScores.Items.Add(row);
-            }
-
-            if (entries.Count == 0)
-            {
-                var emptyRow = new ListViewItem("-");
-                emptyRow.SubItems.Add("No scores recorded yet");
-                _listScores.Items.Add(emptyRow);
-            }
-        }
-        catch (SaveCorruptedException ex)
-        {
-            MessageBox.Show(this, $"Could not load high scores: {ex.Message}", "Data Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        }
+            Difficulty.Tutorial => 0,
+            Difficulty.Hard => 2,
+            _ => 1
+        };
     }
-
-    private void HandleCloseClick(object? sender, EventArgs e) => Close();
 }

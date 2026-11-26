@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using MiniNecesse.App.Audio;
 using MiniNecesse.App.Settings;
+using MiniNecesse.App.UI;
 using MiniNecesse.Core.Enums;
 using MiniNecesse.Core.World;
 
@@ -42,11 +43,11 @@ public sealed class FrmSettingsDialog : Form
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;
-        BackColor = Color.FromArgb(24, 30, 42);
-        ForeColor = Color.FromArgb(236, 240, 246);
-        Font = CreateOwnedFont("Segoe UI", 10f);
+        BackColor = UiTheme.BackgroundPrimary;
+        ForeColor = UiTheme.TextPrimary;
+        Font = CreateOwnedFont(UiTheme.FontFamily, 10f);
 
-        var lblTitle = CreateLabel("GAME SETTINGS", 20, 16, 14f, FontStyle.Bold, Color.FromArgb(240, 184, 77));
+        var lblTitle = CreateLabel("GAME SETTINGS", 20, 16, 14f, FontStyle.Bold, UiTheme.AccentGold);
         Controls.Add(lblTitle);
 
         Controls.Add(CreateLabel("Player Name:", 24, 64));
@@ -54,8 +55,8 @@ public sealed class FrmSettingsDialog : Form
         {
             Location = new Point(165, 60),
             Size = new Size(255, 28),
-            BackColor = Color.FromArgb(35, 43, 60),
-            ForeColor = Color.White,
+            BackColor = UiTheme.SurfaceInput,
+            ForeColor = UiTheme.TextPrimary,
             Text = _settings.PlayerName
         };
         Controls.Add(_txtPlayerName);
@@ -66,8 +67,8 @@ public sealed class FrmSettingsDialog : Form
             Location = new Point(165, 102),
             Size = new Size(255, 28),
             DropDownStyle = ComboBoxStyle.DropDownList,
-            BackColor = Color.FromArgb(35, 43, 60),
-            ForeColor = Color.White
+            BackColor = UiTheme.SurfaceInput,
+            ForeColor = UiTheme.TextPrimary
         };
         _cmbDifficulty.Items.AddRange(new object[] { Difficulty.Tutorial, Difficulty.Normal, Difficulty.Hard });
         _cmbDifficulty.SelectedItem = _cmbDifficulty.Items.Contains(_settings.Difficulty)
@@ -137,8 +138,8 @@ public sealed class FrmSettingsDialog : Form
         };
         Controls.Add(lblControls);
 
-        _btnSave = CreateButton("Save", new Point(225, 376), Color.FromArgb(46, 156, 98));
-        _btnCancel = CreateButton("Cancel", new Point(330, 376), Color.FromArgb(80, 90, 110));
+        _btnSave = CreateButton("Save", new Point(225, 376), UiTheme.AccentGreen);
+        _btnCancel = CreateButton("Cancel", new Point(330, 376), UiTheme.ButtonNeutral);
         Controls.Add(_btnSave);
         Controls.Add(_btnCancel);
 
