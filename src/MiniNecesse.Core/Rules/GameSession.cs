@@ -35,6 +35,8 @@ public sealed class GameSession : IDisposable
     private readonly DayNightCycle _dayNightCycle;
     private readonly RuleEngine _ruleEngine;
     private readonly Func<string, Item> _itemResolver;
+    private GameMode _gameMode;
+    private int _worldSeed;
     private Difficulty _difficulty;
 
     private readonly GameStateMachine _stateMachine = new();
@@ -151,6 +153,12 @@ public sealed class GameSession : IDisposable
     /// <summary>Gets the pooled dropped-item cache for zero-allocation harvesting.</summary>
     public ObjectPool<DroppedItem> DroppedItemPool => _droppedItemPool;
 
+    /// <summary>Gets the world generation mode (Campaign or Endless).</summary>
+    public GameMode GameMode => _gameMode;
+
+    /// <summary>Gets the world generation seed associated with this session.</summary>
+    public int WorldSeed => _worldSeed;
+
     /// <summary>Gets the configured difficulty preset.</summary>
     public Difficulty Difficulty => _difficulty;
 
@@ -221,7 +229,9 @@ public sealed class GameSession : IDisposable
         CropRegistry? cropRegistry = null,
         int? gameplaySeed = null,
         LootTableRegistry? lootTableRegistry = null,
-        SettlerCatalog? settlerCatalog = null)
+        SettlerCatalog? settlerCatalog = null,
+        GameMode gameMode = GameMode.Campaign,
+        int worldSeed = 0)
     {
         ArgumentNullException.ThrowIfNull(level);
         ArgumentNullException.ThrowIfNull(player);
@@ -233,6 +243,8 @@ public sealed class GameSession : IDisposable
         _craftingSystem = new CraftingSystem(itemResolver);
         _dayNightCycle = dayNightCycle ?? new DayNightCycle();
         _ruleEngine = ruleEngine ?? new RuleEngine();
+        _gameMode = gameMode;
+        _worldSeed = worldSeed;
         _difficulty = difficulty;
         _chunkManager = new ChunkManager(level, viewDistanceChunks, minViewDistanceChunks, maxViewDistanceChunks);
         _farmingSystem = new FarmingSystem(cropRegistry);
@@ -848,6 +860,8 @@ public sealed class GameSession : IDisposable
         var snapshot = new GameStateDTO
         {
             IslandId = _level.IslandId,
+            GameMode = _gameMode.ToString(),
+            WorldSeed = _worldSeed,
             Difficulty = _difficulty.ToString(),
             Score = _ruleEngine.Score,
             DayNumber = _dayNightCycle.DayNumber,
@@ -871,6 +885,16 @@ public sealed class GameSession : IDisposable
         ArgumentNullException.ThrowIfNull(entityFactory);
 
         ClearActiveWorldEntities();
+        if (Enum.TryParse(snapshot.GameMode, ignoreCase: true, out GameMode restoredMode))
+        {
+            _gameMode = restoredMode;
+        }
+        else if (snapshot.IslandId.StartsWith("ENDLESS_", StringComparison.OrdinalIgnoreCase))
+        {
+            _gameMode = GameMode.Endless;
+        }
+
+        _worldSeed = snapshot.WorldSeed;
         if (Enum.TryParse(snapshot.Difficulty, ignoreCase: true, out Difficulty restoredDifficulty))
         {
             _difficulty = restoredDifficulty;

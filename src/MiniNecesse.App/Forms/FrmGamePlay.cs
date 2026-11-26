@@ -20,6 +20,7 @@ using MiniNecesse.Core.Math;
 using MiniNecesse.Core.Patterns.Factory;
 using MiniNecesse.Core.Rules;
 using MiniNecesse.Core.Settlement;
+using MiniNecesse.Core.World;
 using MiniNecesse.Data;
 
 namespace MiniNecesse.App.Forms;
@@ -70,6 +71,7 @@ public sealed class FrmGamePlay : Form
     private readonly CropRegistry _cropRegistry;
     private readonly LootTableRegistry _lootTableRegistry;
     private readonly SettlerCatalog _settlerCatalog;
+    private readonly ILevelGenerator _levelGenerator;
     private readonly ItemFactory _itemFactory;
 
     private EnemyFactory? _enemyFactory;
@@ -140,6 +142,11 @@ public sealed class FrmGamePlay : Form
             }
 
             _settlerCatalog = jsonLoader.LoadSettlerCatalog();
+            _levelGenerator = new SeededEndlessLevelGenerator(jsonLoader.LoadEndlessBiomeCatalog());
+        }
+        else
+        {
+            _levelGenerator = new SeededEndlessLevelGenerator();
         }
 
         SuspendLayout();
@@ -292,7 +299,11 @@ public sealed class FrmGamePlay : Form
         try
         {
             GameStateDTO dto = _saveStorage.Load(slotIndex);
-            LoadedIslandPackage package = _levelLoader.LoadIsland(dto.IslandId);
+            bool isEndlessSave = string.Equals(dto.GameMode, GameMode.Endless.ToString(), StringComparison.OrdinalIgnoreCase) ||
+                                 dto.IslandId.StartsWith("ENDLESS_", StringComparison.OrdinalIgnoreCase);
+            LoadedIslandPackage package = isEndlessSave
+                ? _levelGenerator.GenerateWorld(dto.WorldSeed)
+                : _levelLoader.LoadIsland(dto.IslandId);
             BuildSessionFromPackage(package, seedStarterInventory: false);
             _session!.RestoreFromSnapshot(dto, _enemyFactory!);
             HideAllOverlays();
@@ -335,6 +346,7 @@ public sealed class FrmGamePlay : Form
             _config.MaxViewDistanceChunks);
 
         var dayNight = new DayNightCycle(_config.DayDurationSeconds, _config.NightDurationSeconds);
+        bool isEndlessPackage = package.Level.IslandId.StartsWith("ENDLESS_", StringComparison.OrdinalIgnoreCase);
         var session = new GameSession(
             package.Level,
             player,
@@ -346,7 +358,9 @@ public sealed class FrmGamePlay : Form
             maxViewDistanceChunks: _config.MaxViewDistanceChunks,
             cropRegistry: _cropRegistry,
             lootTableRegistry: _lootTableRegistry,
-            settlerCatalog: _settlerCatalog);
+            settlerCatalog: _settlerCatalog,
+            gameMode: isEndlessPackage ? GameMode.Endless : GameMode.Campaign,
+            worldSeed: package.Seed);
 
         EnemyFactory enemyFactory = EnemyFactory.CreateDefault(
             projectileSpawner: (origin, velocity, dmg, ownerId) =>

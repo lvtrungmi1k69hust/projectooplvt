@@ -1,0 +1,106 @@
+[
+  {
+    "biomeId": "Forest",
+    "displayName": "Verdant Forest",
+    "minTemperature": 0.28,
+    "maxTemperature": 0.70,
+    "minMoisture": 0.35,
+    "maxMoisture": 0.72,
+    "primaryTile": "Grass",
+    "shoreTile": "Sand",
+    "accentTile": "Stone",
+    "resourceWeights": {
+      "Tree": 0.36,
+      "StoneRock": 0.16,
+      "CopperDeposit": 0.16,
+      "CoalDeposit": 0.10,
+      "BerryBush": 0.12,
+      "WheatCrop": 0.10
+    },
+    "enemyArchetypes": [ "Slime", "ZombieRaider" ],
+    "bossType": "ForestGuardian"
+  },
+  {
+    "biomeId": "Desert",
+    "displayName": "Sunlit Dunes",
+    "minTemperature": 0.70,
+    "maxTemperature": 1.00,
+    "minMoisture": 0.00,
+    "maxMoisture": 0.42,
+    "primaryTile": "Sand",
+    "shoreTile": "Sand",
+    "accentTile": "Stone",
+    "resourceWeights": {
+      "StoneRock": 0.28,
+      "CopperDeposit": 0.28,
+      "GoldDeposit": 0.18,
+      "CoalDeposit": 0.14,
+      "WheatCrop": 0.06,
+      "Tree": 0.06
+    },
+    "enemyArchetypes": [ "SkeletonArcher", "ZombieRaider" ],
+    "bossType": "KingSlime"
+  },
+  {
+    "biomeId": "Swamp",
+    "displayName": "Boggy Mire",
+    "minTemperature": 0.35,
+    "maxTemperature": 0.75,
+    "minMoisture": 0.72,
+    "maxMoisture": 1.00,
+    "primaryTile": "Swamp",
+    "shoreTile": "Grass",
+    "accentTile": "Grass",
+    "resourceWeights": {
+      "Tree": 0.25,
+      "IronDeposit": 0.22,
+      "CoalDeposit": 0.15,
+      "BerryBush": 0.15,
+      "CopperDeposit": 0.13,
+      "CrystalCluster": 0.10
+    },
+    "enemyArchetypes": [ "SwampZombie", "Slime" ],
+    "bossType": "SwampWitch"
+  },
+  {
+    "biomeId": "Tundra",
+    "displayName": "Frozen Tundra",
+    "minTemperature": 0.00,
+    "maxTemperature": 0.28,
+    "minMoisture": 0.00,
+    "maxMoisture": 1.00,
+    "primaryTile": "Snow",
+    "shoreTile": "Stone",
+    "accentTile": "Stone",
+    "resourceWeights": {
+      "Tree": 0.18,
+      "StoneRock": 0.18,
+      "IronDeposit": 0.24,
+      "GoldDeposit": 0.16,
+      "CoalDeposit": 0.12,
+      "CrystalCluster": 0.12
+    },
+    "enemyArchetypes": [ "FrostRaider", "SkeletonArcher" ],
+    "bossType": "CryoGolem"
+  },
+  {
+    "biomeId": "Volcano",
+    "displayName": "Obsidian Wastes",
+    "minTemperature": 0.70,
+    "maxTemperature": 1.00,
+    "minMoisture": 0.42,
+    "maxMoisture": 1.00,
+    "primaryTile": "DarkStone",
+    "shoreTile": "Stone",
+    "accentTile": "Stone",
+    "resourceWeights": {
+      "StoneRock": 0.20,
+      "IronDeposit": 0.24,
+      "GoldDeposit": 0.24,
+      "CrystalCluster": 0.18,
+      "CoalDeposit": 0.14
+    },
+    "enemyArchetypes": [ "OrcBrute", "DarkMage", "StoneGolem" ],
+    "bossType": "ShadowLord"
+  }
+]

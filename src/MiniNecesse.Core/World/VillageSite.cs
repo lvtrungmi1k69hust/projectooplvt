@@ -115,6 +115,13 @@ public sealed class VillageSite
     /// <summary>Checks whether tile (<paramref name="col"/>, <paramref name="row"/>) lies inside this village footprint.</summary>
     public bool ContainsTile(int col, int row) => _footPrintTiles.Contains(new GridPoint(col, row));
 
+    /// <summary>Checks whether this village bounding box overlaps a chunk tile rectangle.</summary>
+    public bool OverlapsChunk(int startCol, int startRow, int endCol, int endRow)
+    {
+        return CenterCol + RadiusTiles >= startCol && CenterCol - RadiusTiles < endCol &&
+               CenterRow + RadiusTiles >= startRow && CenterRow - RadiusTiles < endRow;
+    }
+
     /// <summary>Checks whether <paramref name="worldPosition"/> is inside or immediately beside this village.</summary>
     public bool IsNearWorldPosition(Vector2D worldPosition, float tileSize)
     {

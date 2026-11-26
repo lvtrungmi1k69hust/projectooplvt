@@ -32,6 +32,7 @@ public sealed class JsonLevelLoader : ILevelLoader
     private const string ARMOR_FILE_NAME = "armor.json";
     private const string LOOT_TABLES_FILE_NAME = "loot_tables.json";
     private const string SETTLERS_FILE_NAME = "settlers.json";
+    private const string ENDLESS_BIOMES_FILE_NAME = "endless_biomes.json";
 
     private static readonly JsonSerializerOptions JSON_OPTIONS = new()
     {
@@ -350,6 +351,67 @@ public sealed class JsonLevelLoader : ILevelLoader
                 p.RecruitCostQuantity,
                 produced.AsReadOnly(),
                 trades.AsReadOnly()));
+        }
+
+        return catalog;
+    }
+
+    /// <summary>Loads data-driven multi-biome Endless generation profiles from <c>endless_biomes.json</c>.</summary>
+    public EndlessBiomeCatalog LoadEndlessBiomeCatalog()
+    {
+        string path = Path.Combine(_assetsDirectory, ENDLESS_BIOMES_FILE_NAME);
+        if (!File.Exists(path))
+        {
+            return EndlessBiomeCatalog.CreateDefault();
+        }
+
+        List<EndlessBiomeJson> rawList = ReadJsonOrThrow<List<EndlessBiomeJson>>(path, "ENDLESS_BIOMES");
+        if (rawList.Count == 0)
+        {
+            throw new InvalidLevelDataException("endless_biomes.json must define at least one biome.", "ENDLESS_BIOMES");
+        }
+
+        var catalog = new EndlessBiomeCatalog();
+        for (int i = 0; i < rawList.Count; i++)
+        {
+            EndlessBiomeJson raw = rawList[i];
+            if (string.IsNullOrWhiteSpace(raw.BiomeId) ||
+                !Enum.TryParse(raw.PrimaryTile, ignoreCase: true, out TileType primary) ||
+                !Enum.TryParse(raw.ShoreTile, ignoreCase: true, out TileType shore) ||
+                !Enum.TryParse(raw.AccentTile, ignoreCase: true, out TileType accent))
+            {
+                throw new InvalidLevelDataException($"Invalid Endless biome tile definition at index {i}.", "ENDLESS_BIOMES");
+            }
+
+            var weights = new Dictionary<ResourceType, float>();
+            if (raw.ResourceWeights is not null)
+            {
+                foreach (KeyValuePair<string, float> kvp in raw.ResourceWeights)
+                {
+                    if (Enum.TryParse(kvp.Key, ignoreCase: true, out ResourceType rt) && kvp.Value > 0f)
+                    {
+                        weights[rt] = kvp.Value;
+                    }
+                }
+            }
+
+            IReadOnlyList<string> enemies = raw.EnemyArchetypes is { Count: > 0 }
+                ? raw.EnemyArchetypes.AsReadOnly()
+                : new[] { "Slime" };
+
+            catalog.Register(new EndlessBiomeProfile(
+                raw.BiomeId,
+                raw.DisplayName ?? raw.BiomeId,
+                raw.MinTemperature,
+                raw.MaxTemperature,
+                raw.MinMoisture,
+                raw.MaxMoisture,
+                primary,
+                shore,
+                accent,
+                weights,
+                enemies,
+                raw.BossType ?? "KingSlime"));
         }
 
         return catalog;

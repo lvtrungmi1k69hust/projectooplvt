@@ -18,6 +18,12 @@ public sealed class GameStateDTO
     /// <summary>Gets or sets the current island identifier.</summary>
     public string IslandId { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets the world mode name ("Campaign" or "Endless").</summary>
+    public string GameMode { get; set; } = "Campaign";
+
+    /// <summary>Gets or sets the deterministic world seed used for Endless generation (0 for default Campaign).</summary>
+    public int WorldSeed { get; set; }
+
     /// <summary>Gets or sets the difficulty preset name.</summary>
     public string Difficulty { get; set; } = "Normal";
 

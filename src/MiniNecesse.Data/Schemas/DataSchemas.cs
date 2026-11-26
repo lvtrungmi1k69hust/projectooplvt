@@ -187,3 +187,19 @@ internal sealed class BossJson
     public string? EnrageStrategy { get; set; }
     public float EnrageThresholdRatio { get; set; }
 }
+
+internal sealed class EndlessBiomeJson
+{
+    public string? BiomeId { get; set; }
+    public string? DisplayName { get; set; }
+    public float MinTemperature { get; set; }
+    public float MaxTemperature { get; set; }
+    public float MinMoisture { get; set; }
+    public float MaxMoisture { get; set; }
+    public string? PrimaryTile { get; set; }
+    public string? ShoreTile { get; set; }
+    public string? AccentTile { get; set; }
+    public Dictionary<string, float>? ResourceWeights { get; set; }
+    public List<string>? EnemyArchetypes { get; set; }
+    public string? BossType { get; set; }
+}
