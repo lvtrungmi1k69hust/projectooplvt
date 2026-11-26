@@ -22,6 +22,7 @@ internal sealed class GameConfigJson
     public float HungerDrainPerSecond { get; set; }
     public float StarvationDamageIntervalSeconds { get; set; }
     public int StarvationDamageAmount { get; set; }
+    public float MinHungerSpeedMultiplier { get; set; }
 }
 
 internal sealed class FoodJson
@@ -139,6 +140,7 @@ internal sealed class IslandJson
     public int Width { get; set; }
     public int Height { get; set; }
     public int Seed { get; set; }
+    public int MaxDays { get; set; }
     public float? ResourceDensity { get; set; }
     public Dictionary<string, float>? ResourceWeights { get; set; }
     public GridCoordJson? PlayerSpawn { get; set; }

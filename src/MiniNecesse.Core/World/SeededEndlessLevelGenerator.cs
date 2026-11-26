@@ -480,7 +480,7 @@ public sealed class SeededEndlessLevelGenerator : ILevelGenerator
             bossType,
             $"Endless {bossType}",
             MaxHp: 560,
-            MoveSpeed: 88f,
+            MoveSpeed: 125f,
             AttackDamage: 26,
             AttackRange: 170f,
             AttackCooldown: 1.05f,

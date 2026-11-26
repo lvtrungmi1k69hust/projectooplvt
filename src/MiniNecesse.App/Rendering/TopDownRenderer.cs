@@ -63,12 +63,14 @@ public sealed class TopDownRenderer : IDisposable
 
     private int _lastScore = -1;
     private int _lastDay = -1;
+    private int _lastMaxDays = -1;
     private DayPhase _lastDayPhase = (DayPhase)(-1);
     private string _cachedScoreDayText = string.Empty;
 
     private int _lastWave = -1;
     private int _lastEnemyCount = -1;
     private int _lastDefense = -1;
+    private int _lastSpeed = -1;
     private string _cachedWaveEnemiesText = string.Empty;
 
     private int _lastChunkX = int.MinValue;
@@ -874,8 +876,9 @@ public sealed class TopDownRenderer : IDisposable
         g.DrawString(GetHungerText(curHunger, maxHunger), _cache.SmallFont, _cache.TextWhiteBrush, 234, 61);
 
         SolidBrush phaseBrush = hud.DayPhase == DayPhase.Day ? _cache.TextGreenBrush : _cache.TextGoldBrush;
-        g.DrawString(GetScoreDayText(hud.Score, hud.DayNumber, hud.DayPhase), _cache.HudBodyFont, phaseBrush, 22, 82);
-        g.DrawString(GetWaveEnemiesText(session.CurrentWaveIndex, session.Enemies.Count, session.Player.TotalDefense), _cache.HudBodyFont, _cache.TextWhiteBrush, 22, 101);
+        int playerSpeed = (int)MathF.Round(session.Player.EffectiveMoveSpeed);
+        g.DrawString(GetScoreDayText(hud.Score, hud.DayNumber, session.CampaignMaxDays, hud.DayPhase), _cache.HudBodyFont, phaseBrush, 22, 82);
+        g.DrawString(GetWaveEnemiesText(session.CurrentWaveIndex, session.Enemies.Count, session.Player.TotalDefense, playerSpeed), _cache.HudBodyFont, _cache.TextWhiteBrush, 22, 101);
 
         ChunkCoord centerChunk = session.ChunkManager.CurrentCenterChunk;
         VillageSite? nearbyVillage = session.FindVillageAt(session.Player.Center);
@@ -1126,28 +1129,32 @@ public sealed class TopDownRenderer : IDisposable
         return _cachedBuffLine;
     }
 
-    private string GetScoreDayText(int score, int day, DayPhase phase)
+    private string GetScoreDayText(int score, int day, int campaignMaxDays, DayPhase phase)
     {
-        if (_lastScore != score || _lastDay != day || _lastDayPhase != phase)
+        if (_lastScore != score || _lastDay != day || _lastMaxDays != campaignMaxDays || _lastDayPhase != phase)
         {
             _lastScore = score;
             _lastDay = day;
+            _lastMaxDays = campaignMaxDays;
             _lastDayPhase = phase;
-            string phaseLabel = phase == DayPhase.Day ? "☀ DAY" : "☾ NIGHT (RAID)";
-            _cachedScoreDayText = $"Score: {score}   |   Day {day} • {phaseLabel}";
+            string phaseLabel = phase == DayPhase.Day ? "☀ DAY" : "☾ NIGHT";
+            _cachedScoreDayText = campaignMaxDays > 0
+                ? $"Score: {score}  |  Day {day}/{campaignMaxDays} • {phaseLabel}"
+                : $"Score: {score}  |  Day {day} • {phaseLabel}";
         }
 
         return _cachedScoreDayText;
     }
 
-    private string GetWaveEnemiesText(int wave, int enemyCount, int defense)
+    private string GetWaveEnemiesText(int wave, int enemyCount, int defense, int playerSpeed)
     {
-        if (_lastWave != wave || _lastEnemyCount != enemyCount || _lastDefense != defense)
+        if (_lastWave != wave || _lastEnemyCount != enemyCount || _lastDefense != defense || _lastSpeed != playerSpeed)
         {
             _lastWave = wave;
             _lastEnemyCount = enemyCount;
             _lastDefense = defense;
-            _cachedWaveEnemiesText = $"Wave: {wave}  |  Enemies: {enemyCount}  |  DEF: {defense}";
+            _lastSpeed = playerSpeed;
+            _cachedWaveEnemiesText = $"Wave: {wave}  |  Enemies: {enemyCount}  |  DEF: {defense}  |  SPD: {playerSpeed}";
         }
 
         return _cachedWaveEnemiesText;

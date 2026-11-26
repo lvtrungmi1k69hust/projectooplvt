@@ -90,6 +90,9 @@ public sealed class GameSession : IDisposable
     private readonly Random _gameplayRng;
     private IReadOnlyList<VillageSite> _villages = Array.Empty<VillageSite>();
     private RaidWaveSpawner? _waveSpawner;
+    private BossConfiguration? _campaignAutoBossConfig;
+    private IEntityFactory? _campaignAutoBossFactory;
+    private int _campaignMaxDays;
     private Boss? _activeBoss;
     private int _currentWaveIndex;
     private int _pooledProjectileSequence;
@@ -166,6 +169,9 @@ public sealed class GameSession : IDisposable
 
     /// <summary>Gets the world generation seed associated with this session.</summary>
     public int WorldSeed => _worldSeed;
+
+    /// <summary>Gets maximum days before Campaign auto-summons the island boss (0 = unlimited Endless).</summary>
+    public int CampaignMaxDays => _campaignMaxDays;
 
     /// <summary>Gets the configured difficulty preset.</summary>
     public Difficulty Difficulty => _difficulty;
@@ -428,6 +434,19 @@ public sealed class GameSession : IDisposable
     {
         ArgumentNullException.ThrowIfNull(waveSpawner);
         _waveSpawner = waveSpawner;
+    }
+
+    /// <summary>
+    /// Configures the Campaign day limit after which the island boss auto-spawns on final Night
+    /// (pass 0 or GameMode.Endless for endless survival).
+    /// </summary>
+    public void ConfigureCampaignAutoBoss(BossConfiguration bossConfig, IEntityFactory entityFactory, int maxDays)
+    {
+        ArgumentNullException.ThrowIfNull(bossConfig);
+        ArgumentNullException.ThrowIfNull(entityFactory);
+        _campaignAutoBossConfig = bossConfig;
+        _campaignAutoBossFactory = entityFactory;
+        _campaignMaxDays = global::System.Math.Max(0, maxDays);
     }
 
     /// <summary>Registers a HUD observer and pushes initial state.</summary>
@@ -1665,10 +1684,24 @@ public sealed class GameSession : IDisposable
     private void HandleDayPhaseChanged(int dayNumber, DayPhase phase)
     {
         NotifyDayPhase(force: true);
-        if (phase == DayPhase.Night && _waveSpawner is not null)
+        if (phase == DayPhase.Night)
         {
-            _nightReinforcementTimer = NIGHT_REINFORCEMENT_INTERVAL;
-            DispatchNightWave();
+            if (_waveSpawner is not null)
+            {
+                _nightReinforcementTimer = NIGHT_REINFORCEMENT_INTERVAL;
+                DispatchNightWave();
+            }
+
+            if (_gameMode == GameMode.Campaign &&
+                _campaignMaxDays > 0 &&
+                dayNumber >= _campaignMaxDays &&
+                _activeBoss is null &&
+                !_bossDefeated &&
+                _campaignAutoBossConfig is not null &&
+                _campaignAutoBossFactory is not null)
+            {
+                TrySummonIslandBoss(_campaignAutoBossConfig, _campaignAutoBossFactory);
+            }
         }
     }
 

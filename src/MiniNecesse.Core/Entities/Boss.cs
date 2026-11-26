@@ -12,7 +12,7 @@ namespace MiniNecesse.Core.Entities;
 public sealed class Boss : Enemy
 {
     private const float DEFAULT_ENRAGE_THRESHOLD = 0.30f;
-    private const float ENRAGE_SPEED_MULTIPLIER = 1.35f;
+    private const float ENRAGE_SPEED_MULTIPLIER = 1.15f;
     private const float ENRAGE_COOLDOWN_MULTIPLIER = 0.70f;
     private const float ENRAGE_DAMAGE_MULTIPLIER = 1.25f;
 

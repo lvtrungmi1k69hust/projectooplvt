@@ -31,6 +31,7 @@ public sealed class Player : Character
     private readonly float _hungerDrainPerSecond;
     private readonly float _starvationInterval;
     private readonly int _starvationDamage;
+    private readonly float _minHungerSpeedMultiplier;
 
     private int _selectedHotbarIndex;
     private IWeapon? _equippedWeapon;
@@ -80,8 +81,11 @@ public sealed class Player : Character
     /// <summary>Gets a value indicating whether the player can attack or swing right now.</summary>
     public bool CanAct => IsAlive && _attackCooldownRemaining <= 0f;
 
-    /// <summary>Gets effective movement speed scaled by active food buffs.</summary>
-    public float EffectiveMoveSpeed => MoveSpeed * _buffs.SpeedMultiplier;
+    /// <summary>Gets movement speed factor induced by current hunger (0.52x at 0 hunger, ~0.76x at 50, 1.0x at 100).</summary>
+    public float HungerSpeedMultiplier => _minHungerSpeedMultiplier + ((1f - _minHungerSpeedMultiplier) * HungerRatio);
+
+    /// <summary>Gets effective movement speed scaled by hunger stamina and active food buffs.</summary>
+    public float EffectiveMoveSpeed => MoveSpeed * HungerSpeedMultiplier * _buffs.SpeedMultiplier;
 
     /// <summary>Gets bonus attack damage from active food buffs.</summary>
     public int BonusAttackDamage => _buffs.BonusDamage;
@@ -126,7 +130,8 @@ public sealed class Player : Character
         float maxHunger = DEFAULT_MAX_HUNGER,
         float hungerDrainPerSecond = DEFAULT_HUNGER_DRAIN_PER_SEC,
         float starvationInterval = DEFAULT_STARVATION_INTERVAL,
-        int starvationDamage = DEFAULT_STARVATION_DAMAGE)
+        int starvationDamage = DEFAULT_STARVATION_DAMAGE,
+        float minHungerSpeedMultiplier = 0.52f)
         : base(id, spawnPosition, new Vector2D(24f, 24f), maxHp, moveSpeed)
     {
         if (hotbarCapacity <= 0)
@@ -155,6 +160,7 @@ public sealed class Player : Character
         _hungerDrainPerSecond = hungerDrainPerSecond;
         _starvationInterval = starvationInterval;
         _starvationDamage = starvationDamage;
+        _minHungerSpeedMultiplier = global::System.Math.Clamp(minHungerSpeedMultiplier, 0.25f, 1f);
         _lastNotifiedHungerInt = (int)MathF.Round(_currentHunger);
 
         _buffs.OnBuffsChanged += RebuildEffectiveWeapon;

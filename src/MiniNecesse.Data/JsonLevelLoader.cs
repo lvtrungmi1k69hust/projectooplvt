@@ -89,6 +89,9 @@ public sealed class JsonLevelLoader : ILevelLoader
         float hungerDrain = dto.HungerDrainPerSecond <= 0f ? 0.9f : dto.HungerDrainPerSecond;
         float starveInterval = dto.StarvationDamageIntervalSeconds <= 0f ? 2.5f : dto.StarvationDamageIntervalSeconds;
         int starveDamage = dto.StarvationDamageAmount <= 0 ? 3 : dto.StarvationDamageAmount;
+        float minHungerMult = dto.MinHungerSpeedMultiplier <= 0f
+            ? 0.52f
+            : global::System.Math.Clamp(dto.MinHungerSpeedMultiplier, 0.25f, 1f);
 
         return new GameConfig(
             dto.FixedDeltaTime,
@@ -108,7 +111,8 @@ public sealed class JsonLevelLoader : ILevelLoader
             maxHunger,
             hungerDrain,
             starveInterval,
-            starveDamage);
+            starveDamage,
+            minHungerMult);
     }
 
     /// <summary>Loads data-driven food and temporary buff definitions from <c>foods.json</c>.</summary>
@@ -634,6 +638,7 @@ public sealed class JsonLevelLoader : ILevelLoader
         IReadOnlyList<ResourceSpawnPoint> resources = ParseResourceSpawns(raw, level);
         IReadOnlyList<WaveDefinition> waves = ParseWaves(raw);
         BossConfiguration boss = ParseBoss(raw.Boss!, raw.IslandId!);
+        int campaignMaxDays = raw.MaxDays > 0 ? raw.MaxDays : waves.Count;
 
         return new LoadedIslandPackage(
             level,
@@ -644,7 +649,8 @@ public sealed class JsonLevelLoader : ILevelLoader
             chunkResourceGenerator,
             chunkStructureGenerator,
             chunkAnimalGenerator,
-            villages);
+            villages,
+            campaignMaxDays);
     }
 
     /// <inheritdoc />

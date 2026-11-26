@@ -6,6 +6,7 @@
   "width": 320,
   "height": 320,
   "seed": 5005,
+  "maxDays": 5,
   "resourceDensity": 0.033,
   "resourceWeights": {
     "StoneRock": 0.18,
@@ -56,6 +57,6 @@
     "attackCooldown": 1,
     "attackDamage": 30,
     "maxHp": 640,
-    "moveSpeed": 92
+    "moveSpeed": 128
   }
 }

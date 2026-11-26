@@ -391,7 +391,8 @@ public sealed class FrmGamePlay : Form
             _config.PlayerMaxHunger,
             _config.HungerDrainPerSecond,
             _config.StarvationDamageIntervalSeconds,
-            _config.StarvationDamageAmount);
+            _config.StarvationDamageAmount,
+            _config.MinHungerSpeedMultiplier);
 
         int viewDistance = Math.Clamp(
             _settings.ViewDistanceChunks,
@@ -445,6 +446,10 @@ public sealed class FrmGamePlay : Form
             seed: package.Seed,
             difficultyProfile: difficultyProfile);
         session.AttachWaveSpawner(spawner);
+        if (sessionMode == GameMode.Campaign && package.CampaignMaxDays > 0)
+        {
+            session.ConfigureCampaignAutoBoss(package.Boss, enemyFactory, package.CampaignMaxDays);
+        }
 
         if (seedStarterInventory)
         {

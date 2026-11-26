@@ -6,6 +6,7 @@
   "width": 320,
   "height": 320,
   "seed": 4004,
+  "maxDays": 4,
   "resourceDensity": 0.032,
   "resourceWeights": {
     "Tree": 0.18,
@@ -57,6 +58,6 @@
     "attackCooldown": 1.15,
     "attackDamage": 26,
     "maxHp": 500,
-    "moveSpeed": 72
+    "moveSpeed": 124
   }
 }

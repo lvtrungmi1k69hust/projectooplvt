@@ -84,10 +84,10 @@ public sealed class SurvivalAndFarmingTests
         Assert.IsType<FoodDamageBuffDecorator>(player.EffectiveEquippedWeapon);
         Assert.Equal(player.EquippedWeapon!.ComputeDamage() + 12, player.EffectiveEquippedWeapon!.ComputeDamage());
 
-        // Advance past both buffs (45 seconds) -> buffs expire cleanly.
+        // Advance past both buffs (45 seconds) -> buffs expire cleanly; speed still reflects hunger ratio cleanly.
         player.Update(45f);
         Assert.Equal(0, player.Buffs.ActiveBuffCount);
-        Assert.Equal(100f, player.EffectiveMoveSpeed, precision: 2);
+        Assert.Equal(100f * player.HungerSpeedMultiplier, player.EffectiveMoveSpeed, precision: 2);
         Assert.Same(player.EquippedWeapon, player.EffectiveEquippedWeapon);
     }
 

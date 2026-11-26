@@ -66,6 +66,9 @@ public sealed class GameConfig
     /// <summary>Gets HP lost per starvation tick.</summary>
     public int StarvationDamageAmount { get; }
 
+    /// <summary>Gets minimum movement speed multiplier at 0 hunger (interpolates smoothly up to 1.0x at full hunger).</summary>
+    public float MinHungerSpeedMultiplier { get; }
+
     /// <summary>Initializes a new instance of the <see cref="GameConfig"/> class.</summary>
     public GameConfig(
         float fixedDeltaTime = 1f / 60f,
@@ -73,7 +76,7 @@ public sealed class GameConfig
         float dayDurationSeconds = 60f,
         float nightDurationSeconds = 45f,
         int playerBaseHp = 100,
-        float playerBaseSpeed = 140f,
+        float playerBaseSpeed = 165f,
         int playerBaseDamage = 10,
         int inventorySlots = 20,
         int hotbarSlots = 9,
@@ -85,7 +88,8 @@ public sealed class GameConfig
         float playerMaxHunger = 100f,
         float hungerDrainPerSecond = 0.9f,
         float starvationDamageIntervalSeconds = 2.5f,
-        int starvationDamageAmount = 3)
+        int starvationDamageAmount = 3,
+        float minHungerSpeedMultiplier = 0.52f)
     {
         FixedDeltaTime = fixedDeltaTime;
         TileSize = tileSize;
@@ -105,6 +109,7 @@ public sealed class GameConfig
         HungerDrainPerSecond = hungerDrainPerSecond;
         StarvationDamageIntervalSeconds = starvationDamageIntervalSeconds;
         StarvationDamageAmount = starvationDamageAmount;
+        MinHungerSpeedMultiplier = global::System.Math.Clamp(minHungerSpeedMultiplier, 0.25f, 1f);
     }
 }
 
@@ -200,6 +205,9 @@ public sealed class LoadedIslandPackage
     /// <summary>Gets the list of procedural villages generated on this island.</summary>
     public IReadOnlyList<VillageSite> Villages { get; }
 
+    /// <summary>Gets maximum days before Campaign auto-summons the island boss (0 = unlimited Endless).</summary>
+    public int CampaignMaxDays { get; }
+
     /// <summary>Initializes a new instance of the <see cref="LoadedIslandPackage"/> class.</summary>
     public LoadedIslandPackage(
         IslandLevel level,
@@ -210,7 +218,8 @@ public sealed class LoadedIslandPackage
         Action<ChunkCoord, List<ResourceSpawnPoint>>? chunkResourceGenerator = null,
         Action<ChunkCoord, List<StructureSpawnPoint>>? chunkStructureGenerator = null,
         Action<ChunkCoord, List<AnimalSpawnPoint>>? chunkAnimalGenerator = null,
-        IReadOnlyList<VillageSite>? villages = null)
+        IReadOnlyList<VillageSite>? villages = null,
+        int campaignMaxDays = 0)
     {
         ArgumentNullException.ThrowIfNull(level);
         ArgumentNullException.ThrowIfNull(resourceSpawns);
@@ -226,5 +235,6 @@ public sealed class LoadedIslandPackage
         ChunkStructureGenerator = chunkStructureGenerator;
         ChunkAnimalGenerator = chunkAnimalGenerator;
         Villages = villages ?? Array.Empty<VillageSite>();
+        CampaignMaxDays = global::System.Math.Max(0, campaignMaxDays);
     }
 }
